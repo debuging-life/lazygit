@@ -576,6 +576,7 @@ type KeybindingUniversalConfig struct {
 type KeybindingStatusConfig struct {
 	CheckForUpdate             Keybinding `yaml:"checkForUpdate"`
 	RecentRepos                Keybinding `yaml:"recentRepos"`
+	DesktimersTasks            Keybinding `yaml:"desktimersTasks"`
 	AllBranchesLogGraph        Keybinding `yaml:"allBranchesLogGraph"`
 	AllBranchesLogGraphReverse Keybinding `yaml:"allBranchesLogGraphReverse"`
 }
@@ -1099,6 +1100,7 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			Status: KeybindingStatusConfig{
 				CheckForUpdate:             Keybinding{"u"},
 				RecentRepos:                Keybinding{"<enter>"},
+				DesktimersTasks:            Keybinding{"t"},
 				AllBranchesLogGraph:        Keybinding{"a"},
 				AllBranchesLogGraphReverse: Keybinding{"A"},
 			},

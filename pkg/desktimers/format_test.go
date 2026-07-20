@@ -51,6 +51,46 @@ func TestStatusLineSegment(t *testing.T) {
 	}
 }
 
+func TestStatusLineHint(t *testing.T) {
+	tests := []struct {
+		name     string
+		keyLabel string
+		maxWidth int
+		want     string
+	}{
+		{name: "normal", keyLabel: "alt+t", maxWidth: 60, want: "⏱ no task (alt+t)"},
+		{name: "disabled binding", keyLabel: "", maxWidth: 60, want: ""},
+		{name: "truncated", keyLabel: "alt+t", maxWidth: 12, want: "⏱ no task (…"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := StatusLineHint(tt.keyLabel, tt.maxWidth); got != tt.want {
+				t.Errorf("StatusLineHint(%q, %d) = %q, want %q", tt.keyLabel, tt.maxWidth, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFriendlyKeyLabel(t *testing.T) {
+	tests := []struct {
+		keys []string
+		want string
+	}{
+		{keys: []string{"<alt+t>"}, want: "alt+t"},
+		{keys: []string{"t"}, want: "t"},
+		{keys: []string{"<c-t>", "<alt+t>"}, want: "c-t"},
+		{keys: nil, want: ""},
+		{keys: []string{}, want: ""},
+	}
+
+	for _, tt := range tests {
+		if got := FriendlyKeyLabel(tt.keys); got != tt.want {
+			t.Errorf("FriendlyKeyLabel(%v) = %q, want %q", tt.keys, got, tt.want)
+		}
+	}
+}
+
 func TestMenuColumns(t *testing.T) {
 	got := MenuColumns(Task{Code: "MOB-101", Title: "Fix login", Project: "Mobile App"})
 	want := []string{"MOB-101", "Fix login", "(Mobile App)"}

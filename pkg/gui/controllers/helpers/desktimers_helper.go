@@ -23,6 +23,9 @@ type DesktimersHelper struct {
 	cachedState  *desktimers.State
 	stateLoaded  bool
 	hooksChecked bool
+	// cached "is there a usable token" answer, same reason as above.
+	authChecked   bool
+	authenticated bool
 }
 
 func NewDesktimersHelper(c *HelperCommon) *DesktimersHelper {
@@ -54,6 +57,35 @@ func (self *DesktimersHelper) setSelectedTask(state *desktimers.State) {
 // StatusLineSegment renders the selected task for the information line.
 func (self *DesktimersHelper) StatusLineSegment(maxWidth int) string {
 	return desktimers.StatusLineSegment(self.SelectedTask(), maxWidth)
+}
+
+// StatusLineHint renders the "no task (alt+t)" nudge: only when the user is
+// authenticated and no task is selected.
+func (self *DesktimersHelper) StatusLineHint(maxWidth int) string {
+	if self.SelectedTask() != nil || !self.isAuthenticated() {
+		return ""
+	}
+	keyLabel := desktimers.FriendlyKeyLabel(self.c.UserConfig().Keybinding.Universal.DesktimersTasks)
+	return desktimers.StatusLineHint(keyLabel, maxWidth)
+}
+
+func (self *DesktimersHelper) isAuthenticated() bool {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	if !self.authChecked {
+		token, err := desktimers.LoadToken()
+		self.authenticated = err == nil && token.Valid()
+		self.authChecked = true
+	}
+	return self.authenticated
+}
+
+func (self *DesktimersHelper) setLoggedOut() {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	self.authenticated = false
+	self.authChecked = true
 }
 
 // BranchNamePrefix returns "CODE/" when a task is selected, else "".
@@ -137,6 +169,7 @@ func (self *DesktimersHelper) confirmLogout() error {
 			if err != nil {
 				return err
 			}
+			self.setLoggedOut()
 			message := self.c.Tr.DesktimersLoggedOut
 			if outcome.Result == desktimers.LogoutLocalOnly {
 				message = self.c.Tr.DesktimersLoggedOutOffline

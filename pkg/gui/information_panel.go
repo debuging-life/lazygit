@@ -13,9 +13,12 @@ func (gui *Gui) informationStr() string {
 		return activeMode.InfoLabel()
 	}
 
-	// deskgit: the selected DeskTimers task is always visible here.
+	// deskgit: the selected DeskTimers task is always visible here; when
+	// logged in without a task, a subtle nudge points at the picker key.
 	if taskSegment := gui.helpers.Desktimers.StatusLineSegment(60); taskSegment != "" {
 		return fmt.Sprintf("%s %s", style.FgCyan.Sprint(taskSegment), gui.Config.GetVersion())
+	} else if hint := gui.helpers.Desktimers.StatusLineHint(60); hint != "" {
+		return fmt.Sprintf("%s %s", style.FgBlackLighter.Sprint(hint), gui.Config.GetVersion())
 	}
 
 	if gui.g.Mouse {

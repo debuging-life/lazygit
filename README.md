@@ -49,11 +49,13 @@ Tokens are scoped per device (revocable in DeskTimers under **Settings → Git C
 
 | Action | How |
 |---|---|
-| Pick / clear your current task | `alt+t` — fuzzy-filterable list of your assigned tasks |
+| Pick / clear your current task | `alt+t` anywhere, or `t` while the Status panel is focused — fuzzy-filterable list of your assigned tasks |
 | See the current task | Always shown in the status line: `⏱ MOB-101 Fix login redirect` |
 | Create a branch | `n` as usual — the input is prefilled with `MOB-101/` when a task is selected |
 | Commit | Just commit — the hook prepends `MOB-101: ` unless the message already has a code |
 | Push | Untagged commits print a yellow warning (push still succeeds) |
+
+> **macOS note:** if `alt+t` does nothing, your terminal isn't sending Option as Meta. Enable "Use Option as Meta key" (Terminal.app → Settings → Profiles → Keyboard) or set Option to "Esc+" (iTerm2 → Settings → Profiles → Keys), use `t` from the Status panel, or rebind via `keybinding.universal.desktimersTasks` in `~/.config/deskgit/config.yml`.
 
 Everything else is stock lazygit — see [docs/](docs/README.md) for the full manual and keybindings.
 

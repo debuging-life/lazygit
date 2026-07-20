@@ -498,6 +498,7 @@ type TranslationSet struct {
 	ExecuteShellCommand                   string
 	ExecuteShellCommandTooltip            string
 	DesktimersTasks                       string
+	DesktimersViewTasks                   string
 	DesktimersTasksTooltip                string
 	DesktimersLoadingTasks                string
 	DesktimersTaskMenuTitle               string
@@ -1668,7 +1669,8 @@ func EnglishTranslationSet() *TranslationSet {
 		CannotSquashCommitsInCurrentBranch:   "Cannot squash commits in current branch: the HEAD commit is a merge commit or is present on the main branch.",
 		ExecuteShellCommand:                  "Execute shell command",
 		ExecuteShellCommandTooltip:           "Bring up a prompt where you can enter a shell command to execute.",
-		DesktimersTasks:                      "Pick DeskTimers task",
+		DesktimersTasks:                      "DeskTimers: pick task",
+		DesktimersViewTasks:                  "View DeskTimers tasks",
 		DesktimersTasksTooltip:               "Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task.",
 		DesktimersLoadingTasks:               "Loading DeskTimers tasks",
 		DesktimersTaskMenuTitle:              "DeskTimers tasks",

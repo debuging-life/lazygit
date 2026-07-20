@@ -51,6 +51,14 @@ func (self *StatusController) GetKeybindings(opts types.KeybindingsOpts) []*type
 			DisplayOnScreen: true,
 		},
 		{
+			Keys:            opts.GetKeys(opts.Config.Status.DesktimersTasks),
+			Handler:         self.c.Helpers().Desktimers.OpenTaskMenu,
+			Description:     self.c.Tr.DesktimersViewTasks,
+			Tooltip:         self.c.Tr.DesktimersTasksTooltip,
+			OpensMenu:       true,
+			DisplayOnScreen: true,
+		},
+		{
 			Keys:        opts.GetKeys(opts.Config.Status.AllBranchesLogGraph),
 			Handler:     func() error { self.switchToOrRotateAllBranchesLogs(); return nil },
 			Description: self.c.Tr.AllBranchesLogGraph,

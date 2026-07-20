@@ -735,6 +735,7 @@ keybinding:
   status:
     checkForUpdate: u
     recentRepos: <enter>
+    desktimersTasks: t
     allBranchesLogGraph: a
     allBranchesLogGraphReverse: A
   files:

@@ -2134,6 +2134,20 @@
           ],
           "default": "\u003center\u003e"
         },
+        "desktimersTasks": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "default": "t"
+        },
         "allBranchesLogGraph": {
           "oneOf": [
             {
