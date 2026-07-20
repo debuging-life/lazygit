@@ -22,7 +22,7 @@ Task codes are your workspace's existing Jira-style codes: `<PROJECT>-<number>`,
 brew install debuging-life/tap/deskgit
 ```
 
-This installs both `deskgit` and its hook companion `dt-hook`. (Until a tagged release exists, use `brew install --HEAD debuging-life/tap/deskgit` to build the latest `dtgit` branch.)
+This installs both `deskgit` and its hook companion `dt-hook` from the latest tagged release. Use `brew install --HEAD debuging-life/tap/deskgit` to build the latest `main` branch instead.
 
 ### From source
 
@@ -30,7 +30,7 @@ Requires Go 1.25+:
 
 ```sh
 git clone git@github.com:debuging-life/lazygit.git deskgit && cd deskgit
-git checkout dtgit
+git checkout main
 sh scripts/build-deskgit.sh ~/.local/bin   # installs `deskgit` and `dt-hook`
 ```
 
