@@ -37,7 +37,7 @@ sh scripts/build-deskgit.sh ~/.local/bin   # installs `deskgit` and `dt-hook`
 ## First run
 
 1. Run `deskgit` inside any git repo.
-2. It prints a code like `BDBG-GSGX` and opens `https://app.desktimers.com/device` in your browser (RFC 8628 device flow, like `gh auth login`).
+2. It prints a code like `BDBG-GSGX` and opens `https://leads.desktimers.com/device` in your browser (RFC 8628 device flow, like `gh auth login`).
 3. Approve the code while logged in to DeskTimers. The terminal picks it up automatically and the TUI opens.
 4. deskgit offers to install the DeskTimers git hooks for the repo (see below).
 
