@@ -507,6 +507,10 @@ type TranslationSet struct {
 	DesktimersInstallHooksTitle           string
 	DesktimersInstallHooksPrompt          string
 	DesktimersCustomHooksPathNotice       string
+	DesktimersLogout                      string
+	DesktimersLogoutConfirm               string
+	DesktimersLoggedOut                   string
+	DesktimersLoggedOutOffline            string
 	ShellCommand                          string
 	CommitChangesWithoutHook              string
 	ResetTo                               string
@@ -1674,6 +1678,10 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersInstallHooksTitle:          "Install DeskTimers git hooks",
 		DesktimersInstallHooksPrompt:         "Install DeskTimers git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
 		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTimers hooks were not installed. Add them to your hook manager manually.",
+		DesktimersLogout:                     "Log out of DeskTimers",
+		DesktimersLogoutConfirm:              "Log out of DeskTimers on this machine?\n\nThe device token is revoked and deskgit will ask you to log in again on the next launch.",
+		DesktimersLoggedOut:                  "Logged out. Restart deskgit to log in again.",
+		DesktimersLoggedOutOffline:           "Logged out locally — the server couldn't be reached to revoke the token. You can also revoke it in DeskTimers → Settings → Git Clients.\n\nRestart deskgit to log in again.",
 		ShellCommand:                         "Shell command:",
 		CommitChangesWithoutHook:             "Commit changes without pre-commit hook",
 		ResetTo:                              `Reset to`,

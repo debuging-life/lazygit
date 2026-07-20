@@ -51,6 +51,13 @@ type BuildInfo struct {
 }
 
 func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTest) {
+	// deskgit: `deskgit logout` is a plain subcommand handled before flaggy
+	// takes over argument parsing (flaggy would reject it as a positional).
+	if len(os.Args) > 1 && os.Args[1] == "logout" {
+		runDesktimersLogout(os.Stdout)
+		return
+	}
+
 	cliArgs := parseCliArgsAndEnvVars()
 	mergeBuildInfo(buildInfo)
 

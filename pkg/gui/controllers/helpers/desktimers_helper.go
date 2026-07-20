@@ -115,10 +115,37 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 		})
 	}
 
+	menuItems = append(menuItems, &types.MenuItem{
+		Label:   self.c.Tr.DesktimersLogout,
+		OnPress: self.confirmLogout,
+	})
+
 	return self.c.Menu(types.CreateMenuOptions{
 		Title: self.c.Tr.DesktimersTaskMenuTitle,
 		Items: menuItems,
 	})
+}
+
+// confirmLogout asks for confirmation, then revokes the device token and
+// clears the local login. The TUI keeps running for plain git use.
+func (self *DesktimersHelper) confirmLogout() error {
+	self.c.Confirm(types.ConfirmOpts{
+		Title:  self.c.Tr.DesktimersLogout,
+		Prompt: self.c.Tr.DesktimersLogoutConfirm,
+		HandleConfirm: func() error {
+			outcome, err := desktimers.Logout()
+			if err != nil {
+				return err
+			}
+			message := self.c.Tr.DesktimersLoggedOut
+			if outcome.Result == desktimers.LogoutLocalOnly {
+				message = self.c.Tr.DesktimersLoggedOutOffline
+			}
+			self.c.Alert(self.c.Tr.DesktimersLogout, message)
+			return nil
+		},
+	})
+	return nil
 }
 
 func (self *DesktimersHelper) selectTask(task desktimers.Task) error {

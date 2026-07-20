@@ -43,6 +43,8 @@ sh scripts/build-deskgit.sh ~/.local/bin   # installs `deskgit` and `dt-hook`
 
 Tokens are scoped per device (revocable in DeskTimers under **Settings → Git Clients**), stored at `~/.config/deskgit/token.json` (0600), and last 90 days — after that the device flow simply runs again. If the API is unreachable but you have a cached token, deskgit continues offline; hooks work fully offline.
 
+**Log out / reconnect:** run `deskgit logout` (revokes the device token server-side and clears the local login), or use the **Log out of DeskTimers** item at the bottom of the `alt+t` menu. Running `deskgit` again starts the device flow.
+
 ## Daily use
 
 | Action | How |
