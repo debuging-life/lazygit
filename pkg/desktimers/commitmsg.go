@@ -10,11 +10,12 @@ var commitSourcesToSkip = map[string]bool{
 	"commit": true,
 }
 
-// PrefixCommitMessage prepends "<code>: " to a commit message file's content
-// when appropriate. It returns the (possibly rewritten) content and whether
-// it changed. The message is left alone when code is empty, the commit
-// source reuses an existing message, or the message already carries a task
-// code.
+// PrefixCommitMessage prepends "<code>/" to a commit message file's content
+// when appropriate (matching the picker's commit format, e.g.
+// "LOUD-124/fix images"). It returns the (possibly rewritten) content and
+// whether it changed. The message is left alone when code is empty, the
+// commit source reuses an existing message, or the message already carries a
+// task code.
 func PrefixCommitMessage(content string, code string, source string) (string, bool) {
 	if code == "" || commitSourcesToSkip[source] {
 		return content, false
@@ -22,7 +23,7 @@ func PrefixCommitMessage(content string, code string, source string) (string, bo
 	if messageHasCode(content) {
 		return content, false
 	}
-	return code + ": " + content, true
+	return ApplyPrefixTemplate(DefaultCommitPrefixTemplate, DefaultCommitPrefixTemplate, code) + content, true
 }
 
 // messageHasCode reports whether the non-comment portion of a commit message

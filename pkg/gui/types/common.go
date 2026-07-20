@@ -166,6 +166,7 @@ type CreateMenuOptions struct {
 	ColumnAlignment            []utils.Alignment
 	AllowFilteringKeybindings  bool
 	KeepConflictingKeybindings bool // if true, the keybindings that match essential bindings such as confirm or return will not be removed from menu items
+	InitialSelectedIdx         int  // index of the item to preselect (0 = first item, the previous behavior)
 }
 
 type CreatePopupPanelOpts struct {

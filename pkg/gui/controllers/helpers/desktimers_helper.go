@@ -181,6 +181,67 @@ func (self *DesktimersHelper) confirmLogout() error {
 	return nil
 }
 
+// PickTaskForAction shows the task picker as a mandatory step inside another
+// flow (commit, new branch): tasks are fetched LIVE, in-progress tasks float
+// to the top, and the currently-selected task is preselected. Picking
+// persists the selection (keeping the hooks working for outside-deskgit
+// commits) and then calls onPick. Escape/cancel closes the menu without
+// calling onPick, aborting the surrounding flow.
+func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) error) error {
+	desktimers.SetConfiguredBaseURL(self.c.UserConfig().Desktimers.ApiBaseUrl)
+
+	var tasks []desktimers.Task
+	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersLoadingTasks, func() error {
+		client, err := desktimers.NewClientFromToken()
+		if err != nil {
+			return err
+		}
+		tasks, err = client.GetTasks("active")
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, desktimers.ErrUnauthorized) {
+			return errors.New(self.c.Tr.DesktimersReauthNeeded)
+		}
+		return err
+	}
+
+	currentCode := ""
+	if state := self.SelectedTask(); state != nil {
+		currentCode = state.Code
+	}
+	ordered, selectedIdx := desktimers.OrderTasksForPicker(tasks, currentCode)
+
+	menuItems := lo.Map(ordered, func(task desktimers.Task, _ int) *types.MenuItem {
+		return &types.MenuItem{
+			LabelColumns: desktimers.PickerColumns(task),
+			OnPress: func() error {
+				if err := self.selectTask(task); err != nil {
+					return err
+				}
+				return onPick(task)
+			},
+		}
+	})
+
+	if len(menuItems) == 0 {
+		// Safety valve: a user with no assigned tasks must still be able to
+		// commit; the action proceeds without a code.
+		menuItems = append(menuItems, &types.MenuItem{
+			Label: self.c.Tr.DesktimersContinueWithoutTask,
+			OnPress: func() error {
+				return onPick(desktimers.Task{})
+			},
+		})
+	}
+
+	return self.c.Menu(types.CreateMenuOptions{
+		Title:              self.c.Tr.DesktimersPickTaskTitle,
+		Items:              menuItems,
+		InitialSelectedIdx: selectedIdx,
+	})
+}
+
 func (self *DesktimersHelper) selectTask(task desktimers.Task) error {
 	state := desktimers.NewState(task)
 	if err := desktimers.SaveState(".", state); err != nil {

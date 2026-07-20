@@ -15,14 +15,14 @@ func TestPrefixCommitMessage(t *testing.T) {
 			name:        "plain -m message",
 			content:     "fix login redirect\n",
 			code:        "MOB-101",
-			want:        "MOB-101: fix login redirect\n",
+			want:        "MOB-101/fix login redirect\n",
 			wantChanged: true,
 		},
 		{
 			name:        "template with comments only",
 			content:     "\n# Please enter the commit message for your changes.\n# Lines starting with '#' will be ignored.\n",
 			code:        "MOB-101",
-			want:        "MOB-101: \n# Please enter the commit message for your changes.\n# Lines starting with '#' will be ignored.\n",
+			want:        "MOB-101/\n# Please enter the commit message for your changes.\n# Lines starting with '#' will be ignored.\n",
 			wantChanged: true,
 		},
 		{
@@ -36,7 +36,7 @@ func TestPrefixCommitMessage(t *testing.T) {
 			name:        "code only in comments still gets prefixed",
 			content:     "fix header\n# On branch MOB-101/fix-header\n",
 			code:        "MOB-101",
-			want:        "MOB-101: fix header\n# On branch MOB-101/fix-header\n",
+			want:        "MOB-101/fix header\n# On branch MOB-101/fix-header\n",
 			wantChanged: true,
 		},
 		{
@@ -75,7 +75,7 @@ func TestPrefixCommitMessage(t *testing.T) {
 			content:     "fix login redirect\n",
 			code:        "MOB-101",
 			source:      "message",
-			want:        "MOB-101: fix login redirect\n",
+			want:        "MOB-101/fix login redirect\n",
 			wantChanged: true,
 		},
 	}

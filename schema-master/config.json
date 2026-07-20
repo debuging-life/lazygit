@@ -335,6 +335,26 @@
           "type": "boolean",
           "description": "If true, pushes containing commits without a task code are blocked\n(sets strict mode for the pre-push hook).",
           "default": false
+        },
+        "requireTaskForCommit": {
+          "type": "boolean",
+          "description": "If true (default), committing opens the task picker first and the\nmessage is prefilled with the chosen task's code. False restores the\npassive behavior (the pre-selected task is applied by the git hook).",
+          "default": true
+        },
+        "requireTaskForBranch": {
+          "type": "boolean",
+          "description": "If true (default), creating a branch opens the task picker first and\nthe branch name is prefilled from branchPrefixTemplate.",
+          "default": true
+        },
+        "branchPrefixTemplate": {
+          "type": "string",
+          "description": "Branch name prefix template; {{code}} is replaced with the task code.",
+          "default": "feature/{{code}}-"
+        },
+        "commitPrefixTemplate": {
+          "type": "string",
+          "description": "Commit message prefix template; {{code}} is replaced with the task\ncode. Note: the prepare-commit-msg hook always uses the default\n'{{code}}/'.",
+          "default": "{{code}}/"
         }
       },
       "additionalProperties": false,

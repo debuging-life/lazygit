@@ -26,7 +26,8 @@ func (gui *Gui) resetHelpersAndControllers() {
 	recordDirectoryHelper := helpers.NewRecordDirectoryHelper(helperCommon)
 	reposHelper := helpers.NewRecentReposHelper(helperCommon, recordDirectoryHelper, gui.onSwitchToNewRepo)
 	rebaseHelper := helpers.NewMergeAndRebaseHelper(helperCommon)
-	refsHelper := helpers.NewRefsHelper(helperCommon, rebaseHelper)
+	desktimersHelper := helpers.NewDesktimersHelper(helperCommon)
+	refsHelper := helpers.NewRefsHelper(helperCommon, rebaseHelper, desktimersHelper)
 	suggestionsHelper := helpers.NewSuggestionsHelper(helperCommon)
 	worktreeHelper := helpers.NewWorktreeHelper(helperCommon, reposHelper, refsHelper, suggestionsHelper)
 
@@ -96,7 +97,7 @@ func (gui *Gui) resetHelpersAndControllers() {
 		Bisect:          bisectHelper,
 		Suggestions:     suggestionsHelper,
 		Files:           helpers.NewFilesHelper(helperCommon),
-		WorkingTree:     helpers.NewWorkingTreeHelper(helperCommon, refsHelper, commitsHelper, gpgHelper, rebaseHelper),
+		WorkingTree:     helpers.NewWorkingTreeHelper(helperCommon, refsHelper, commitsHelper, gpgHelper, rebaseHelper, desktimersHelper),
 		Tags:            helpers.NewTagsHelper(helperCommon, commitsHelper, gpgHelper),
 		BranchesHelper:  helpers.NewBranchesHelper(helperCommon, worktreeHelper),
 		GPG:             helpers.NewGpgHelper(helperCommon),
@@ -129,7 +130,7 @@ func (gui *Gui) resetHelpersAndControllers() {
 		Search:     searchHelper,
 		Worktree:   worktreeHelper,
 		SubCommits: helpers.NewSubCommitsHelper(helperCommon, refreshHelper),
-		Desktimers: helpers.NewDesktimersHelper(helperCommon),
+		Desktimers: desktimersHelper,
 	}
 
 	gui.CustomCommandsClient = custom_commands.NewClient(

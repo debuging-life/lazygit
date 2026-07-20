@@ -70,7 +70,11 @@ func (gui *Gui) createMenu(opts types.CreateMenuOptions) error {
 	gui.State.Contexts.Menu.SetAllowFilteringKeybindings(opts.AllowFilteringKeybindings)
 	gui.State.Contexts.Menu.SetKeybindingsTakePrecedence(!opts.KeepConflictingKeybindings)
 	gui.State.Contexts.Menu.SetOnCancel(opts.OnCancel)
-	gui.State.Contexts.Menu.SetSelection(0)
+	initialSelectedIdx := opts.InitialSelectedIdx
+	if initialSelectedIdx < 0 || initialSelectedIdx >= len(opts.Items) {
+		initialSelectedIdx = 0
+	}
+	gui.State.Contexts.Menu.SetSelection(initialSelectedIdx)
 
 	gui.Views.Menu.SetOriginY(0)
 

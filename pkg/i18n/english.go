@@ -502,6 +502,8 @@ type TranslationSet struct {
 	DesktimersTasksTooltip                string
 	DesktimersLoadingTasks                string
 	DesktimersTaskMenuTitle               string
+	DesktimersPickTaskTitle               string
+	DesktimersContinueWithoutTask         string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
 	DesktimersReauthNeeded                string
@@ -1674,6 +1676,8 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersTasksTooltip:               "Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task.",
 		DesktimersLoadingTasks:               "Loading DeskTimers tasks",
 		DesktimersTaskMenuTitle:              "DeskTimers tasks",
+		DesktimersPickTaskTitle:              "Pick a task for this work",
+		DesktimersContinueWithoutTask:        "Continue without a task",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
 		DesktimersReauthNeeded:               "Your DeskTimers session is no longer valid. Restart deskgit to log in again.",

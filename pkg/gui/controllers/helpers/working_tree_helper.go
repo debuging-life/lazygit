@@ -10,6 +10,7 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
 	"github.com/jesseduffield/lazygit/pkg/config"
+	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
@@ -22,6 +23,7 @@ type WorkingTreeHelper struct {
 	commitsHelper        *CommitsHelper
 	gpgHelper            *GpgHelper
 	mergeAndRebaseHelper *MergeAndRebaseHelper
+	desktimersHelper     *DesktimersHelper
 }
 
 func NewWorkingTreeHelper(
@@ -30,6 +32,7 @@ func NewWorkingTreeHelper(
 	commitsHelper *CommitsHelper,
 	gpgHelper *GpgHelper,
 	mergeAndRebaseHelper *MergeAndRebaseHelper,
+	desktimersHelper *DesktimersHelper,
 ) *WorkingTreeHelper {
 	return &WorkingTreeHelper{
 		c:                    c,
@@ -37,6 +40,7 @@ func NewWorkingTreeHelper(
 		commitsHelper:        commitsHelper,
 		gpgHelper:            gpgHelper,
 		mergeAndRebaseHelper: mergeAndRebaseHelper,
+		desktimersHelper:     desktimersHelper,
 	}
 }
 
@@ -218,7 +222,30 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 		}
 	}
 
-	return self.HandleCommitPressWithMessage(initialMessage, false)
+	// deskgit: picking a task is a mandatory step of the commit flow, unless
+	// the retained/derived message already carries a task code.
+	cfg := self.c.UserConfig().Desktimers
+	if !cfg.RequireTaskForCommit ||
+		desktimers.ExtractCode(preservedMessage) != "" ||
+		desktimers.ExtractCode(initialMessage) != "" {
+		return self.HandleCommitPressWithMessage(initialMessage, false)
+	}
+
+	// The retained message (failed commit) or branch-derived prefix is kept
+	// after the task prefix; with neither, the panel opens with just
+	// "CODE/" and the cursor after it.
+	messageTail := initialMessage
+	if preservedMessage != "" {
+		messageTail = preservedMessage
+	}
+
+	return self.desktimersHelper.PickTaskForAction(func(task desktimers.Task) error {
+		if task.Code == "" { // "continue without a task"
+			return self.HandleCommitPressWithMessage(initialMessage, false)
+		}
+		prefix := desktimers.ApplyPrefixTemplate(cfg.CommitPrefixTemplate, desktimers.DefaultCommitPrefixTemplate, task.Code)
+		return self.HandleCommitPressWithMessage(prefix+messageTail, false)
+	})
 }
 
 func (self *WorkingTreeHelper) WithEnsureCommittableFiles(handler func() error) error {

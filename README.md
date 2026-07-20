@@ -49,11 +49,14 @@ Tokens are scoped per device (revocable in DeskTimers under **Settings → Git C
 
 | Action | How |
 |---|---|
-| Pick / clear your current task | `alt+t` anywhere, or `t` while the Status panel is focused — fuzzy-filterable list of your assigned tasks |
-| See the current task | Always shown in the status line: `⏱ MOB-101 Fix login redirect` |
-| Create a branch | `n` as usual — the input is prefilled with `MOB-101/` when a task is selected |
-| Commit | Just commit — the hook prepends `MOB-101: ` unless the message already has a code |
+| Commit | `c` opens the task picker first (live task list, in-progress tasks on top, your current task preselected — Enter-Enter is fast). Picking drops you into the message panel prefilled `LOUD-124/` — type the title after the slash. Escape in the picker aborts the commit. |
+| Create a branch | `n` opens the same picker, then the name input comes prefilled `feature/LOUD-124-`. Escape aborts. |
+| Browse / pre-select a task | `alt+t` anywhere, or `t` while the Status panel is focused — fuzzy-filterable list of your assigned tasks |
+| See the current task | Always shown in the status line: `⏱ LOUD-124 Fix images` |
+| Commit outside deskgit | The `prepare-commit-msg` hook prepends `LOUD-124/` (your picked task) unless the message already has a code |
 | Push | Untagged commits print a yellow warning (push still succeeds) |
+
+The pick-first steps can be turned off with `desktimers.requireTaskForCommit: false` / `requireTaskForBranch: false`, and the prefix formats customized via `commitPrefixTemplate` (default `{{code}}/`) and `branchPrefixTemplate` (default `feature/{{code}}-`) — the git hook always uses the default commit format.
 
 > **macOS note:** if `alt+t` does nothing, your terminal isn't sending Option as Meta. Enable "Use Option as Meta key" (Terminal.app → Settings → Profiles → Keyboard) or set Option to "Esc+" (iTerm2 → Settings → Profiles → Keys), use `t` from the Status panel, or rebind via `keybinding.universal.desktimersTasks` in `~/.config/deskgit/config.yml`.
 

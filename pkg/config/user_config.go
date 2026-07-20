@@ -57,6 +57,19 @@ type DesktimersConfig struct {
 	// If true, pushes containing commits without a task code are blocked
 	// (sets strict mode for the pre-push hook).
 	StrictPush bool `yaml:"strictPush"`
+	// If true (default), committing opens the task picker first and the
+	// message is prefilled with the chosen task's code. False restores the
+	// passive behavior (the pre-selected task is applied by the git hook).
+	RequireTaskForCommit bool `yaml:"requireTaskForCommit"`
+	// If true (default), creating a branch opens the task picker first and
+	// the branch name is prefilled from branchPrefixTemplate.
+	RequireTaskForBranch bool `yaml:"requireTaskForBranch"`
+	// Branch name prefix template; {{code}} is replaced with the task code.
+	BranchPrefixTemplate string `yaml:"branchPrefixTemplate"`
+	// Commit message prefix template; {{code}} is replaced with the task
+	// code. Note: the prepare-commit-msg hook always uses the default
+	// '{{code}}/'.
+	CommitPrefixTemplate string `yaml:"commitPrefixTemplate"`
 }
 
 type RefresherConfig struct {
@@ -1006,9 +1019,13 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 		NotARepository:               "prompt",
 		PromptToReturnFromSubprocess: true,
 		Desktimers: DesktimersConfig{
-			ApiBaseUrl:       "https://api-leads.loudowls.com",
-			AutoInstallHooks: "prompt",
-			StrictPush:       false,
+			ApiBaseUrl:           "https://api-leads.loudowls.com",
+			AutoInstallHooks:     "prompt",
+			StrictPush:           false,
+			RequireTaskForCommit: true,
+			RequireTaskForBranch: true,
+			BranchPrefixTemplate: "feature/{{code}}-",
+			CommitPrefixTemplate: "{{code}}/",
 		},
 		Keybinding: KeybindingConfig{
 			Universal: KeybindingUniversalConfig{

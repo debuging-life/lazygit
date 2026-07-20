@@ -842,6 +842,23 @@ desktimers:
   # If true, pushes containing commits without a task code are blocked
   # (sets strict mode for the pre-push hook).
   strictPush: false
+
+  # If true (default), committing opens the task picker first and the
+  # message is prefilled with the chosen task's code. False restores the
+  # passive behavior (the pre-selected task is applied by the git hook).
+  requireTaskForCommit: true
+
+  # If true (default), creating a branch opens the task picker first and
+  # the branch name is prefilled from branchPrefixTemplate.
+  requireTaskForBranch: true
+
+  # Branch name prefix template; {{code}} is replaced with the task code.
+  branchPrefixTemplate: feature/{{code}}-
+
+  # Commit message prefix template; {{code}} is replaced with the task
+  # code. Note: the prepare-commit-msg hook always uses the default
+  # '{{code}}/'.
+  commitPrefixTemplate: '{{code}}/'
 ```
 <!-- END CONFIG YAML -->
 

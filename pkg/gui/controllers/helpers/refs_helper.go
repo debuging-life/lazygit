@@ -19,16 +19,19 @@ import (
 type RefsHelper struct {
 	c *HelperCommon
 
-	rebaseHelper *MergeAndRebaseHelper
+	rebaseHelper     *MergeAndRebaseHelper
+	desktimersHelper *DesktimersHelper
 }
 
 func NewRefsHelper(
 	c *HelperCommon,
 	rebaseHelper *MergeAndRebaseHelper,
+	desktimersHelper *DesktimersHelper,
 ) *RefsHelper {
 	return &RefsHelper{
-		c:            c,
-		rebaseHelper: rebaseHelper,
+		c:                c,
+		rebaseHelper:     rebaseHelper,
+		desktimersHelper: desktimersHelper,
 	}
 }
 
@@ -353,13 +356,6 @@ func (self *RefsHelper) CreateCheckoutMenu(commit *models.Commit) error {
 }
 
 func (self *RefsHelper) NewBranch(from string, fromFormattedName string, suggestedBranchName string) error {
-	message := utils.ResolvePlaceholderString(
-		self.c.Tr.NewBranchNameBranchOff,
-		map[string]string{
-			"branchName": fromFormattedName,
-		},
-	)
-
 	if suggestedBranchName == "" {
 		var err error
 
@@ -368,6 +364,38 @@ func (self *RefsHelper) NewBranch(from string, fromFormattedName string, suggest
 			return err
 		}
 	}
+
+	return self.withTaskForBranch(suggestedBranchName, func(prefilledName string) error {
+		return self.promptNewBranch(from, fromFormattedName, prefilledName)
+	})
+}
+
+// withTaskForBranch wraps a new-branch flow: when requireTaskForBranch is on
+// and the suggested name doesn't already carry a task code, the task picker
+// runs first and the branch name gets the task prefix
+// (branchPrefixTemplate). Escape in the picker aborts the flow.
+func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(string) error) error {
+	cfg := self.c.UserConfig().Desktimers
+	if !cfg.RequireTaskForBranch || desktimers.ExtractCode(suggestedBranchName) != "" {
+		return then(suggestedBranchName)
+	}
+
+	return self.desktimersHelper.PickTaskForAction(func(task desktimers.Task) error {
+		if task.Code == "" { // "continue without a task"
+			return then(suggestedBranchName)
+		}
+		prefix := desktimers.ApplyPrefixTemplate(cfg.BranchPrefixTemplate, desktimers.DefaultBranchPrefixTemplate, task.Code)
+		return then(prefix + suggestedBranchName)
+	})
+}
+
+func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, suggestedBranchName string) error {
+	message := utils.ResolvePlaceholderString(
+		self.c.Tr.NewBranchNameBranchOff,
+		map[string]string{
+			"branchName": fromFormattedName,
+		},
+	)
 
 	refresh := func() {
 		if self.c.Context().Current() != self.c.Contexts().Branches {
@@ -446,18 +474,20 @@ func (self *RefsHelper) MoveCommitsToNewBranch() error {
 			return err
 		}
 
-		self.c.Prompt(types.PromptOpts{
-			Title:          prompt,
-			InitialContent: suggestedBranchName,
-			HandleConfirm: func(response string) error {
-				self.c.LogAction(self.c.Tr.MoveCommitsToNewBranch)
-				newBranchName := SanitizedBranchName(response)
-				return self.c.WithWaitingStatus(self.c.Tr.MovingCommitsToNewBranchStatus, func(gocui.Task) error {
-					return f(newBranchName)
-				})
-			},
+		return self.withTaskForBranch(suggestedBranchName, func(prefilledName string) error {
+			self.c.Prompt(types.PromptOpts{
+				Title:          prompt,
+				InitialContent: prefilledName,
+				HandleConfirm: func(response string) error {
+					self.c.LogAction(self.c.Tr.MoveCommitsToNewBranch)
+					newBranchName := SanitizedBranchName(response)
+					return self.c.WithWaitingStatus(self.c.Tr.MovingCommitsToNewBranchStatus, func(gocui.Task) error {
+						return f(newBranchName)
+					})
+				},
+			})
+			return nil
 		})
-		return nil
 	}
 
 	isMainBranch := lo.Contains(self.c.UserConfig().Git.MainBranches, currentBranch.Name)
@@ -635,10 +665,14 @@ func IsSwitchBranchUncommittedChangesError(err error) bool {
 }
 
 func (self *RefsHelper) getSuggestedBranchName() (string, error) {
-	// deskgit: a selected DeskTimers task wins over the branchPrefix template,
-	// so branches are named CODE/... and the server can map them to the task.
-	if state, err := desktimers.LoadState("."); err == nil && state != nil && state.Code != "" {
-		return desktimers.BranchPrefix(state.Code), nil
+	// deskgit passive mode only (requireTaskForBranch: false): a selected
+	// DeskTimers task wins over the branchPrefix template. In mandatory mode
+	// the picker supplies the prefix instead (withTaskForBranch).
+	cfg := self.c.UserConfig().Desktimers
+	if !cfg.RequireTaskForBranch {
+		if state, err := desktimers.LoadState("."); err == nil && state != nil && state.Code != "" {
+			return desktimers.ApplyPrefixTemplate(cfg.BranchPrefixTemplate, desktimers.DefaultBranchPrefixTemplate, state.Code), nil
+		}
 	}
 
 	suggestedBranchName, err := utils.ResolveTemplate(self.c.UserConfig().Git.BranchPrefix, nil, template.FuncMap{
