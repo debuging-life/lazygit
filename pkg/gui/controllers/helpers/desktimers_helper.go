@@ -117,9 +117,15 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 		return err
 	}
 
-	menuItems := lo.Map(tasks, func(task desktimers.Task, _ int) *types.MenuItem {
+	currentCode := ""
+	if state := self.SelectedTask(); state != nil {
+		currentCode = state.Code
+	}
+	ordered, selectedIdx := desktimers.OrderTasksForPicker(tasks, currentCode)
+
+	menuItems := lo.Map(ordered, func(task desktimers.Task, _ int) *types.MenuItem {
 		return &types.MenuItem{
-			LabelColumns: desktimers.MenuColumns(task),
+			LabelColumns: desktimers.PickerColumns(task),
 			OnPress: func() error {
 				return self.selectTask(task)
 			},
@@ -153,8 +159,9 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 	})
 
 	return self.c.Menu(types.CreateMenuOptions{
-		Title: self.c.Tr.DesktimersTaskMenuTitle,
-		Items: menuItems,
+		Title:              self.c.Tr.DesktimersTaskMenuTitle,
+		Items:              menuItems,
+		InitialSelectedIdx: selectedIdx,
 	})
 }
 
@@ -267,12 +274,41 @@ func (self *DesktimersHelper) PickBranchTypeThen(branchTypes []string, then func
 }
 
 func (self *DesktimersHelper) selectTask(task desktimers.Task) error {
+	previousCode := ""
+	if prev := self.SelectedTask(); prev != nil {
+		previousCode = prev.Code
+	}
+
 	state := desktimers.NewState(task)
 	if err := desktimers.SaveState(".", state); err != nil {
 		return err
 	}
 	self.setSelectedTask(state)
+
+	// Only a CHANGE of task is reported — re-picking the same task isn't.
+	if task.Code != previousCode {
+		self.reportTaskSelectedInBackground(task.Code)
+	}
 	return nil
+}
+
+// reportTaskSelectedInBackground fires the task_selected event to
+// DeskTimers: fire-and-forget, bounded by the client's short report
+// timeout, failures only ever logged — never surfaced, never blocking.
+func (self *DesktimersHelper) reportTaskSelectedInBackground(code string) {
+	log := self.c.Log
+	go func() {
+		client, err := desktimers.NewClientFromToken()
+		if err != nil {
+			log.Debugf("deskgit: skipping task_selected report: %v", err)
+			return
+		}
+		repo := desktimers.RepoSlug(".")
+		branch := desktimers.CurrentBranch(".")
+		if err := client.ReportTaskSelected(code, repo, branch); err != nil {
+			log.Warnf("deskgit: failed to report task selection: %v", err)
+		}
+	}()
 }
 
 // declinedMarkerPath records that the user declined hook installation for

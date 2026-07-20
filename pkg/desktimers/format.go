@@ -37,12 +37,3 @@ func FriendlyKeyLabel(keys []string) string {
 	}
 	return strings.Trim(keys[0], "<>")
 }
-
-// MenuColumns renders a task as menu columns: CODE, title, (project).
-func MenuColumns(task Task) []string {
-	project := ""
-	if task.Project != "" {
-		project = "(" + task.Project + ")"
-	}
-	return []string{task.Code, utils.TruncateWithEllipsis(task.Title, 60), project}
-}

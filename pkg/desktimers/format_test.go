@@ -91,21 +91,6 @@ func TestFriendlyKeyLabel(t *testing.T) {
 	}
 }
 
-func TestMenuColumns(t *testing.T) {
-	got := MenuColumns(Task{Code: "MOB-101", Title: "Fix login", Project: "Mobile App"})
-	want := []string{"MOB-101", "Fix login", "(Mobile App)"}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("MenuColumns()[%d] = %q, want %q", i, got[i], want[i])
-		}
-	}
-
-	noProject := MenuColumns(Task{Code: "MOB-101", Title: "Fix login"})
-	if noProject[2] != "" {
-		t.Errorf("expected empty project column, got %q", noProject[2])
-	}
-}
-
 func TestPathKey(t *testing.T) {
 	a := PathKey("/repo/one")
 	b := PathKey("/repo/two")

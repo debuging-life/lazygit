@@ -11,6 +11,8 @@ type Task struct {
 	Title   string `json:"title"`
 	Project string `json:"project"`
 	Status  string `json:"status"`
+	// Tracking marks the task of the user's currently running desktop timer.
+	Tracking bool `json:"tracking"`
 }
 
 // CodeRegex matches a DeskTimers task code (e.g. MOB-101) anywhere in a

@@ -20,20 +20,31 @@ var DefaultBranchTypes = []string{"feature", "bugfix", "hotfix", "release", "cho
 // StatusInProgress is the task status the picker floats to the top.
 const StatusInProgress = "in_progress"
 
-// OrderTasksForPicker orders tasks for the pick-before-commit menu:
-// in-progress tasks first (stable within each group), and returns the index
-// of the currently-selected task (by code) in the ordered slice so the menu
-// can preselect it. Index is 0 when currentCode is absent or empty.
+// pickerRank groups tasks for the picker: the timer-tracked task first, then
+// in-progress, then the rest. Ordering is stable within each group.
+func pickerRank(t Task) int {
+	switch {
+	case t.Tracking:
+		return 0
+	case t.Status == StatusInProgress:
+		return 1
+	default:
+		return 2
+	}
+}
+
+// OrderTasksForPicker orders tasks for the picker menus: the task being
+// tracked by the running desktop timer first, then in-progress tasks, then
+// the rest (stable within each group). The returned index is the item to
+// preselect: the tracking task wins over the currently-selected task
+// (currentCode), which wins over the first item.
 func OrderTasksForPicker(tasks []Task, currentCode string) ([]Task, int) {
 	ordered := make([]Task, 0, len(tasks))
-	for _, t := range tasks {
-		if t.Status == StatusInProgress {
-			ordered = append(ordered, t)
-		}
-	}
-	for _, t := range tasks {
-		if t.Status != StatusInProgress {
-			ordered = append(ordered, t)
+	for rank := 0; rank <= 2; rank++ {
+		for _, t := range tasks {
+			if pickerRank(t) == rank {
+				ordered = append(ordered, t)
+			}
 		}
 	}
 
@@ -46,14 +57,23 @@ func OrderTasksForPicker(tasks []Task, currentCode string) ([]Task, int) {
 			}
 		}
 	}
+	for i, t := range ordered {
+		if t.Tracking {
+			selectedIdx = i
+			break
+		}
+	}
 	return ordered, selectedIdx
 }
 
 // PickerColumns renders a task as picker-menu columns:
-// CODE, title, (project), in-progress marker.
+// CODE, title, (project), tracking/in-progress marker.
 func PickerColumns(task Task) []string {
 	marker := ""
-	if task.Status == StatusInProgress {
+	switch {
+	case task.Tracking:
+		marker = "⏱ tracking"
+	case task.Status == StatusInProgress:
 		marker = "● in progress"
 	}
 	project := ""

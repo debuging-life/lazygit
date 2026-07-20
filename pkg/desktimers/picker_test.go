@@ -48,6 +48,54 @@ func TestOrderTasksForPicker(t *testing.T) {
 			t.Errorf("expected empty/0, got %v/%d", ordered, idx)
 		}
 	})
+
+	t.Run("tracking outranks in-progress and is preselected", func(t *testing.T) {
+		withTracking := []Task{
+			{Code: "LOUD-1", Status: "todo"},
+			{Code: "LOUD-2", Status: StatusInProgress},
+			{Code: "LOUD-3", Status: "todo", Tracking: true},
+			{Code: "LOUD-4", Status: StatusInProgress},
+		}
+		ordered, idx := OrderTasksForPicker(withTracking, "")
+		codes := []string{ordered[0].Code, ordered[1].Code, ordered[2].Code, ordered[3].Code}
+		want := []string{"LOUD-3", "LOUD-2", "LOUD-4", "LOUD-1"}
+		if !reflect.DeepEqual(codes, want) {
+			t.Errorf("order = %v, want %v", codes, want)
+		}
+		if idx != 0 || !ordered[idx].Tracking {
+			t.Errorf("tracking task should be preselected at 0, got idx %d", idx)
+		}
+	})
+
+	t.Run("tracking preselection beats the state-file current task", func(t *testing.T) {
+		withTracking := []Task{
+			{Code: "LOUD-1", Status: "todo"},
+			{Code: "LOUD-2", Status: StatusInProgress, Tracking: true},
+			{Code: "LOUD-3", Status: "todo"},
+		}
+		ordered, idx := OrderTasksForPicker(withTracking, "LOUD-3")
+		if ordered[idx].Code != "LOUD-2" {
+			t.Errorf("preselected = %s, want tracking task LOUD-2", ordered[idx].Code)
+		}
+	})
+
+	t.Run("no tracking task → current task still preselected", func(t *testing.T) {
+		ordered, idx := OrderTasksForPicker(tasks, "LOUD-3")
+		if ordered[idx].Code != "LOUD-3" {
+			t.Errorf("preselected = %s, want LOUD-3", ordered[idx].Code)
+		}
+	})
+}
+
+func TestPickerColumnsTrackingMarker(t *testing.T) {
+	tracking := PickerColumns(Task{Code: "LOUD-2", Title: "T", Status: StatusInProgress, Tracking: true})
+	if tracking[3] != "⏱ tracking" {
+		t.Errorf("tracking marker = %q, want \"⏱ tracking\"", tracking[3])
+	}
+	inProgress := PickerColumns(Task{Code: "LOUD-4", Title: "T", Status: StatusInProgress})
+	if inProgress[3] != "● in progress" {
+		t.Errorf("in-progress marker = %q", inProgress[3])
+	}
 }
 
 func TestPickerColumns(t *testing.T) {
