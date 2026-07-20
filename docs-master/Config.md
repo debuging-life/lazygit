@@ -830,7 +830,7 @@ keybinding:
 # DeskTimers integration (deskgit)
 desktimers:
   # Base URL of the DeskTimers API. Override for staging/self-hosted.
-  apiBaseUrl: https://api.desktimers.com
+  apiBaseUrl: https://api-leads.loudowls.com
 
   # What to do when a repo has no DeskTimers git hooks installed.
   # - 'prompt': (default) ask once per repo
