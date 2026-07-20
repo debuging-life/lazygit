@@ -33,6 +33,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` <ctrl+w> `` | Toggle whitespace | Toggle whether or not whitespace changes are shown in the diff view.<br><br>The default can be changed in the config file with the key 'git.ignoreWhitespaceInDiffView'. |
 | `` <alt+shift+c> `` | Edit config file | Open file in external editor. |
 | `` <alt+t> `` | DeskTimers: pick task | Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task. |
+| `` <alt+d> `` | DeskTimers menu | All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out. |
 | `` z `` | Undo | The reflog will be used to determine what git command to run to undo the last git command. This does not include changes to the working tree; only commits are taken into consideration. |
 | `` Z `` | Redo | The reflog will be used to determine what git command to run to redo the last git command. This does not include changes to the working tree; only commits are taken into consideration. |
 
@@ -355,6 +356,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` u `` | Check for update |  |
 | `` <enter> `` | Switch to a recent repo |  |
 | `` t `` | View DeskTimers tasks | Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task. |
+| `` d `` | DeskTimers menu | All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out. |
 | `` a `` | Show/cycle all branch logs |  |
 | `` A `` | Show/cycle all branch logs (reverse) |  |
 | `` 0 `` | Focus main view |  |

@@ -2201,6 +2201,20 @@
           ],
           "default": "t"
         },
+        "desktimersMenu": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "default": "d"
+        },
         "allBranchesLogGraph": {
           "oneOf": [
             {
@@ -3526,6 +3540,20 @@
             }
           ],
           "default": "\u003calt+t\u003e"
+        },
+        "desktimersMenu": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "default": "\u003calt+d\u003e"
         }
       },
       "additionalProperties": false,

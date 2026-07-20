@@ -139,10 +139,12 @@ func formulaURL() string {
 
 // LatestReleasedVersion returns the latest released deskgit version from the
 // Homebrew tap, hitting the network at most once per 24h (cached in the
-// config dir).
-func LatestReleasedVersion() (string, error) {
-	if latest, ok := cachedLatestVersion(loadUpdateCache(), time.Now()); ok {
-		return latest, nil
+// config dir). force bypasses the cache.
+func LatestReleasedVersion(force bool) (string, error) {
+	if !force {
+		if latest, ok := cachedLatestVersion(loadUpdateCache(), time.Now()); ok {
+			return latest, nil
+		}
 	}
 
 	httpClient := &http.Client{Timeout: updateCheckTimeout}
@@ -174,7 +176,7 @@ func CheckForUpdate(currentVersion string) (latest string, newer bool, err error
 	if _, ok := parseSemver(currentVersion); !ok {
 		return "", false, nil
 	}
-	latest, err = LatestReleasedVersion()
+	latest, err = LatestReleasedVersion(false)
 	if err != nil {
 		return "", false, err
 	}

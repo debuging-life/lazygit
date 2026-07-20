@@ -732,10 +732,12 @@ keybinding:
     openDiffTool: <ctrl+t>
     editConfig: <alt+shift+c>
     desktimersTasks: <alt+t>
+    desktimersMenu: <alt+d>
   status:
     checkForUpdate: u
     recentRepos: <enter>
     desktimersTasks: t
+    desktimersMenu: d
     allBranchesLogGraph: a
     allBranchesLogGraphReverse: A
   files:

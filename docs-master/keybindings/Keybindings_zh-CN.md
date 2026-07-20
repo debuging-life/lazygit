@@ -33,6 +33,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` <ctrl+w> `` | 切换是否在差异视图中显示空白字符差异 | 切换是否在差异视图中显示空白字符更改。<br><br>默认值可在配置文件中通过键 'git.ignoreWhitespaceInDiffView' 更改。 |
 | `` <alt+shift+c> `` | 编辑配置文件 | 使用外部编辑器打开文件 |
 | `` <alt+t> `` | DeskTimers: pick task | Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task. |
+| `` <alt+d> `` | DeskTimers menu | All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out. |
 | `` z `` | 撤销 | Reflog将用于确定运行哪个git命令来撤消最后一个git命令。这并不包括对工作树的更改，只考虑提交。 |
 | `` Z `` | 重做 | Reflog将用于确定运行哪个git命令来重做上一个git命令。这并不包括对工作树的更改，只考虑提交。 |
 
@@ -346,6 +347,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` u `` | 检查更新 |  |
 | `` <enter> `` | 切换到最近的仓库 |  |
 | `` t `` | View DeskTimers tasks | Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task. |
+| `` d `` | DeskTimers menu | All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out. |
 | `` a `` | 显示/循环所有分支日志 |  |
 | `` A `` | 显示/循环所有分支日志（反向） |  |
 | `` 0 `` | 聚焦主视图 |  |

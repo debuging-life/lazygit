@@ -602,12 +602,14 @@ type KeybindingUniversalConfig struct {
 	OpenDiffTool                      Keybinding `yaml:"openDiffTool"`
 	EditConfig                        Keybinding `yaml:"editConfig"`
 	DesktimersTasks                   Keybinding `yaml:"desktimersTasks"`
+	DesktimersMenu                    Keybinding `yaml:"desktimersMenu"`
 }
 
 type KeybindingStatusConfig struct {
 	CheckForUpdate             Keybinding `yaml:"checkForUpdate"`
 	RecentRepos                Keybinding `yaml:"recentRepos"`
 	DesktimersTasks            Keybinding `yaml:"desktimersTasks"`
+	DesktimersMenu             Keybinding `yaml:"desktimersMenu"`
 	AllBranchesLogGraph        Keybinding `yaml:"allBranchesLogGraph"`
 	AllBranchesLogGraphReverse Keybinding `yaml:"allBranchesLogGraphReverse"`
 }
@@ -1134,11 +1136,13 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 				OpenDiffTool:                      Keybinding{"<ctrl+t>"},
 				EditConfig:                        Keybinding{"<alt+shift+c>"},
 				DesktimersTasks:                   Keybinding{"<alt+t>"},
+				DesktimersMenu:                    Keybinding{"<alt+d>"},
 			},
 			Status: KeybindingStatusConfig{
 				CheckForUpdate:             Keybinding{"u"},
 				RecentRepos:                Keybinding{"<enter>"},
 				DesktimersTasks:            Keybinding{"t"},
+				DesktimersMenu:             Keybinding{"d"},
 				AllBranchesLogGraph:        Keybinding{"a"},
 				AllBranchesLogGraphReverse: Keybinding{"A"},
 			},

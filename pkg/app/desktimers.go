@@ -67,7 +67,7 @@ func runDesktimersDoctor(w io.Writer, version string) int {
 	userConfig := loadUserConfigForCLI()
 
 	// Version.
-	if latest, err := desktimers.LatestReleasedVersion(); err != nil {
+	if latest, err := desktimers.LatestReleasedVersion(false); err != nil {
 		pass("deskgit %s (update check failed: %v)", version, err)
 	} else if desktimers.IsNewerVersion(latest, version) {
 		pass("deskgit %s — v%s available, run: brew upgrade deskgit", version, latest)

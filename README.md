@@ -60,6 +60,7 @@ Tokens are scoped per device (revocable in DeskTimers under **Settings → Git C
 |---|---|
 | Commit | `c` opens the task picker first (live task list, in-progress tasks on top, your current task preselected — Enter-Enter is fast). Picking drops you into the message panel titled `Commit summary — LOUD-124/`: the code is fixed (not part of your text, can't be deleted) and is prepended automatically on confirm — just type the title. Typing your own task code overrides it. Escape in the picker aborts the commit. |
 | Create a branch | `n` asks for the branch type first (`feature` / `bugfix` / `hotfix` / `release` / `chore` / `refactor` / `docs` — configurable via `desktimers.branchTypes`), then opens the task picker; the name prompt title shows the fixed `bugfix/LOUD-183-` prefix and you type only the name part — the prefix is prepended on confirm. Escape at any step aborts. |
+| Everything in one menu | `alt+d` anywhere, or `d` in the Status panel — the DeskTimers menu: pick task, open in browser, clear, check for updates, log out |
 | Browse / pre-select a task | `alt+t` anywhere, or `t` while the Status panel is focused — fuzzy-filterable list of your assigned tasks |
 | See the current task | Always shown in the status line: `⏱ LOUD-124 Fix images` |
 | Open a task in the browser | `o` on any highlighted task in the pickers, or the **Open task in browser** item in the `alt+t` menu |

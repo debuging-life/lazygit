@@ -509,6 +509,14 @@ type TranslationSet struct {
 	DesktimersOpenTaskInBrowser           string
 	DesktimersOpenInBrowser               string
 	DesktimersNoTaskURL                   string
+	DesktimersMenu                        string
+	DesktimersMenuTooltip                 string
+	DesktimersMenuTitle                   string
+	DesktimersViewPickTask                string
+	DesktimersCheckForUpdatesNow          string
+	DesktimersCheckingForUpdates          string
+	DesktimersUpToDate                    string
+	DesktimersNoTaskSelected              string
 	DesktimersContinueWithoutTask         string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
@@ -1691,6 +1699,14 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersOpenTaskInBrowser:          "Open task in browser",
 		DesktimersOpenInBrowser:              "Open highlighted item in browser",
 		DesktimersNoTaskURL:                  "No browser link for this task",
+		DesktimersMenu:                       "DeskTimers menu",
+		DesktimersMenuTooltip:                "All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out.",
+		DesktimersMenuTitle:                  "DeskTimers",
+		DesktimersViewPickTask:               "View / pick task",
+		DesktimersCheckForUpdatesNow:         "Check for updates now",
+		DesktimersCheckingForUpdates:         "Checking for updates",
+		DesktimersUpToDate:                   "deskgit is up to date (latest release v{{version}}).",
+		DesktimersNoTaskSelected:             "No task selected",
 		DesktimersContinueWithoutTask:        "Continue without a task",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",

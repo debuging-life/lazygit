@@ -89,6 +89,14 @@ func TestCheckForUpdate(t *testing.T) {
 		t.Errorf("expected 1 network fetch (cache on second), got %d", fetches)
 	}
 
+	// Forced check ("Check for updates now") bypasses the fresh cache.
+	if latest, err := LatestReleasedVersion(true); err != nil || latest != "0.3.1" {
+		t.Fatalf("forced check failed: %q/%v", latest, err)
+	}
+	if fetches != 2 {
+		t.Errorf("forced check must hit the network despite a fresh cache, got %d fetches", fetches)
+	}
+
 	// Dev build: no fetch, no update.
 	latest, newer, err = CheckForUpdate("HEAD-abc123")
 	if err != nil || latest != "" || newer {

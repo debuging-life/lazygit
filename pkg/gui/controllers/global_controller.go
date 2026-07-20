@@ -149,6 +149,13 @@ func (self *GlobalController) GetKeybindings(opts types.KeybindingsOpts) []*type
 			Tooltip:     self.c.Tr.DesktimersTasksTooltip,
 			OpensMenu:   true,
 		},
+		{
+			Keys:        opts.GetKeys(opts.Config.Universal.DesktimersMenu),
+			Handler:     opts.Guards.NoPopupPanel(self.openDesktimersMenu),
+			Description: self.c.Tr.DesktimersMenu,
+			Tooltip:     self.c.Tr.DesktimersMenuTooltip,
+			OpensMenu:   true,
+		},
 	}
 }
 
@@ -282,6 +289,10 @@ func (self *GlobalController) toggleWhitespace() error {
 
 func (self *GlobalController) openDesktimersTaskMenu() error {
 	return self.c.Helpers().Desktimers.OpenTaskMenu()
+}
+
+func (self *GlobalController) openDesktimersMenu() error {
+	return self.c.Helpers().Desktimers.OpenDeskTimersMenu()
 }
 
 func (self *GlobalController) editConfig() error {

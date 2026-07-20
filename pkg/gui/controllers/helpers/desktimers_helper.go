@@ -17,6 +17,8 @@ import (
 // status-line segment, branch-name prefixes, and the hook install prompt.
 type DesktimersHelper struct {
 	c *HelperCommon
+	// running deskgit version, for the on-demand update check.
+	version string
 
 	// cached selected-task state so the status line doesn't hit the disk on
 	// every layout pass. nil = not loaded yet or no selection.
@@ -29,8 +31,8 @@ type DesktimersHelper struct {
 	authenticated bool
 }
 
-func NewDesktimersHelper(c *HelperCommon) *DesktimersHelper {
-	return &DesktimersHelper{c: c}
+func NewDesktimersHelper(c *HelperCommon, version string) *DesktimersHelper {
+	return &DesktimersHelper{c: c, version: version}
 }
 
 // SelectedTask returns the task selected for the current worktree, or nil.
@@ -87,6 +89,92 @@ func (self *DesktimersHelper) setLoggedOut() {
 	defer self.mutex.Unlock()
 	self.authenticated = false
 	self.authChecked = true
+}
+
+func (self *DesktimersHelper) clearSelectedTask() error {
+	if err := desktimers.ClearState("."); err != nil {
+		return err
+	}
+	self.setSelectedTask(nil)
+	return nil
+}
+
+// OpenDeskTimersMenu is the alt+d launcher: one menu dispatching to every
+// DeskTimers action, so nobody has to memorize the individual bindings.
+func (self *DesktimersHelper) OpenDeskTimersMenu() error {
+	state := self.SelectedTask()
+	var noTaskReason *types.DisabledReason
+	stateURL := ""
+	if state == nil {
+		noTaskReason = &types.DisabledReason{Text: self.c.Tr.DesktimersNoTaskSelected}
+	} else {
+		stateURL = state.URL
+	}
+
+	menuItems := []*types.MenuItem{
+		{
+			Label:     self.c.Tr.DesktimersViewPickTask,
+			OnPress:   self.OpenTaskMenu,
+			Keys:      menuKey('t'),
+			OpensMenu: true,
+		},
+		{
+			Label: self.c.Tr.DesktimersOpenTaskInBrowser,
+			OnPress: func() error {
+				return self.openTaskInBrowser(stateURL)
+			},
+			Keys:           menuKey('o'),
+			DisabledReason: noTaskReason,
+		},
+		{
+			Label:          self.c.Tr.DesktimersClearTask,
+			OnPress:        self.clearSelectedTask,
+			Keys:           menuKey('c'),
+			DisabledReason: noTaskReason,
+		},
+		{
+			Label:   self.c.Tr.DesktimersCheckForUpdatesNow,
+			OnPress: self.checkForUpdatesNow,
+			Keys:    menuKey('u'),
+		},
+		{
+			Label:   self.c.Tr.DesktimersLogout,
+			OnPress: self.confirmLogout,
+			Keys:    menuKey('l'),
+		},
+	}
+
+	return self.c.Menu(types.CreateMenuOptions{
+		Title: self.c.Tr.DesktimersMenuTitle,
+		Items: menuItems,
+	})
+}
+
+// checkForUpdatesNow runs the tap version check bypassing the 24h cache and
+// reports the outcome in a popup.
+func (self *DesktimersHelper) checkForUpdatesNow() error {
+	var latest string
+	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersCheckingForUpdates, func() error {
+		var err error
+		latest, err = desktimers.LatestReleasedVersion(true)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	if desktimers.IsNewerVersion(latest, self.version) {
+		self.c.Alert(self.c.Tr.DesktimersUpdateAvailableTitle, utils.ResolvePlaceholderString(
+			self.c.Tr.DesktimersUpdateAvailable,
+			map[string]string{"version": latest},
+		))
+	} else {
+		self.c.Alert(self.c.Tr.DesktimersCheckForUpdatesNow, utils.ResolvePlaceholderString(
+			self.c.Tr.DesktimersUpToDate,
+			map[string]string{"version": latest},
+		))
+	}
+	return nil
 }
 
 // openTaskInBrowser opens a task's webapp deep link; a missing link shows a
@@ -198,14 +286,8 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 				},
 			},
 			&types.MenuItem{
-				Label: self.c.Tr.DesktimersClearTask,
-				OnPress: func() error {
-					if err := desktimers.ClearState("."); err != nil {
-						return err
-					}
-					self.setSelectedTask(nil)
-					return nil
-				},
+				Label:   self.c.Tr.DesktimersClearTask,
+				OnPress: self.clearSelectedTask,
 			})
 	}
 

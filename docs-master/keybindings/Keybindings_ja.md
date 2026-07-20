@@ -33,6 +33,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` <ctrl+w> `` | 空白表示の切り替え | Toggle whether or not whitespace changes are shown in the diff view.<br><br>The default can be changed in the config file with the key 'git.ignoreWhitespaceInDiffView'. |
 | `` <alt+shift+c> `` | 設定ファイルを編集 | 外部エディタでファイルを開きます。 |
 | `` <alt+t> `` | DeskTimers: pick task | Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task. |
+| `` <alt+d> `` | DeskTimers menu | All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out. |
 | `` z `` | 元に戻す | 最後のgitコマンドを元に戻すために実行するgitコマンドを決定するためにreflogが使用されます。これにはワーキングツリーへの変更は含まれません。コミットのみが考慮されます。 |
 | `` Z `` | やり直す | 最後のgitコマンドをやり直すために実行するgitコマンドを決定するためにreflogが使用されます。これにはワーキングツリーへの変更は含まれません。コミットのみが考慮されます。 |
 
@@ -185,6 +186,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` u `` | 更新を確認 |  |
 | `` <enter> `` | 最近のリポジトリをチェックアウト |  |
 | `` t `` | View DeskTimers tasks | Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task. |
+| `` d `` | DeskTimers menu | All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out. |
 | `` a `` | ブランチログの表示モードを順に切り替え |  |
 | `` A `` | Show/cycle all branch logs (reverse) |  |
 | `` 0 `` | メインビューにフォーカス |  |
