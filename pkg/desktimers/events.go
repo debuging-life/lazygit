@@ -67,6 +67,29 @@ func remoteURLToSlug(url string) string {
 	return match[1]
 }
 
+// SlugOwner returns the owner part of an "owner/name" slug, or "".
+func SlugOwner(slug string) string {
+	owner, _, found := strings.Cut(slug, "/")
+	if !found {
+		return ""
+	}
+	return owner
+}
+
+// OwnerMatchesOrgs reports whether owner (case-insensitively) is one of the
+// configured "work" orgs. An empty owner never matches.
+func OwnerMatchesOrgs(owner string, orgs []string) bool {
+	if owner == "" {
+		return false
+	}
+	for _, org := range orgs {
+		if strings.EqualFold(owner, org) {
+			return true
+		}
+	}
+	return false
+}
+
 // RepoSlug returns the origin remote's "owner/name" for the repo at
 // repoPath, or "" when there is no origin or it can't be parsed.
 func RepoSlug(repoPath string) string {

@@ -324,12 +324,24 @@
         "autoInstallHooks": {
           "type": "string",
           "enum": [
+            "auto",
             "prompt",
             "always",
             "never"
           ],
-          "description": "What to do when a repo has no DeskTimers git hooks installed.\n- 'prompt': (default) ask once per repo\n- 'always': install silently\n- 'never': skip",
-          "default": "prompt"
+          "description": "What to do when a repo has no DeskTimers git hooks installed.\n- 'auto': (default) install silently when the origin remote's owner is\n  in hookOrgs; otherwise leave the repo completely alone\n- 'prompt': ask once per repo\n- 'always': install silently in every repo\n- 'never': skip",
+          "default": "auto"
+        },
+        "hookOrgs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "GitHub orgs/owners considered \"work\": in autoInstallHooks 'auto' mode,\nhooks are only installed in repos whose origin remote belongs to one\nof these (case-insensitive).",
+          "default": [
+            "debuging-life",
+            "loudowls"
+          ]
         },
         "strictPush": {
           "type": "boolean",

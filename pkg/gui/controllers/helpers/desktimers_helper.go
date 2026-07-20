@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/utils"
@@ -397,6 +398,50 @@ func (self *DesktimersHelper) reportTaskSelectedInBackground(code string) {
 	}()
 }
 
+// autoInstallHooksForWorkRepo is autoInstallHooks 'auto' mode: repos whose
+// origin remote belongs to a configured work org get hooks installed (or
+// refreshed) silently and their strictpush config synced; any other repo —
+// including ones with no origin remote — is left completely alone. The
+// prompt-mode "declined" marker is deliberately ignored here. Everything is
+// log-only; no dialogs, no toasts.
+func (self *DesktimersHelper) autoInstallHooksForWorkRepo(cfg config.DesktimersConfig) {
+	slug := desktimers.RepoSlug(".")
+	if !desktimers.OwnerMatchesOrgs(desktimers.SlugOwner(slug), cfg.HookOrgs) {
+		self.c.Log.Debugf("deskgit: repo %q is not in hookOrgs — leaving it alone", slug)
+		return
+	}
+
+	if err := desktimers.SyncStrictPushConfig(".", cfg.StrictPush); err != nil {
+		self.c.Log.Debugf("deskgit: could not sync strictpush config: %v", err)
+	}
+
+	status, err := desktimers.HooksStatus(".")
+	if err != nil {
+		var customPathErr *desktimers.ErrCustomHooksPath
+		if errors.As(err, &customPathErr) {
+			self.c.Log.Infof("deskgit: %q uses a custom core.hooksPath — hooks not installed", slug)
+		} else {
+			self.c.Log.Debugf("deskgit: hooks status check failed: %v", err)
+		}
+		return
+	}
+	if status == desktimers.HooksInstalled {
+		return
+	}
+
+	dtHookPath, ok := desktimers.FindDtHookBinary()
+	if !ok {
+		self.c.Log.Warnf("deskgit: dt-hook binary not found — cannot install hooks in %q", slug)
+		return
+	}
+
+	if err := desktimers.InstallHooks(".", dtHookPath); err != nil {
+		self.c.Log.Warnf("deskgit: installing hooks in %q failed: %v", slug, err)
+		return
+	}
+	self.c.Log.Infof("deskgit: installed git hooks in %q (work org)", slug)
+}
+
 // declinedMarkerPath records that the user declined hook installation for
 // this repo, so we only ask once.
 func declinedMarkerPath() (string, error) {
@@ -412,7 +457,8 @@ func declinedMarkerPath() (string, error) {
 }
 
 // PromptToInstallHooksInBackground checks hook status once per repo session
-// and, depending on desktimers.autoInstallHooks, installs or prompts.
+// and, depending on desktimers.autoInstallHooks, installs silently (auto in
+// work-org repos, always) or prompts.
 func (self *DesktimersHelper) PromptToInstallHooksInBackground() {
 	self.mutex.Lock()
 	alreadyChecked := self.hooksChecked
@@ -422,13 +468,19 @@ func (self *DesktimersHelper) PromptToInstallHooksInBackground() {
 		return
 	}
 
-	// Keep the repo's git config in step with deskgit's strictPush setting
-	// so the pre-push hook enforces (or stops enforcing) it.
-	if err := desktimers.SyncStrictPushConfig(".", self.c.UserConfig().Desktimers.StrictPush); err != nil {
+	cfg := self.c.UserConfig().Desktimers
+	if cfg.AutoInstallHooks == "auto" || cfg.AutoInstallHooks == "" {
+		self.autoInstallHooksForWorkRepo(cfg)
+		return
+	}
+
+	// Legacy modes (prompt/always/never): sync strictpush unconditionally,
+	// as before.
+	if err := desktimers.SyncStrictPushConfig(".", cfg.StrictPush); err != nil {
 		self.c.Log.Debugf("deskgit: could not sync strictpush config: %v", err)
 	}
 
-	mode := self.c.UserConfig().Desktimers.AutoInstallHooks
+	mode := cfg.AutoInstallHooks
 	if mode == "never" {
 		return
 	}

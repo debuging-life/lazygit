@@ -39,7 +39,7 @@ sh scripts/build-deskgit.sh ~/.local/bin   # installs `deskgit` and `dt-hook`
 1. Run `deskgit` inside any git repo.
 2. It prints a code like `BDBG-GSGX` and opens `https://leads.desktimers.com/device` in your browser (RFC 8628 device flow, like `gh auth login`).
 3. Approve the code while logged in to DeskTimers. The terminal picks it up automatically and the TUI opens.
-4. deskgit offers to install the DeskTimers git hooks for the repo (see below).
+4. In work-org repos (see `hookOrgs` below) deskgit installs the DeskTimers git hooks automatically; other repos are left alone.
 
 Tokens are scoped per device (revocable in DeskTimers under **Settings → Git Clients**), stored at `~/.config/deskgit/token.json` (0600), and last 90 days — after that the device flow simply runs again. If the API is unreachable but you have a cached token, deskgit continues offline; hooks work fully offline.
 
@@ -65,7 +65,7 @@ Everything else is stock lazygit — see [docs/](docs/README.md) for the full ma
 
 ## Git hooks (`dt-hook`)
 
-deskgit installs two hooks per repo (with your consent — it prompts on repo open):
+deskgit installs two hooks per repo. By default (`autoInstallHooks: auto`) this happens **silently for work repos only**: when the origin remote's owner is in `desktimers.hookOrgs` (default `debuging-life`, `loudowls`), hooks are installed/refreshed and strict-push config synced on repo open; any other repo — or a repo with no origin remote — is left completely untouched. Set `autoInstallHooks: prompt` to be asked per repo instead (`always`/`never` also available).
 
 - **prepare-commit-msg** — prepends the selected task's code to the message. Skips merges, squashes, and amends; never double-prefixes; exits silently on any problem (it will never break a commit).
 - **pre-push** — flags pushed commits that carry no task code in the message **and** no code in the branch name. deskgit syncs `git config desktimers.strictpush` into each repo it opens from your `desktimers.strictPush` setting (default **true** = block). Precedence: `DT_STRICT` env (`1`/`true` strict, `0`/`false` off) > repo git config > warn-only default. `DT_STRICT=0 git push` pushes anyway this once.
@@ -87,7 +87,10 @@ The hooks read the selected task from `<git-dir>/desktimers-task` (per worktree)
 ```yaml
 desktimers:
   apiBaseUrl: https://api-leads.loudowls.com   # point at staging/local if needed
-  autoInstallHooks: prompt                 # prompt | always | never
+  autoInstallHooks: auto                   # auto | prompt | always | never
+  hookOrgs:                                # "work" owners for auto mode
+    - debuging-life
+    - loudowls
   strictPush: true                         # block pushes with untagged commits
   checkForUpdates: true                    # brew-tap update notice, max once/24h
 

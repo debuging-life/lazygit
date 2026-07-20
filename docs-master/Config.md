@@ -834,10 +834,19 @@ desktimers:
   apiBaseUrl: https://api-leads.loudowls.com
 
   # What to do when a repo has no DeskTimers git hooks installed.
-  # - 'prompt': (default) ask once per repo
-  # - 'always': install silently
+  # - 'auto': (default) install silently when the origin remote's owner is
+  #   in hookOrgs; otherwise leave the repo completely alone
+  # - 'prompt': ask once per repo
+  # - 'always': install silently in every repo
   # - 'never': skip
-  autoInstallHooks: prompt
+  autoInstallHooks: auto
+
+  # GitHub orgs/owners considered "work": in autoInstallHooks 'auto' mode,
+  # hooks are only installed in repos whose origin remote belongs to one
+  # of these (case-insensitive).
+  hookOrgs:
+    - debuging-life
+    - loudowls
 
   # If true (default), pushes containing commits without a task code are
   # blocked: deskgit syncs `git config desktimers.strictpush` in each repo

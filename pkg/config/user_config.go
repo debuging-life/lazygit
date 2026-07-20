@@ -50,10 +50,16 @@ type DesktimersConfig struct {
 	// Base URL of the DeskTimers API. Override for staging/self-hosted.
 	ApiBaseUrl string `yaml:"apiBaseUrl"`
 	// What to do when a repo has no DeskTimers git hooks installed.
-	// - 'prompt': (default) ask once per repo
-	// - 'always': install silently
+	// - 'auto': (default) install silently when the origin remote's owner is
+	//   in hookOrgs; otherwise leave the repo completely alone
+	// - 'prompt': ask once per repo
+	// - 'always': install silently in every repo
 	// - 'never': skip
-	AutoInstallHooks string `yaml:"autoInstallHooks" jsonschema:"enum=prompt,enum=always,enum=never"`
+	AutoInstallHooks string `yaml:"autoInstallHooks" jsonschema:"enum=auto,enum=prompt,enum=always,enum=never"`
+	// GitHub orgs/owners considered "work": in autoInstallHooks 'auto' mode,
+	// hooks are only installed in repos whose origin remote belongs to one
+	// of these (case-insensitive).
+	HookOrgs []string `yaml:"hookOrgs"`
 	// If true (default), pushes containing commits without a task code are
 	// blocked: deskgit syncs `git config desktimers.strictpush` in each repo
 	// it opens, which the pre-push hook enforces. One-off escape hatch:
@@ -1032,7 +1038,8 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 		PromptToReturnFromSubprocess: true,
 		Desktimers: DesktimersConfig{
 			ApiBaseUrl:           "https://api-leads.loudowls.com",
-			AutoInstallHooks:     "prompt",
+			AutoInstallHooks:     "auto",
+			HookOrgs:             []string{"debuging-life", "loudowls"},
 			StrictPush:           true,
 			RequireTaskForCommit: true,
 			RequireTaskForBranch: true,
