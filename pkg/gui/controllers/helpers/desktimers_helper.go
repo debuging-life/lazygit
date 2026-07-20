@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/jesseduffield/lazygit/pkg/config"
@@ -89,6 +90,93 @@ func (self *DesktimersHelper) setLoggedOut() {
 	defer self.mutex.Unlock()
 	self.authenticated = false
 	self.authChecked = true
+}
+
+// openCreateTaskFlow is the "＋ Create task…" flow: project menu → title
+// prompt → CreateTask → select the new task exactly like a normal pick
+// (SaveState, task_selected report, status line), then hand it to onCreated
+// so an interrupted commit/branch flow continues seamlessly. API errors show
+// a toast and reopen the originating picker (reopenPicker).
+func (self *DesktimersHelper) openCreateTaskFlow(onCreated func(desktimers.Task) error, reopenPicker func() error) error {
+	var projects []desktimers.Project
+	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersLoadingProjects, func() error {
+		client, err := desktimers.NewClientFromToken()
+		if err != nil {
+			return err
+		}
+		projects, err = client.GetProjects()
+		return err
+	})
+	if err != nil {
+		self.c.ErrorToast(err.Error())
+		return reopenPicker()
+	}
+	if len(projects) == 0 {
+		self.c.ErrorToast(self.c.Tr.DesktimersNoProjects)
+		return reopenPicker()
+	}
+
+	multiWorkspace := desktimers.ProjectsSpanWorkspaces(projects)
+	menuItems := lo.Map(projects, func(project desktimers.Project, _ int) *types.MenuItem {
+		return &types.MenuItem{
+			LabelColumns: desktimers.ProjectMenuColumns(project, multiWorkspace),
+			OnPress: func() error {
+				return self.promptNewTaskTitle(project, onCreated, reopenPicker)
+			},
+		}
+	})
+
+	return self.c.Menu(types.CreateMenuOptions{
+		Title: self.c.Tr.DesktimersPickProjectTitle,
+		Items: menuItems,
+	})
+}
+
+func (self *DesktimersHelper) promptNewTaskTitle(project desktimers.Project, onCreated func(desktimers.Task) error, reopenPicker func() error) error {
+	self.c.Prompt(types.PromptOpts{
+		Title: utils.ResolvePlaceholderString(
+			self.c.Tr.DesktimersNewTaskTitlePrompt,
+			map[string]string{"project": project.Name},
+		),
+		HandleConfirm: func(title string) error {
+			title = strings.TrimSpace(title)
+			if title == "" {
+				self.c.ErrorToast(self.c.Tr.DesktimersTaskTitleEmpty)
+				return self.promptNewTaskTitle(project, onCreated, reopenPicker)
+			}
+
+			var task desktimers.Task
+			err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersCreatingTask, func() error {
+				client, err := desktimers.NewClientFromToken()
+				if err != nil {
+					return err
+				}
+				task, err = client.CreateTask(project.ID, title)
+				return err
+			})
+			if err != nil {
+				self.c.ErrorToast(err.Error())
+				return reopenPicker()
+			}
+
+			if err := self.selectTask(task); err != nil {
+				return err
+			}
+			return onCreated(task)
+		},
+	})
+	return nil
+}
+
+// createTaskMenuItem builds the shared "＋ Create task…" picker item.
+func (self *DesktimersHelper) createTaskMenuItem(onCreated func(desktimers.Task) error, reopenPicker func() error) *types.MenuItem {
+	return &types.MenuItem{
+		Label: self.c.Tr.DesktimersCreateTask,
+		OnPress: func() error {
+			return self.openCreateTaskFlow(onCreated, reopenPicker)
+		},
+		OpensMenu: true,
+	}
 }
 
 func (self *DesktimersHelper) clearSelectedTask() error {
@@ -291,10 +379,12 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 			})
 	}
 
-	menuItems = append(menuItems, &types.MenuItem{
-		Label:   self.c.Tr.DesktimersLogout,
-		OnPress: self.confirmLogout,
-	})
+	menuItems = append(menuItems,
+		self.createTaskMenuItem(func(desktimers.Task) error { return nil }, self.OpenTaskMenu),
+		&types.MenuItem{
+			Label:   self.c.Tr.DesktimersLogout,
+			OnPress: self.confirmLogout,
+		})
 
 	return self.c.Menu(types.CreateMenuOptions{
 		Title:              self.c.Tr.DesktimersTaskMenuTitle,
@@ -382,6 +472,12 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 			},
 		})
 	}
+
+	// Creating a task mid-flow selects it and continues the interrupted
+	// commit/branch action with the fresh code.
+	menuItems = append(menuItems, self.createTaskMenuItem(onPick, func() error {
+		return self.PickTaskForAction(onPick)
+	}))
 
 	return self.c.Menu(types.CreateMenuOptions{
 		Title:              self.c.Tr.DesktimersPickTaskTitle,

@@ -517,6 +517,13 @@ type TranslationSet struct {
 	DesktimersCheckingForUpdates          string
 	DesktimersUpToDate                    string
 	DesktimersNoTaskSelected              string
+	DesktimersCreateTask                  string
+	DesktimersPickProjectTitle            string
+	DesktimersLoadingProjects             string
+	DesktimersNoProjects                  string
+	DesktimersNewTaskTitlePrompt          string
+	DesktimersCreatingTask                string
+	DesktimersTaskTitleEmpty              string
 	DesktimersContinueWithoutTask         string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
@@ -1707,6 +1714,13 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersCheckingForUpdates:         "Checking for updates",
 		DesktimersUpToDate:                   "deskgit is up to date (latest release v{{version}}).",
 		DesktimersNoTaskSelected:             "No task selected",
+		DesktimersCreateTask:                 "＋ Create task…",
+		DesktimersPickProjectTitle:           "Project",
+		DesktimersLoadingProjects:            "Loading projects",
+		DesktimersNoProjects:                 "No projects available — create a project in DeskTimers first",
+		DesktimersNewTaskTitlePrompt:         "New task in {{project}}",
+		DesktimersCreatingTask:               "Creating task",
+		DesktimersTaskTitleEmpty:             "Task title cannot be empty",
 		DesktimersContinueWithoutTask:        "Continue without a task",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",

@@ -111,6 +111,39 @@ func TestPickerColumns(t *testing.T) {
 	}
 }
 
+func TestProjectsSpanWorkspaces(t *testing.T) {
+	if ProjectsSpanWorkspaces(nil) {
+		t.Error("no projects → false")
+	}
+	single := []Project{
+		{Name: "Web", Workspace: "LoudOwls"},
+		{Name: "Mobile", Workspace: "LoudOwls"},
+	}
+	if ProjectsSpanWorkspaces(single) {
+		t.Error("same workspace everywhere → false")
+	}
+	multi := append(single, Project{Name: "Leads", Workspace: "DeskTimers"})
+	if !ProjectsSpanWorkspaces(multi) {
+		t.Error("two workspaces → true")
+	}
+}
+
+func TestProjectMenuColumns(t *testing.T) {
+	project := Project{Name: "Mobile App", Code: "MOB", Workspace: "LoudOwls"}
+
+	got := ProjectMenuColumns(project, false)
+	want := []string{"Mobile App", "(MOB)", ""}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("single-workspace columns = %v, want %v", got, want)
+	}
+
+	got = ProjectMenuColumns(project, true)
+	want = []string{"Mobile App", "(MOB)", "LoudOwls"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("multi-workspace columns = %v, want %v", got, want)
+	}
+}
+
 func TestApplyBranchPrefixTemplate(t *testing.T) {
 	tests := []struct {
 		name       string

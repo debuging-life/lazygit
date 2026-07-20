@@ -83,6 +83,34 @@ func PickerColumns(task Task) []string {
 	return []string{task.Code, utils.TruncateWithEllipsis(task.Title, 60), project, marker}
 }
 
+// ProjectsSpanWorkspaces reports whether the projects belong to more than
+// one workspace (in which case the picker shows the workspace name).
+func ProjectsSpanWorkspaces(projects []Project) bool {
+	first := ""
+	for i, p := range projects {
+		if i == 0 {
+			first = p.Workspace
+			continue
+		}
+		if p.Workspace != first {
+			return true
+		}
+	}
+	return false
+}
+
+// ProjectMenuColumns renders a project as picker columns: name, (CODE), and
+// — only when projects span multiple workspaces — the workspace name.
+func ProjectMenuColumns(project Project, multiWorkspace bool) []string {
+	columns := []string{project.Name, "(" + project.Code + ")"}
+	if multiWorkspace {
+		columns = append(columns, project.Workspace)
+	} else {
+		columns = append(columns, "")
+	}
+	return columns
+}
+
 // effectiveTemplate resolves a possibly-blank user template to fallback.
 func effectiveTemplate(template string, fallback string) string {
 	if strings.TrimSpace(template) == "" {
