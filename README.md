@@ -24,6 +24,15 @@ brew install debuging-life/tap/deskgit
 
 This installs both `deskgit` and its hook companion `dt-hook` from the latest tagged release. Use `brew install --HEAD debuging-life/tap/deskgit` to build the latest `main` branch instead.
 
+### Windows (Scoop)
+
+```powershell
+scoop bucket add loudowls https://github.com/debuging-life/homebrew-tap
+scoop install deskgit
+```
+
+Or download `deskgit_<ver>_windows_amd64.zip` from the [releases page](https://github.com/debuging-life/lazygit/releases) and put both executables on your PATH.
+
 ### From source
 
 Requires Go 1.25+:
@@ -63,6 +72,14 @@ The pick-first steps can be turned off with `desktimers.requireTaskForCommit: fa
 
 Everything else is stock lazygit — see [docs/](docs/README.md) for the full manual and keybindings.
 
+## Timer integration
+
+deskgit and the DeskTimers desktop timer know about each other:
+
+- The task your desktop timer is currently tracking shows a **`⏱ tracking`** marker in every picker, sorts to the very top, and is preselected — committing while tracking is Enter-Enter.
+- Every task pick is reported to DeskTimers (silently, in the background). Time tracked **without** an explicit task gets attributed to tasks automatically when the timer stops — from your picks, and retroactively from the tagged commits you made during the session. Explicitly-tasked timer sessions are never reassigned; if your git activity is on a different task than your timer, you get a heads-up notification instead.
+- See it working under **Settings → Git Clients** in the webapp: "Recent deskgit activity" (your picks, live) and "Auto-attributed time" (per-task totals with a picks/commits split).
+
 ## Git hooks (`dt-hook`)
 
 deskgit installs two hooks per repo. By default (`autoInstallHooks: auto`) this happens **silently for work repos only**: when the origin remote's owner is in `desktimers.hookOrgs` (default `debuging-life`, `loudowls`), hooks are installed/refreshed and strict-push config synced on repo open; any other repo — or a repo with no origin remote — is left completely untouched. Set `autoInstallHooks: prompt` to be asked per repo instead (`always`/`never` also available).
@@ -93,6 +110,11 @@ desktimers:
     - loudowls
   strictPush: true                         # block pushes with untagged commits
   checkForUpdates: true                    # brew-tap update notice, max once/24h
+  requireTaskForCommit: true               # commit opens the task picker first
+  requireTaskForBranch: true               # new branch: type menu + task picker
+  commitPrefixTemplate: '{{code}}/'        # readonly prefix on commit messages
+  branchPrefixTemplate: '{{type}}/{{code}}-' # omit {{type}} to skip the type menu
+  branchTypes: [feature, bugfix, hotfix, release, chore, refactor, docs]
 
 keybinding:
   universal:
