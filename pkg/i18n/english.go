@@ -1670,7 +1670,7 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersTaskMenuTitle:              "DeskTimers tasks",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
-		DesktimersReauthNeeded:               "Your DeskTimers session is no longer valid. Restart dtgit to log in again.",
+		DesktimersReauthNeeded:               "Your DeskTimers session is no longer valid. Restart deskgit to log in again.",
 		DesktimersInstallHooksTitle:          "Install DeskTimers git hooks",
 		DesktimersInstallHooksPrompt:         "Install DeskTimers git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
 		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTimers hooks were not installed. Add them to your hook manager manually.",

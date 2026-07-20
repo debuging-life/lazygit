@@ -1,6 +1,6 @@
 package desktimers
 
-// Version is the version of the DeskTimers integration layer shared by dtgit
+// Version is the version of the DeskTimers integration layer shared by deskgit
 // and dt-hook.
 const Version = "0.1.0"
 

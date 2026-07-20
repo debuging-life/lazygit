@@ -13,10 +13,10 @@ const LazygitBaseVersion = "v0.63.1"
 
 // runDesktimersGate blocks until this machine has a DeskTimers git-client
 // token (running the device flow in plain terminal mode if needed). Offline
-// with a previously stored token is allowed. DTGIT_SKIP_AUTH=1 bypasses the
+// with a previously stored token is allowed. DESKGIT_SKIP_AUTH=1 bypasses the
 // gate entirely (CI, scripted use).
 func runDesktimersGate(appConfig *config.AppConfig) error {
-	if os.Getenv("DTGIT_SKIP_AUTH") == "1" {
+	if os.Getenv("DESKGIT_SKIP_AUTH") == "1" {
 		return nil
 	}
 

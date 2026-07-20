@@ -12,7 +12,7 @@ import (
 	"github.com/samber/lo"
 )
 
-// DesktimersHelper owns the dtgit-specific UI: the task picker, the
+// DesktimersHelper owns the deskgit-specific UI: the task picker, the
 // status-line segment, branch-name prefixes, and the hook install prompt.
 type DesktimersHelper struct {
 	c *HelperCommon

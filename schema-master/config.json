@@ -339,7 +339,7 @@
       },
       "additionalProperties": false,
       "type": "object",
-      "description": "DeskTimers integration (dtgit)"
+      "description": "DeskTimers integration (deskgit)"
     },
     "GitConfig": {
       "properties": {
@@ -3939,7 +3939,7 @@
         },
         "desktimers": {
           "$ref": "#/$defs/DesktimersConfig",
-          "description": "DeskTimers integration (dtgit)"
+          "description": "DeskTimers integration (deskgit)"
         }
       },
       "additionalProperties": false,

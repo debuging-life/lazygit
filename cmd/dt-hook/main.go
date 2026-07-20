@@ -1,5 +1,5 @@
-// dt-hook is the git-hook companion binary for dtgit (DeskTimers). It is
-// invoked by the prepare-commit-msg and pre-push hooks that dtgit installs,
+// dt-hook is the git-hook companion binary for deskgit (DeskTimers). It is
+// invoked by the prepare-commit-msg and pre-push hooks that deskgit installs,
 // and can also install/uninstall those hooks itself.
 //
 // Design rule: hook subcommands must NEVER break git. Any internal failure

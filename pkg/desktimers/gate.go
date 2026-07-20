@@ -35,7 +35,7 @@ func EnsureAuthenticated(w io.Writer, openBrowser func(url string) error) (GateR
 	if stored != nil {
 		fmt.Fprintln(w, "Your DeskTimers session has expired — please re-authenticate.")
 	} else {
-		fmt.Fprintln(w, "Welcome to dtgit! Connect it to your DeskTimers account.")
+		fmt.Fprintln(w, "Welcome to deskgit! Connect it to your DeskTimers account.")
 	}
 
 	if _, err := RunDeviceFlow(w, openBrowser); err != nil {
@@ -45,7 +45,7 @@ func EnsureAuthenticated(w io.Writer, openBrowser func(url string) error) (GateR
 			fmt.Fprintf(w, "Warning: could not reach DeskTimers (%v) — continuing offline.\n", err)
 			return GateOffline, nil
 		}
-		return 0, fmt.Errorf("dtgit requires a DeskTimers login: %w", err)
+		return 0, fmt.Errorf("deskgit requires a DeskTimers login: %w", err)
 	}
 
 	fmt.Fprintln(w, "Device connected — happy shipping!")

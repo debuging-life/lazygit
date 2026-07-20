@@ -827,7 +827,7 @@ keybinding:
   commitMessage:
     commitMenu: <ctrl+o>
 
-# DeskTimers integration (dtgit)
+# DeskTimers integration (deskgit)
 desktimers:
   # Base URL of the DeskTimers API. Override for staging/self-hosted.
   apiBaseUrl: https://api.desktimers.com

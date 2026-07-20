@@ -126,7 +126,7 @@ func TestHooksStatusOutdated(t *testing.T) {
 	if err := InstallHooks(repo, "/usr/local/bin/dt-hook"); err != nil {
 		t.Fatalf("InstallHooks: %v", err)
 	}
-	stale := "#!/bin/sh\n# dtgit-hook v0\nexec dt-hook pre-push \"$@\"\n"
+	stale := "#!/bin/sh\n# deskgit-hook v0\nexec dt-hook pre-push \"$@\"\n"
 	if err := os.WriteFile(filepath.Join(repo, ".git", "hooks", "pre-push"), []byte(stale), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestHooksStatusOutdated(t *testing.T) {
 		t.Fatalf("re-InstallHooks: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(repo, ".git", "hooks", "pre-push.local")); err == nil {
-		t.Error("upgrade wrongly preserved a dtgit script as .local")
+		t.Error("upgrade wrongly preserved a deskgit script as .local")
 	}
 	status, err = HooksStatus(repo)
 	if err != nil || status != HooksInstalled {

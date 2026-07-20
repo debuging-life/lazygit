@@ -27,7 +27,7 @@ func TestTokenRoundTrip(t *testing.T) {
 		t.Fatalf("SaveToken: %v", err)
 	}
 
-	path := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "dtgit", "token.json")
+	path := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "deskgit", "token.json")
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("token file missing: %v", err)

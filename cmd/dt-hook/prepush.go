@@ -68,7 +68,7 @@ func runPrePush(args []string, stdin io.Reader, stderr io.Writer, repoPath strin
 		return 0
 	}
 
-	fmt.Fprintf(stderr, "%sdtgit: %d commit(s) being pushed have no DeskTimers task code:%s\n",
+	fmt.Fprintf(stderr, "%sdeskgit: %d commit(s) being pushed have no DeskTimers task code:%s\n",
 		ansiYellow, len(unmapped), ansiReset)
 	for i, commit := range unmapped {
 		if i == maxListedCommits {
@@ -77,11 +77,11 @@ func runPrePush(args []string, stdin io.Reader, stderr io.Writer, repoPath strin
 		}
 		fmt.Fprintf(stderr, "  %s %s\n", commit.sha, commit.subject)
 	}
-	fmt.Fprintf(stderr, "%sSelect a task in dtgit (press 't') or include a task code like MOB-101 in the commit message.%s\n",
+	fmt.Fprintf(stderr, "%sSelect a task in deskgit (press alt+t) or include a task code like MOB-101 in the commit message.%s\n",
 		ansiYellow, ansiReset)
 
 	if strictMode(repoPath) {
-		fmt.Fprintf(stderr, "%sdtgit: push blocked (strict mode): commits are missing task codes.%s\n",
+		fmt.Fprintf(stderr, "%sdeskgit: push blocked (strict mode): commits are missing task codes.%s\n",
 			ansiRed, ansiReset)
 		return 1
 	}

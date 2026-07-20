@@ -8,29 +8,29 @@ import (
 	"strings"
 )
 
-// ManagedHooks are the git hooks dtgit installs.
+// ManagedHooks are the git hooks deskgit installs.
 var ManagedHooks = []string{"prepare-commit-msg", "pre-push"}
 
-const hookMarkerPrefix = "# dtgit-hook"
+const hookMarkerPrefix = "# deskgit-hook"
 
 func hookMarker() string {
 	return fmt.Sprintf("%s v%d", hookMarkerPrefix, hookScriptVersion)
 }
 
-// HookStatus describes the install state of the dtgit hooks in a repo.
+// HookStatus describes the install state of the deskgit hooks in a repo.
 type HookStatus int
 
 const (
-	// HooksMissing: no dtgit hooks are installed.
+	// HooksMissing: no deskgit hooks are installed.
 	HooksMissing HookStatus = iota
-	// HooksOutdated: dtgit hooks exist but are stale or incomplete.
+	// HooksOutdated: deskgit hooks exist but are stale or incomplete.
 	HooksOutdated
-	// HooksInstalled: all dtgit hooks are installed and current.
+	// HooksInstalled: all deskgit hooks are installed and current.
 	HooksInstalled
 )
 
 // ErrCustomHooksPath is returned when a repo sets core.hooksPath (e.g.
-// Husky); dtgit never writes into a custom hooks directory.
+// Husky); deskgit never writes into a custom hooks directory.
 type ErrCustomHooksPath struct {
 	Path string
 }
@@ -78,7 +78,7 @@ func fileHasMarker(path string) (hasAny bool, current bool) {
 	return true, strings.Contains(content, hookMarker())
 }
 
-// HooksStatus reports whether the dtgit hooks are installed in the repo at
+// HooksStatus reports whether the deskgit hooks are installed in the repo at
 // repoPath. Returns *ErrCustomHooksPath when core.hooksPath is set.
 func HooksStatus(repoPath string) (HookStatus, error) {
 	if custom, err := customHooksPath(repoPath); err != nil {
@@ -111,7 +111,7 @@ func HooksStatus(repoPath string) (HookStatus, error) {
 	}
 }
 
-// InstallHooks writes the dtgit hook scripts into the repo at repoPath,
+// InstallHooks writes the deskgit hook scripts into the repo at repoPath,
 // chaining any pre-existing hooks by renaming them to <name>.local.
 // dtHookPath is the absolute path of the dt-hook binary to bake into the
 // scripts.
@@ -132,11 +132,11 @@ func InstallHooks(repoPath string, dtHookPath string) error {
 		target := filepath.Join(dir, name)
 		local := target + ".local"
 		if hasAny, _ := fileHasMarker(target); !hasAny {
-			// A pre-existing non-dtgit hook gets preserved and chained.
+			// A pre-existing non-deskgit hook gets preserved and chained.
 			if _, err := os.Stat(target); err == nil {
 				if _, err := os.Stat(local); err == nil {
 					return fmt.Errorf(
-						"both %s and %s.local exist; move one aside before installing dtgit hooks", name, name)
+						"both %s and %s.local exist; move one aside before installing deskgit hooks", name, name)
 				}
 				if err := os.Rename(target, local); err != nil {
 					return fmt.Errorf("preserving existing %s hook: %w", name, err)
@@ -158,8 +158,8 @@ func InstallHooks(repoPath string, dtHookPath string) error {
 	return nil
 }
 
-// UninstallHooks removes the dtgit hook scripts, restoring any chained
-// <name>.local hooks. Hooks not written by dtgit are left untouched.
+// UninstallHooks removes the deskgit hook scripts, restoring any chained
+// <name>.local hooks. Hooks not written by deskgit are left untouched.
 func UninstallHooks(repoPath string) error {
 	if custom, err := customHooksPath(repoPath); err != nil {
 		return err
@@ -194,7 +194,7 @@ func UninstallHooks(repoPath string) error {
 func hookScript(name string, dtHookPath string, chained bool) string {
 	b := &strings.Builder{}
 	fmt.Fprintf(b, "#!/bin/sh\n%s\n", hookMarker())
-	fmt.Fprintf(b, "# Installed by dtgit (DeskTimers). Safe to delete; dtgit can reinstall it.\n\n")
+	fmt.Fprintf(b, "# Installed by deskgit (DeskTimers). Safe to delete; deskgit can reinstall it.\n\n")
 
 	needsStdinCapture := chained && name == "pre-push"
 	if needsStdinCapture {

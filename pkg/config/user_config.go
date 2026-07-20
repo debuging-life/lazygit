@@ -41,11 +41,11 @@ type UserConfig struct {
 	// Keybindings.
 	// Each binding can be a single key or a list of keys; see https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybindings.md for the syntax.
 	Keybinding KeybindingConfig `yaml:"keybinding"`
-	// DeskTimers integration (dtgit)
+	// DeskTimers integration (deskgit)
 	Desktimers DesktimersConfig `yaml:"desktimers"`
 }
 
-// DesktimersConfig is dtgit's own config section.
+// DesktimersConfig is deskgit's own config section.
 type DesktimersConfig struct {
 	// Base URL of the DeskTimers API. Override for staging/self-hosted.
 	ApiBaseUrl string `yaml:"apiBaseUrl"`

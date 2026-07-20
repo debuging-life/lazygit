@@ -133,7 +133,7 @@ func TestEnsureAuthenticatedRunsDeviceFlow(t *testing.T) {
 	}
 
 	// Token persisted with 0600.
-	tokenFile := filepath.Join(configDir, "dtgit", "token.json")
+	tokenFile := filepath.Join(configDir, "deskgit", "token.json")
 	info, err := os.Stat(tokenFile)
 	if err != nil {
 		t.Fatal(err)

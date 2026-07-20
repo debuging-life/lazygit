@@ -2,7 +2,7 @@ package desktimers
 
 import "strings"
 
-// configuredBaseURL is the apiBaseUrl from the dtgit user config
+// configuredBaseURL is the apiBaseUrl from the deskgit user config
 // (desktimers.apiBaseUrl). It sits between the DESKTIMERS_API_URL env var and
 // the token file in the base-URL resolution order.
 var configuredBaseURL string

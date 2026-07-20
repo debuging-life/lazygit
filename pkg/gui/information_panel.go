@@ -13,7 +13,7 @@ func (gui *Gui) informationStr() string {
 		return activeMode.InfoLabel()
 	}
 
-	// dtgit: the selected DeskTimers task is always visible here.
+	// deskgit: the selected DeskTimers task is always visible here.
 	if taskSegment := gui.helpers.Desktimers.StatusLineSegment(60); taskSegment != "" {
 		return fmt.Sprintf("%s %s", style.FgCyan.Sprint(taskSegment), gui.Config.GetVersion())
 	}

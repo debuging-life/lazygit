@@ -95,7 +95,7 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 
 	if cliArgs.PrintVersionInfo {
 		gitVersion := getGitVersionInfo()
-		fmt.Printf("dtgit %s (based on lazygit %s)\n", buildInfo.Version, LazygitBaseVersion)
+		fmt.Printf("deskgit %s (based on lazygit %s)\n", buildInfo.Version, LazygitBaseVersion)
 		fmt.Printf("commit=%s, build date=%s, build source=%s, os=%s, arch=%s, git version=%s\n", buildInfo.Commit, buildInfo.Date, buildInfo.BuildSource, runtime.GOOS, runtime.GOARCH, gitVersion)
 		os.Exit(0)
 	}
@@ -137,7 +137,7 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 	}
 	defer os.RemoveAll(tempDir)
 
-	appConfig, err := config.NewAppConfig("dtgit", buildInfo.Version, buildInfo.Commit, buildInfo.Date, buildInfo.BuildSource, cliArgs.Debug, tempDir)
+	appConfig, err := config.NewAppConfig("deskgit", buildInfo.Version, buildInfo.Commit, buildInfo.Date, buildInfo.BuildSource, cliArgs.Debug, tempDir)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -173,7 +173,7 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 		}()
 	}
 
-	// dtgit: make sure this machine is connected to DeskTimers before the
+	// deskgit: make sure this machine is connected to DeskTimers before the
 	// TUI takes over the terminal. Skipped for integration tests.
 	if integrationTest == nil {
 		if err := runDesktimersGate(appConfig); err != nil {

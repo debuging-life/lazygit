@@ -621,9 +621,9 @@ func (c *AppConfig) GetTempDir() string {
 	return c.tempDir
 }
 
-// dtgit: our own config/state dir name so we never fight an existing lazygit
+// deskgit: our own config/state dir name so we never fight an existing lazygit
 // install on the same machine.
-const configDirName = "dtgit"
+const configDirName = "deskgit"
 
 // findConfigFile looks for a possibly existing config file.
 // This function does NOT create any folders or files.
@@ -632,7 +632,7 @@ func findConfigFile(filename string) (exists bool, path string) {
 		return true, filepath.Join(envConfigDir, filename)
 	}
 
-	// look for dtgit/filename in XDG_CONFIG_HOME and XDG_CONFIG_DIRS
+	// look for deskgit/filename in XDG_CONFIG_HOME and XDG_CONFIG_DIRS
 	configFilepath, err := xdg.SearchConfigFile(filepath.Join(configDirName, filename))
 	if err == nil {
 		return true, configFilepath
@@ -651,7 +651,7 @@ func stateFilePath(filename string) (string, error) {
 		return legacyStateFile, nil
 	}
 
-	// looks for XDG_STATE_HOME/dtgit/filename
+	// looks for XDG_STATE_HOME/deskgit/filename
 	return xdg.StateFile(filepath.Join(configDirName, filename))
 }
 

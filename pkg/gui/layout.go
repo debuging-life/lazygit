@@ -283,7 +283,7 @@ func (gui *Gui) onInitialViewsCreation() error {
 
 	gui.helpers.Update.CheckForUpdateInBackground()
 
-	// dtgit: offer to install the DeskTimers git hooks for this repo.
+	// deskgit: offer to install the DeskTimers git hooks for this repo.
 	gui.helpers.Desktimers.PromptToInstallHooksInBackground()
 
 	gui.waitForIntro.Done()

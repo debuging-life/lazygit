@@ -36,16 +36,16 @@ func (t *Token) Valid() bool {
 	return time.Now().Add(60 * time.Second).Before(t.ExpiresAt)
 }
 
-// ConfigDir returns the dtgit config directory, honoring XDG_CONFIG_HOME.
+// ConfigDir returns the deskgit config directory, honoring XDG_CONFIG_HOME.
 func ConfigDir() (string, error) {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "dtgit"), nil
+		return filepath.Join(xdg, "deskgit"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolving home dir: %w", err)
 	}
-	return filepath.Join(home, ".config", "dtgit"), nil
+	return filepath.Join(home, ".config", "deskgit"), nil
 }
 
 func tokenPath() (string, error) {

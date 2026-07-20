@@ -635,7 +635,7 @@ func IsSwitchBranchUncommittedChangesError(err error) bool {
 }
 
 func (self *RefsHelper) getSuggestedBranchName() (string, error) {
-	// dtgit: a selected DeskTimers task wins over the branchPrefix template,
+	// deskgit: a selected DeskTimers task wins over the branchPrefix template,
 	// so branches are named CODE/... and the server can map them to the task.
 	if state, err := desktimers.LoadState("."); err == nil && state != nil && state.Code != "" {
 		return desktimers.BranchPrefix(state.Code), nil
