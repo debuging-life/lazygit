@@ -1,6 +1,8 @@
 package desktimers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +21,22 @@ type State struct {
 	Code       string    `json:"code"`
 	Title      string    `json:"title"`
 	SelectedAt time.Time `json:"selectedAt"`
+}
+
+// NewState builds a State for a freshly selected task.
+func NewState(task Task) *State {
+	return &State{
+		Code:       task.Code,
+		Title:      task.Title,
+		SelectedAt: time.Now(),
+	}
+}
+
+// PathKey turns an absolute path into a short filesystem-safe key, for
+// per-repo marker files in the config dir.
+func PathKey(path string) string {
+	sum := sha256.Sum256([]byte(path))
+	return hex.EncodeToString(sum[:8])
 }
 
 // gitDir resolves the absolute git dir for the repo at repoPath. Using

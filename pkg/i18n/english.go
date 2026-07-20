@@ -497,6 +497,16 @@ type TranslationSet struct {
 	CannotSquashCommitsInCurrentBranch    string
 	ExecuteShellCommand                   string
 	ExecuteShellCommandTooltip            string
+	DesktimersTasks                       string
+	DesktimersTasksTooltip                string
+	DesktimersLoadingTasks                string
+	DesktimersTaskMenuTitle               string
+	DesktimersClearTask                   string
+	DesktimersNoTasks                     string
+	DesktimersReauthNeeded                string
+	DesktimersInstallHooksTitle           string
+	DesktimersInstallHooksPrompt          string
+	DesktimersCustomHooksPathNotice       string
 	ShellCommand                          string
 	CommitChangesWithoutHook              string
 	ResetTo                               string
@@ -1654,6 +1664,16 @@ func EnglishTranslationSet() *TranslationSet {
 		CannotSquashCommitsInCurrentBranch:   "Cannot squash commits in current branch: the HEAD commit is a merge commit or is present on the main branch.",
 		ExecuteShellCommand:                  "Execute shell command",
 		ExecuteShellCommandTooltip:           "Bring up a prompt where you can enter a shell command to execute.",
+		DesktimersTasks:                      "Pick DeskTimers task",
+		DesktimersTasksTooltip:               "Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task.",
+		DesktimersLoadingTasks:               "Loading DeskTimers tasks",
+		DesktimersTaskMenuTitle:              "DeskTimers tasks",
+		DesktimersClearTask:                  "Clear selected task",
+		DesktimersNoTasks:                    "No active tasks assigned to you",
+		DesktimersReauthNeeded:               "Your DeskTimers session is no longer valid. Restart dtgit to log in again.",
+		DesktimersInstallHooksTitle:          "Install DeskTimers git hooks",
+		DesktimersInstallHooksPrompt:         "Install DeskTimers git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
+		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTimers hooks were not installed. Add them to your hook manager manually.",
 		ShellCommand:                         "Shell command:",
 		CommitChangesWithoutHook:             "Commit changes without pre-commit hook",
 		ResetTo:                              `Reset to`,

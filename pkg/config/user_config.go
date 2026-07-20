@@ -41,6 +41,22 @@ type UserConfig struct {
 	// Keybindings.
 	// Each binding can be a single key or a list of keys; see https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybindings.md for the syntax.
 	Keybinding KeybindingConfig `yaml:"keybinding"`
+	// DeskTimers integration (dtgit)
+	Desktimers DesktimersConfig `yaml:"desktimers"`
+}
+
+// DesktimersConfig is dtgit's own config section.
+type DesktimersConfig struct {
+	// Base URL of the DeskTimers API. Override for staging/self-hosted.
+	ApiBaseUrl string `yaml:"apiBaseUrl"`
+	// What to do when a repo has no DeskTimers git hooks installed.
+	// - 'prompt': (default) ask once per repo
+	// - 'always': install silently
+	// - 'never': skip
+	AutoInstallHooks string `yaml:"autoInstallHooks" jsonschema:"enum=prompt,enum=always,enum=never"`
+	// If true, pushes containing commits without a task code are blocked
+	// (sets strict mode for the pre-push hook).
+	StrictPush bool `yaml:"strictPush"`
 }
 
 type RefresherConfig struct {
@@ -554,6 +570,7 @@ type KeybindingUniversalConfig struct {
 	DecreaseRenameSimilarityThreshold Keybinding `yaml:"decreaseRenameSimilarityThreshold"`
 	OpenDiffTool                      Keybinding `yaml:"openDiffTool"`
 	EditConfig                        Keybinding `yaml:"editConfig"`
+	DesktimersTasks                   Keybinding `yaml:"desktimersTasks"`
 }
 
 type KeybindingStatusConfig struct {
@@ -987,6 +1004,11 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 		Services:                     map[string]string(nil),
 		NotARepository:               "prompt",
 		PromptToReturnFromSubprocess: true,
+		Desktimers: DesktimersConfig{
+			ApiBaseUrl:       "https://api.desktimers.com",
+			AutoInstallHooks: "prompt",
+			StrictPush:       false,
+		},
 		Keybinding: KeybindingConfig{
 			Universal: KeybindingUniversalConfig{
 				Quit:                              Keybinding{"q"},
@@ -1072,6 +1094,7 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 				DecreaseRenameSimilarityThreshold: Keybinding{"("},
 				OpenDiffTool:                      Keybinding{"<ctrl+t>"},
 				EditConfig:                        Keybinding{"<alt+shift+c>"},
+				DesktimersTasks:                   Keybinding{"<alt+t>"},
 			},
 			Status: KeybindingStatusConfig{
 				CheckForUpdate:             Keybinding{"u"},

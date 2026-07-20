@@ -13,6 +13,11 @@ func (gui *Gui) informationStr() string {
 		return activeMode.InfoLabel()
 	}
 
+	// dtgit: the selected DeskTimers task is always visible here.
+	if taskSegment := gui.helpers.Desktimers.StatusLineSegment(60); taskSegment != "" {
+		return fmt.Sprintf("%s %s", style.FgCyan.Sprint(taskSegment), gui.Config.GetVersion())
+	}
+
 	if gui.g.Mouse {
 		donate := style.FgMagenta.Sprint(style.PrintHyperlink(gui.c.Tr.Donate, constants.Links.Donate))
 		askQuestion := style.FgYellow.Sprint(style.PrintHyperlink(gui.c.Tr.AskQuestion, constants.Links.Discussions))

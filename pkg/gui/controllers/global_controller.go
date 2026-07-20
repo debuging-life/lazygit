@@ -142,6 +142,13 @@ func (self *GlobalController) GetKeybindings(opts types.KeybindingsOpts) []*type
 			Description: self.c.Tr.EditConfig,
 			Tooltip:     self.c.Tr.EditFileTooltip,
 		},
+		{
+			Keys:        opts.GetKeys(opts.Config.Universal.DesktimersTasks),
+			Handler:     opts.Guards.NoPopupPanel(self.openDesktimersTaskMenu),
+			Description: self.c.Tr.DesktimersTasks,
+			Tooltip:     self.c.Tr.DesktimersTasksTooltip,
+			OpensMenu:   true,
+		},
 	}
 }
 
@@ -271,6 +278,10 @@ func (self *GlobalController) escapeEnabled() *types.DisabledReason {
 
 func (self *GlobalController) toggleWhitespace() error {
 	return (&ToggleWhitespaceAction{c: self.c}).Call()
+}
+
+func (self *GlobalController) openDesktimersTaskMenu() error {
+	return self.c.Helpers().Desktimers.OpenTaskMenu()
 }
 
 func (self *GlobalController) editConfig() error {

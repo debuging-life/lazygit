@@ -621,6 +621,10 @@ func (c *AppConfig) GetTempDir() string {
 	return c.tempDir
 }
 
+// dtgit: our own config/state dir name so we never fight an existing lazygit
+// install on the same machine.
+const configDirName = "dtgit"
+
 // findConfigFile looks for a possibly existing config file.
 // This function does NOT create any folders or files.
 func findConfigFile(filename string) (exists bool, path string) {
@@ -628,19 +632,13 @@ func findConfigFile(filename string) (exists bool, path string) {
 		return true, filepath.Join(envConfigDir, filename)
 	}
 
-	// look for jesseduffield/lazygit/filename in XDG_CONFIG_HOME and XDG_CONFIG_DIRS
-	legacyConfigPath, err := xdg.SearchConfigFile(filepath.Join("jesseduffield", "lazygit", filename))
-	if err == nil {
-		return true, legacyConfigPath
-	}
-
-	// look for lazygit/filename in XDG_CONFIG_HOME and XDG_CONFIG_DIRS
-	configFilepath, err := xdg.SearchConfigFile(filepath.Join("lazygit", filename))
+	// look for dtgit/filename in XDG_CONFIG_HOME and XDG_CONFIG_DIRS
+	configFilepath, err := xdg.SearchConfigFile(filepath.Join(configDirName, filename))
 	if err == nil {
 		return true, configFilepath
 	}
 
-	return false, filepath.Join(xdg.ConfigHome, "lazygit", filename)
+	return false, filepath.Join(xdg.ConfigHome, configDirName, filename)
 }
 
 var ConfigFilename = "config.yml"
@@ -653,8 +651,8 @@ func stateFilePath(filename string) (string, error) {
 		return legacyStateFile, nil
 	}
 
-	// looks for XDG_STATE_HOME/lazygit/filename
-	return xdg.StateFile(filepath.Join("lazygit", filename))
+	// looks for XDG_STATE_HOME/dtgit/filename
+	return xdg.StateFile(filepath.Join(configDirName, filename))
 }
 
 // SaveAppState marshalls the AppState struct and writes it to the disk

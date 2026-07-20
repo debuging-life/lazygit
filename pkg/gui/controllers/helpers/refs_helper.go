@@ -7,6 +7,7 @@ import (
 
 	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
+	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/style"
@@ -634,6 +635,12 @@ func IsSwitchBranchUncommittedChangesError(err error) bool {
 }
 
 func (self *RefsHelper) getSuggestedBranchName() (string, error) {
+	// dtgit: a selected DeskTimers task wins over the branchPrefix template,
+	// so branches are named CODE/... and the server can map them to the task.
+	if state, err := desktimers.LoadState("."); err == nil && state != nil && state.Code != "" {
+		return desktimers.BranchPrefix(state.Code), nil
+	}
+
 	suggestedBranchName, err := utils.ResolveTemplate(self.c.UserConfig().Git.BranchPrefix, nil, template.FuncMap{
 		"runCommand": self.c.Git().Custom.TemplateFunctionRunCommand,
 	})

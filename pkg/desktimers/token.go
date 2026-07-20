@@ -113,10 +113,14 @@ func DeleteToken() error {
 }
 
 // ResolveBaseURL picks the API base URL: DESKTIMERS_API_URL env var first,
-// then the stored token's apiBaseUrl, then the production default.
+// then the user config's desktimers.apiBaseUrl, then the stored token's
+// apiBaseUrl, then the production default.
 func ResolveBaseURL(token *Token) string {
 	if env := os.Getenv("DESKTIMERS_API_URL"); env != "" {
 		return strings.TrimSuffix(env, "/")
+	}
+	if configuredBaseURL != "" {
+		return configuredBaseURL
 	}
 	if token != nil && token.APIBaseURL != "" {
 		return strings.TrimSuffix(token.APIBaseURL, "/")

@@ -731,6 +731,7 @@ keybinding:
     decreaseRenameSimilarityThreshold: (
     openDiffTool: <ctrl+t>
     editConfig: <alt+shift+c>
+    desktimersTasks: <alt+t>
   status:
     checkForUpdate: u
     recentRepos: <enter>
@@ -825,6 +826,21 @@ keybinding:
     bulkMenu: b
   commitMessage:
     commitMenu: <ctrl+o>
+
+# DeskTimers integration (dtgit)
+desktimers:
+  # Base URL of the DeskTimers API. Override for staging/self-hosted.
+  apiBaseUrl: https://api.desktimers.com
+
+  # What to do when a repo has no DeskTimers git hooks installed.
+  # - 'prompt': (default) ask once per repo
+  # - 'always': install silently
+  # - 'never': skip
+  autoInstallHooks: prompt
+
+  # If true, pushes containing commits without a task code are blocked
+  # (sets strict mode for the pre-push hook).
+  strictPush: false
 ```
 <!-- END CONFIG YAML -->
 

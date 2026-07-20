@@ -314,6 +314,33 @@
       "type": "object",
       "description": "Custom icons for filenames and file extensions\nSee https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md#custom-files-icon--color"
     },
+    "DesktimersConfig": {
+      "properties": {
+        "apiBaseUrl": {
+          "type": "string",
+          "description": "Base URL of the DeskTimers API. Override for staging/self-hosted.",
+          "default": "https://api.desktimers.com"
+        },
+        "autoInstallHooks": {
+          "type": "string",
+          "enum": [
+            "prompt",
+            "always",
+            "never"
+          ],
+          "description": "What to do when a repo has no DeskTimers git hooks installed.\n- 'prompt': (default) ask once per repo\n- 'always': install silently\n- 'never': skip",
+          "default": "prompt"
+        },
+        "strictPush": {
+          "type": "boolean",
+          "description": "If true, pushes containing commits without a task code are blocked\n(sets strict mode for the pre-push hook).",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "DeskTimers integration (dtgit)"
+    },
     "GitConfig": {
       "properties": {
         "pagers": {
@@ -3418,6 +3445,20 @@
             }
           ],
           "default": "\u003calt+shift+c\u003e"
+        },
+        "desktimersTasks": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "default": "\u003calt+t\u003e"
         }
       },
       "additionalProperties": false,
@@ -3895,6 +3936,10 @@
         "keybinding": {
           "$ref": "#/$defs/KeybindingConfig",
           "description": "Keybindings.\nEach binding can be a single key or a list of keys; see https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybindings.md for the syntax."
+        },
+        "desktimers": {
+          "$ref": "#/$defs/DesktimersConfig",
+          "description": "DeskTimers integration (dtgit)"
         }
       },
       "additionalProperties": false,
