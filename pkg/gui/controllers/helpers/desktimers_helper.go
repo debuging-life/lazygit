@@ -3,12 +3,12 @@ package helpers
 import (
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
+	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/samber/lo"
 )
 
@@ -88,6 +88,50 @@ func (self *DesktimersHelper) setLoggedOut() {
 	self.authChecked = true
 }
 
+// openTaskInBrowser opens a task's webapp deep link; a missing link shows a
+// status toast instead of erroring.
+func (self *DesktimersHelper) openTaskInBrowser(url string) error {
+	if url == "" {
+		self.c.ErrorToast(self.c.Tr.DesktimersNoTaskURL)
+		return nil
+	}
+	return self.c.OS().OpenLink(url)
+}
+
+func (self *DesktimersHelper) resetAuthCache() {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	self.authChecked = false
+}
+
+// promptReauthThen handles an expired login inside the TUI: confirm, then
+// run `deskgit login` (the terminal device flow) as a subprocess with the
+// gui suspended, and on success resume the original action.
+func (self *DesktimersHelper) promptReauthThen(retry func() error) error {
+	self.c.Confirm(types.ConfirmOpts{
+		Title:  self.c.Tr.DesktimersLoginExpiredTitle,
+		Prompt: self.c.Tr.DesktimersLoginExpiredPrompt,
+		HandleConfirm: func() error {
+			exe, err := os.Executable()
+			if err != nil {
+				return err
+			}
+			if err := self.c.RunSubprocessAndRefresh(self.c.OS().Cmd.New([]string{exe, "login"})); err != nil {
+				return err
+			}
+			self.resetAuthCache()
+
+			// Only resume when the login actually produced a valid token
+			// (the user may have Ctrl-C'd the terminal flow).
+			if token, err := desktimers.LoadToken(); err != nil || !token.Valid() {
+				return nil
+			}
+			return retry()
+		},
+	})
+	return nil
+}
+
 // BranchNamePrefix returns "CODE/" when a task is selected, else "".
 func (self *DesktimersHelper) BranchNamePrefix() string {
 	state := self.SelectedTask()
@@ -112,7 +156,7 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 	})
 	if err != nil {
 		if errors.Is(err, desktimers.ErrUnauthorized) {
-			return errors.New(self.c.Tr.DesktimersReauthNeeded)
+			return self.promptReauthThen(self.OpenTaskMenu)
 		}
 		return err
 	}
@@ -129,6 +173,9 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 			OnPress: func() error {
 				return self.selectTask(task)
 			},
+			OnOpen: func() error {
+				return self.openTaskInBrowser(task.URL)
+			},
 		}
 	})
 
@@ -140,17 +187,25 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 		})
 	}
 
-	if self.SelectedTask() != nil {
-		menuItems = append(menuItems, &types.MenuItem{
-			Label: self.c.Tr.DesktimersClearTask,
-			OnPress: func() error {
-				if err := desktimers.ClearState("."); err != nil {
-					return err
-				}
-				self.setSelectedTask(nil)
-				return nil
+	if state := self.SelectedTask(); state != nil {
+		stateURL := state.URL
+		menuItems = append(menuItems,
+			&types.MenuItem{
+				Label: self.c.Tr.DesktimersOpenTaskInBrowser,
+				OnPress: func() error {
+					return self.openTaskInBrowser(stateURL)
+				},
 			},
-		})
+			&types.MenuItem{
+				Label: self.c.Tr.DesktimersClearTask,
+				OnPress: func() error {
+					if err := desktimers.ClearState("."); err != nil {
+						return err
+					}
+					self.setSelectedTask(nil)
+					return nil
+				},
+			})
 	}
 
 	menuItems = append(menuItems, &types.MenuItem{
@@ -208,7 +263,7 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 	})
 	if err != nil {
 		if errors.Is(err, desktimers.ErrUnauthorized) {
-			return errors.New(self.c.Tr.DesktimersReauthNeeded)
+			return self.promptReauthThen(func() error { return self.PickTaskForAction(onPick) })
 		}
 		return err
 	}
@@ -227,6 +282,9 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 					return err
 				}
 				return onPick(task)
+			},
+			OnOpen: func() error {
+				return self.openTaskInBrowser(task.URL)
 			},
 		}
 	})
@@ -247,6 +305,34 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 		Items:              menuItems,
 		InitialSelectedIdx: selectedIdx,
 	})
+}
+
+// CheckForUpdateInBackground checks the Homebrew tap for a newer deskgit
+// release (cache-limited to once per 24h) and shows a one-time notice.
+// Dev builds (non-semver versions) never nag.
+func (self *DesktimersHelper) CheckForUpdateInBackground(currentVersion string) {
+	if !self.c.UserConfig().Desktimers.CheckForUpdates {
+		return
+	}
+	log := self.c.Log
+	go func() {
+		latest, newer, err := desktimers.CheckForUpdate(currentVersion)
+		if err != nil {
+			log.Debugf("deskgit: update check failed: %v", err)
+			return
+		}
+		if !newer {
+			return
+		}
+		self.c.OnUIThread(func() error {
+			message := utils.ResolvePlaceholderString(
+				self.c.Tr.DesktimersUpdateAvailable,
+				map[string]string{"version": latest},
+			)
+			self.c.Alert(self.c.Tr.DesktimersUpdateAvailableTitle, message)
+			return nil
+		})
+	}()
 }
 
 // PickBranchTypeThen shows the branch-type menu (feature/bugfix/hotfix/...)
@@ -336,6 +422,12 @@ func (self *DesktimersHelper) PromptToInstallHooksInBackground() {
 		return
 	}
 
+	// Keep the repo's git config in step with deskgit's strictPush setting
+	// so the pre-push hook enforces (or stops enforcing) it.
+	if err := desktimers.SyncStrictPushConfig(".", self.c.UserConfig().Desktimers.StrictPush); err != nil {
+		self.c.Log.Debugf("deskgit: could not sync strictpush config: %v", err)
+	}
+
 	mode := self.c.UserConfig().Desktimers.AutoInstallHooks
 	if mode == "never" {
 		return
@@ -356,7 +448,7 @@ func (self *DesktimersHelper) PromptToInstallHooksInBackground() {
 		return
 	}
 
-	dtHookPath, ok := findDtHookBinary()
+	dtHookPath, ok := desktimers.FindDtHookBinary()
 	if !ok {
 		// Without the binary an installed hook would be inert; skip quietly.
 		return
@@ -391,19 +483,4 @@ func (self *DesktimersHelper) PromptToInstallHooksInBackground() {
 		})
 		return nil
 	})
-}
-
-// findDtHookBinary looks for dt-hook next to the running executable, then on
-// the PATH.
-func findDtHookBinary() (string, bool) {
-	if exe, err := os.Executable(); err == nil {
-		candidate := filepath.Join(filepath.Dir(exe), "dt-hook")
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			return candidate, true
-		}
-	}
-	if path, err := exec.LookPath("dt-hook"); err == nil {
-		return path, true
-	}
-	return "", false
 }

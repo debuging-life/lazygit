@@ -266,9 +266,12 @@ func (gui *Gui) onInitialViewsCreation() error {
 		storedPopupVersion := gui.c.GetAppState().StartupPopupVersion
 		if storedPopupVersion < StartupPopupVersion {
 			gui.showIntroPopupMessage()
-		} else {
-			gui.showBreakingChangesMessage()
 		}
+		// deskgit: upstream's showBreakingChangesMessage is intentionally not
+		// called — deskgit version numbers don't align with lazygit's release
+		// history, so it would misfire with irrelevant lazygit notes after
+		// every deskgit upgrade. The deskgit update notice replaces it.
+		// LastVersion keeps being written below so nothing else breaks.
 	}
 
 	gui.c.GetAppState().LastVersion = gui.Config.GetVersion()
@@ -283,8 +286,10 @@ func (gui *Gui) onInitialViewsCreation() error {
 
 	gui.helpers.Update.CheckForUpdateInBackground()
 
-	// deskgit: offer to install the DeskTimers git hooks for this repo.
+	// deskgit: offer to install the DeskTimers git hooks for this repo, and
+	// check the Homebrew tap for a newer deskgit release.
 	gui.helpers.Desktimers.PromptToInstallHooksInBackground()
+	gui.helpers.Desktimers.CheckForUpdateInBackground(gui.Config.GetVersion())
 
 	gui.waitForIntro.Done()
 

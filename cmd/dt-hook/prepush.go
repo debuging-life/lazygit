@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -80,8 +79,10 @@ func runPrePush(args []string, stdin io.Reader, stderr io.Writer, repoPath strin
 	fmt.Fprintf(stderr, "%sSelect a task in deskgit (press alt+t) or include a task code like MOB-101 in the commit message.%s\n",
 		ansiYellow, ansiReset)
 
-	if strictMode(repoPath) {
+	if strict, _ := desktimers.EffectiveStrictPush(repoPath); strict {
 		fmt.Fprintf(stderr, "%sdeskgit: push blocked (strict mode): commits are missing task codes.%s\n",
+			ansiRed, ansiReset)
+		fmt.Fprintf(stderr, "%sTo push anyway this once, run: DT_STRICT=0 git push%s\n",
 			ansiRed, ansiReset)
 		return 1
 	}
@@ -120,19 +121,6 @@ func commitMessage(repoPath string, sha string) (string, error) {
 		return "", err
 	}
 	return string(out), nil
-}
-
-func strictMode(repoPath string) bool {
-	if os.Getenv("DT_STRICT") == "1" {
-		return true
-	}
-	cmd := exec.Command("git", "config", "--bool", "desktimers.strictpush")
-	cmd.Dir = repoPath
-	out, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return strings.TrimSpace(string(out)) == "true"
 }
 
 func isZeroSha(sha string) bool {

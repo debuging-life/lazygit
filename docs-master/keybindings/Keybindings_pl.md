@@ -193,6 +193,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 |-----|--------|-------------|
 | `` <enter> `` | Wykonaj |  |
 | `` <esc> `` | Zamknij/Anuluj |  |
+| `` o `` | Open highlighted item in browser |  |
 | `` / `` | Filtruj bieżący widok po tekście |  |
 
 ## Panel główny (normalny)

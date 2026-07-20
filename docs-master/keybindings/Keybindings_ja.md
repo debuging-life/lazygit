@@ -316,6 +316,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 |-----|--------|-------------|
 | `` <enter> `` | 実行 |  |
 | `` <esc> `` | 閉じる/キャンセル |  |
+| `` o `` | Open highlighted item in browser |  |
 | `` / `` | 現在のビューをテキストでフィルタリング |  |
 
 ## リフログ

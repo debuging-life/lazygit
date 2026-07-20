@@ -13,6 +13,8 @@ type Task struct {
 	Status  string `json:"status"`
 	// Tracking marks the task of the user's currently running desktop timer.
 	Tracking bool `json:"tracking"`
+	// URL is an absolute webapp deep link to the task; may be absent.
+	URL string `json:"url"`
 }
 
 // CodeRegex matches a DeskTimers task code (e.g. MOB-101) anywhere in a

@@ -504,10 +504,17 @@ type TranslationSet struct {
 	DesktimersTaskMenuTitle               string
 	DesktimersPickTaskTitle               string
 	DesktimersBranchTypeTitle             string
+	DesktimersUpdateAvailableTitle        string
+	DesktimersUpdateAvailable             string
+	DesktimersOpenTaskInBrowser           string
+	DesktimersOpenInBrowser               string
+	DesktimersNoTaskURL                   string
 	DesktimersContinueWithoutTask         string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
 	DesktimersReauthNeeded                string
+	DesktimersLoginExpiredTitle           string
+	DesktimersLoginExpiredPrompt          string
 	DesktimersInstallHooksTitle           string
 	DesktimersInstallHooksPrompt          string
 	DesktimersCustomHooksPathNotice       string
@@ -1679,10 +1686,17 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersTaskMenuTitle:              "DeskTimers tasks",
 		DesktimersPickTaskTitle:              "Pick a task for this work",
 		DesktimersBranchTypeTitle:            "Branch type",
+		DesktimersUpdateAvailableTitle:       "Update available",
+		DesktimersUpdateAvailable:            "deskgit v{{version}} is available — run: brew upgrade deskgit",
+		DesktimersOpenTaskInBrowser:          "Open task in browser",
+		DesktimersOpenInBrowser:              "Open highlighted item in browser",
+		DesktimersNoTaskURL:                  "No browser link for this task",
 		DesktimersContinueWithoutTask:        "Continue without a task",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
 		DesktimersReauthNeeded:               "Your DeskTimers session is no longer valid. Restart deskgit to log in again.",
+		DesktimersLoginExpiredTitle:          "DeskTimers login expired",
+		DesktimersLoginExpiredPrompt:         "Your DeskTimers login expired — log in again now?\n\ndeskgit will drop to the terminal for the device flow and return here.",
 		DesktimersInstallHooksTitle:          "Install DeskTimers git hooks",
 		DesktimersInstallHooksPrompt:         "Install DeskTimers git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
 		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTimers hooks were not installed. Add them to your hook manager manually.",

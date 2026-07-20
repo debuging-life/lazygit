@@ -227,6 +227,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 |-----|--------|-------------|
 | `` <enter> `` | Executar |  |
 | `` <esc> `` | Fechar/Cancelar |  |
+| `` o `` | Open highlighted item in browser |  |
 | `` / `` | Filtrar a visualização atual por texto |  |
 
 ## Painel Principal (Normal)

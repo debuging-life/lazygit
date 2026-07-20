@@ -20,6 +20,7 @@ const stateFileName = "desktimers-task"
 type State struct {
 	Code       string    `json:"code"`
 	Title      string    `json:"title"`
+	URL        string    `json:"url,omitempty"`
 	SelectedAt time.Time `json:"selectedAt"`
 }
 
@@ -28,6 +29,7 @@ func NewState(task Task) *State {
 	return &State{
 		Code:       task.Code,
 		Title:      task.Title,
+		URL:        task.URL,
 		SelectedAt: time.Now(),
 	}
 }

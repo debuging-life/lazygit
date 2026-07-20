@@ -333,8 +333,8 @@
         },
         "strictPush": {
           "type": "boolean",
-          "description": "If true, pushes containing commits without a task code are blocked\n(sets strict mode for the pre-push hook).",
-          "default": false
+          "description": "If true (default), pushes containing commits without a task code are\nblocked: deskgit syncs `git config desktimers.strictpush` in each repo\nit opens, which the pre-push hook enforces. One-off escape hatch:\n`DT_STRICT=0 git push`.",
+          "default": true
         },
         "requireTaskForCommit": {
           "type": "boolean",
@@ -371,6 +371,11 @@
           "type": "string",
           "description": "Commit message prefix template ({{code}} = task code); shown readonly\nand prepended on confirm. Note: the prepare-commit-msg hook always\nuses the default '{{code}}/'.",
           "default": "{{code}}/"
+        },
+        "checkForUpdates": {
+          "type": "boolean",
+          "description": "If true (default), deskgit checks the Homebrew tap for a newer release\n(at most once per 24h) and shows a notice when one is available.",
+          "default": true
         }
       },
       "additionalProperties": false,

@@ -235,3 +235,63 @@ func hookScript(name string, dtHookPath string, chained bool) string {
 	}
 	return b.String()
 }
+
+// FindDtHookBinary looks for dt-hook next to the running executable, then on
+// the PATH.
+func FindDtHookBinary() (string, bool) {
+	if exe, err := os.Executable(); err == nil {
+		candidate := filepath.Join(filepath.Dir(exe), "dt-hook")
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, true
+		}
+	}
+	if path, err := exec.LookPath("dt-hook"); err == nil {
+		return path, true
+	}
+	return "", false
+}
+
+// EffectiveStrictPush resolves the pre-push strict mode for a repo:
+// DT_STRICT env var ("1"/"true" strict, "0"/"false" off) beats the repo's
+// `git config desktimers.strictpush`, which beats the warn-only default.
+// The returned source is "env", "git config", or "default".
+func EffectiveStrictPush(repoPath string) (strict bool, source string) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("DT_STRICT"))) {
+	case "1", "true":
+		return true, "env"
+	case "0", "false":
+		return false, "env"
+	}
+
+	cmd := exec.Command("git", "config", "--bool", "desktimers.strictpush")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err == nil {
+		return strings.TrimSpace(string(out)) == "true", "git config"
+	}
+	return false, "default"
+}
+
+// SyncStrictPushConfig aligns the repo-local `git config
+// desktimers.strictpush` with deskgit's configured value, writing only when
+// the stored value differs (or is absent).
+func SyncStrictPushConfig(repoPath string, strict bool) error {
+	want := "false"
+	if strict {
+		want = "true"
+	}
+
+	cmd := exec.Command("git", "config", "--local", "--get", "desktimers.strictpush")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err == nil && strings.TrimSpace(string(out)) == want {
+		return nil
+	}
+
+	set := exec.Command("git", "config", "--local", "desktimers.strictpush", want)
+	set.Dir = repoPath
+	if err := set.Run(); err != nil {
+		return fmt.Errorf("setting desktimers.strictpush: %w", err)
+	}
+	return nil
+}

@@ -54,8 +54,10 @@ type DesktimersConfig struct {
 	// - 'always': install silently
 	// - 'never': skip
 	AutoInstallHooks string `yaml:"autoInstallHooks" jsonschema:"enum=prompt,enum=always,enum=never"`
-	// If true, pushes containing commits without a task code are blocked
-	// (sets strict mode for the pre-push hook).
+	// If true (default), pushes containing commits without a task code are
+	// blocked: deskgit syncs `git config desktimers.strictpush` in each repo
+	// it opens, which the pre-push hook enforces. One-off escape hatch:
+	// `DT_STRICT=0 git push`.
 	StrictPush bool `yaml:"strictPush"`
 	// If true (default), committing opens the task picker first; the chosen
 	// task's code is shown readonly in the summary title and prepended to
@@ -77,6 +79,9 @@ type DesktimersConfig struct {
 	// and prepended on confirm. Note: the prepare-commit-msg hook always
 	// uses the default '{{code}}/'.
 	CommitPrefixTemplate string `yaml:"commitPrefixTemplate"`
+	// If true (default), deskgit checks the Homebrew tap for a newer release
+	// (at most once per 24h) and shows a notice when one is available.
+	CheckForUpdates bool `yaml:"checkForUpdates"`
 }
 
 type RefresherConfig struct {
@@ -1028,12 +1033,13 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 		Desktimers: DesktimersConfig{
 			ApiBaseUrl:           "https://api-leads.loudowls.com",
 			AutoInstallHooks:     "prompt",
-			StrictPush:           false,
+			StrictPush:           true,
 			RequireTaskForCommit: true,
 			RequireTaskForBranch: true,
 			BranchPrefixTemplate: "{{type}}/{{code}}-",
 			BranchTypes:          []string{"feature", "bugfix", "hotfix", "release", "chore", "refactor", "docs"},
 			CommitPrefixTemplate: "{{code}}/",
+			CheckForUpdates:      true,
 		},
 		Keybinding: KeybindingConfig{
 			Universal: KeybindingUniversalConfig{

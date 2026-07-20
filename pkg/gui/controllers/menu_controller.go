@@ -50,6 +50,12 @@ func (self *MenuController) GetKeybindings(opts types.KeybindingsOpts) []*types.
 			Description:     self.c.Tr.CloseCancel,
 			DisplayOnScreen: true,
 		},
+		{
+			Keys:              opts.GetKeys(opts.Config.Universal.OpenFile),
+			Handler:           self.withItem(self.open),
+			GetDisabledReason: self.require(self.singleItemSelected()),
+			Description:       self.c.Tr.DesktimersOpenInBrowser,
+		},
 	}
 
 	return bindings
@@ -70,6 +76,15 @@ func (self *MenuController) GetOnFocus() func(types.OnFocusOpts) {
 
 func (self *MenuController) press(selectedItem *types.MenuItem) error {
 	return self.context().OnMenuPress(selectedItem)
+}
+
+// open runs the highlighted item's secondary open action (deskgit: open the
+// task in a browser). Items without one ignore the key.
+func (self *MenuController) open(selectedItem *types.MenuItem) error {
+	if selectedItem.OnOpen == nil {
+		return nil
+	}
+	return selectedItem.OnOpen()
 }
 
 func (self *MenuController) close() error {

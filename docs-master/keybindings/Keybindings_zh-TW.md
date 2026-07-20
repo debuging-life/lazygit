@@ -130,6 +130,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 |-----|--------|-------------|
 | `` <enter> `` | 執行 |  |
 | `` <esc> `` | 關閉/取消 |  |
+| `` o `` | Open highlighted item in browser |  |
 | `` / `` | 搜尋 |  |
 
 ## 子提交

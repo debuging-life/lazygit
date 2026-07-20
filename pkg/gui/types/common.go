@@ -261,6 +261,11 @@ type MenuItem struct {
 
 	OnPress func() error
 
+	// deskgit: optional secondary action invoked with the 'open' key (o)
+	// while the item is highlighted, e.g. opening the item in a browser.
+	// Items without one ignore the key.
+	OnOpen func() error
+
 	// Only applies when Label is used
 	OpensMenu bool
 

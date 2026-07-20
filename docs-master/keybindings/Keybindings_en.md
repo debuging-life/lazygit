@@ -271,6 +271,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 |-----|--------|-------------|
 | `` <enter> `` | Execute |  |
 | `` <esc> `` | Close/Cancel |  |
+| `` o `` | Open highlighted item in browser |  |
 | `` / `` | Filter the current view by text |  |
 
 ## Reflog

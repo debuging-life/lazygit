@@ -43,7 +43,7 @@ sh scripts/build-deskgit.sh ~/.local/bin   # installs `deskgit` and `dt-hook`
 
 Tokens are scoped per device (revocable in DeskTimers under **Settings → Git Clients**), stored at `~/.config/deskgit/token.json` (0600), and last 90 days — after that the device flow simply runs again. If the API is unreachable but you have a cached token, deskgit continues offline; hooks work fully offline.
 
-**Log out / reconnect:** run `deskgit logout` (revokes the device token server-side and clears the local login), or use the **Log out of DeskTimers** item at the bottom of the `alt+t` menu. Running `deskgit` again starts the device flow.
+**Log out / reconnect:** run `deskgit logout` (revokes the device token server-side and clears the local login), or use the **Log out of DeskTimers** item at the bottom of the `alt+t` menu. `deskgit login` re-runs the device flow directly; when a login expires mid-session, deskgit offers to re-login on the spot. Something off? `deskgit doctor` prints ✓/✗ diagnostics (version, config, token, API reachability, hooks, push mode).
 
 ## Daily use
 
@@ -53,8 +53,9 @@ Tokens are scoped per device (revocable in DeskTimers under **Settings → Git C
 | Create a branch | `n` asks for the branch type first (`feature` / `bugfix` / `hotfix` / `release` / `chore` / `refactor` / `docs` — configurable via `desktimers.branchTypes`), then opens the task picker; the name prompt title shows the fixed `bugfix/LOUD-183-` prefix and you type only the name part — the prefix is prepended on confirm. Escape at any step aborts. |
 | Browse / pre-select a task | `alt+t` anywhere, or `t` while the Status panel is focused — fuzzy-filterable list of your assigned tasks |
 | See the current task | Always shown in the status line: `⏱ LOUD-124 Fix images` |
+| Open a task in the browser | `o` on any highlighted task in the pickers, or the **Open task in browser** item in the `alt+t` menu |
 | Commit outside deskgit | The `prepare-commit-msg` hook prepends `LOUD-124/` (your picked task) unless the message already has a code |
-| Push | Untagged commits print a yellow warning (push still succeeds) |
+| Push | Commits without a task code **block the push** by default (strict mode). One-off escape hatch: `DT_STRICT=0 git push`. Set `desktimers.strictPush: false` for warn-only |
 
 The pick-first steps can be turned off with `desktimers.requireTaskForCommit: false` / `requireTaskForBranch: false`, and the prefix formats customized via `commitPrefixTemplate` (default `{{code}}/`) and `branchPrefixTemplate` (default `{{type}}/{{code}}-`; a template without `{{type}}` skips the branch-type menu) — the git hook always uses the default commit format.
 
@@ -67,7 +68,7 @@ Everything else is stock lazygit — see [docs/](docs/README.md) for the full ma
 deskgit installs two hooks per repo (with your consent — it prompts on repo open):
 
 - **prepare-commit-msg** — prepends the selected task's code to the message. Skips merges, squashes, and amends; never double-prefixes; exits silently on any problem (it will never break a commit).
-- **pre-push** — warns (yellow, non-blocking) about pushed commits that carry no task code in the message **and** no code in the branch name. Set `DT_STRICT=1` or `git config desktimers.strictpush true` to make it block instead.
+- **pre-push** — flags pushed commits that carry no task code in the message **and** no code in the branch name. deskgit syncs `git config desktimers.strictpush` into each repo it opens from your `desktimers.strictPush` setting (default **true** = block). Precedence: `DT_STRICT` env (`1`/`true` strict, `0`/`false` off) > repo git config > warn-only default. `DT_STRICT=0 git push` pushes anyway this once.
 
 Existing hooks are preserved: they're renamed to `<hook>.local` and chained before ours. Repos using `core.hooksPath` (e.g. Husky) are detected and left alone with a notice. Manual control:
 
@@ -87,7 +88,8 @@ The hooks read the selected task from `<git-dir>/desktimers-task` (per worktree)
 desktimers:
   apiBaseUrl: https://api-leads.loudowls.com   # point at staging/local if needed
   autoInstallHooks: prompt                 # prompt | always | never
-  strictPush: false
+  strictPush: true                         # block pushes with untagged commits
+  checkForUpdates: true                    # brew-tap update notice, max once/24h
 
 keybinding:
   universal:

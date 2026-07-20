@@ -85,6 +85,26 @@ func TestPrePushStrictModeBlocks(t *testing.T) {
 	if !strings.Contains(stderr.String(), "push blocked") {
 		t.Errorf("strict mode should explain the block:\n%s", stderr.String())
 	}
+	if !strings.Contains(stderr.String(), "DT_STRICT=0 git push") {
+		t.Errorf("strict block should mention the escape hatch:\n%s", stderr.String())
+	}
+}
+
+func TestPrePushEnvOverridesGitConfigOff(t *testing.T) {
+	repo, head := setupRepo(t)
+	runGit(t, repo, "config", "desktimers.strictpush", "true")
+	t.Setenv("DT_STRICT", "0")
+
+	stdin := strings.NewReader("refs/heads/feature " + head + " refs/heads/feature " + zeroSha + "\n")
+	stderr := &bytes.Buffer{}
+	code := runPrePush([]string{"origin", "ignored-url"}, stdin, stderr, repo)
+
+	if code != 0 {
+		t.Fatalf("DT_STRICT=0 must override git config strict, got exit %d", code)
+	}
+	if !strings.Contains(stderr.String(), "no DeskTimers task code") {
+		t.Errorf("warning should still print in override mode:\n%s", stderr.String())
+	}
 }
 
 func TestPrePushStrictViaGitConfig(t *testing.T) {

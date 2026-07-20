@@ -839,9 +839,11 @@ desktimers:
   # - 'never': skip
   autoInstallHooks: prompt
 
-  # If true, pushes containing commits without a task code are blocked
-  # (sets strict mode for the pre-push hook).
-  strictPush: false
+  # If true (default), pushes containing commits without a task code are
+  # blocked: deskgit syncs `git config desktimers.strictpush` in each repo
+  # it opens, which the pre-push hook enforces. One-off escape hatch:
+  # `DT_STRICT=0 git push`.
+  strictPush: true
 
   # If true (default), committing opens the task picker first; the chosen
   # task's code is shown readonly in the summary title and prepended to
@@ -874,6 +876,10 @@ desktimers:
   # and prepended on confirm. Note: the prepare-commit-msg hook always
   # uses the default '{{code}}/'.
   commitPrefixTemplate: '{{code}}/'
+
+  # If true (default), deskgit checks the Homebrew tap for a newer release
+  # (at most once per 24h) and shows a notice when one is available.
+  checkForUpdates: true
 ```
 <!-- END CONFIG YAML -->
 

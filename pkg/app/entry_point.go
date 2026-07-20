@@ -51,11 +51,20 @@ type BuildInfo struct {
 }
 
 func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTest) {
-	// deskgit: `deskgit logout` is a plain subcommand handled before flaggy
-	// takes over argument parsing (flaggy would reject it as a positional).
-	if len(os.Args) > 1 && os.Args[1] == "logout" {
-		runDesktimersLogout(os.Stdout)
-		return
+	// deskgit: plain subcommands handled before flaggy takes over argument
+	// parsing (flaggy would reject them as positionals).
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "logout":
+			runDesktimersLogout(os.Stdout)
+			return
+		case "login":
+			runDesktimersLogin(os.Stdout)
+			return
+		case "doctor":
+			mergeBuildInfo(buildInfo)
+			os.Exit(runDesktimersDoctor(os.Stdout, buildInfo.Version))
+		}
 	}
 
 	cliArgs := parseCliArgsAndEnvVars()
