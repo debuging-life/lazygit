@@ -231,9 +231,9 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 		return self.HandleCommitPressWithMessage(initialMessage, false)
 	}
 
-	// The retained message (failed commit) or branch-derived prefix is kept
-	// after the task prefix; with neither, the panel opens with just
-	// "CODE/" and the cursor after it.
+	// The editable buffer holds only the retained message (failed commit) or
+	// branch-derived prefix; the task code is NOT part of the buffer — it is
+	// shown readonly in the summary title and prepended on confirm.
 	messageTail := initialMessage
 	if preservedMessage != "" {
 		messageTail = preservedMessage
@@ -244,7 +244,38 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 			return self.HandleCommitPressWithMessage(initialMessage, false)
 		}
 		prefix := desktimers.ApplyPrefixTemplate(cfg.CommitPrefixTemplate, desktimers.DefaultCommitPrefixTemplate, task.Code)
-		return self.HandleCommitPressWithMessage(prefix+messageTail, false)
+		return self.handleCommitPressWithTaskPrefix(messageTail, prefix)
+	})
+}
+
+// handleCommitPressWithTaskPrefix opens the commit message panel with the
+// task code rendered readonly in the summary frame title
+// (`Commit summary — LOUD-124/`) rather than prefilled into the editable
+// buffer. The prefix is prepended to the typed summary on confirm, unless
+// the user typed their own task code (intentional override).
+func (self *WorkingTreeHelper) handleCommitPressWithTaskPrefix(initialMessage string, taskPrefix string) error {
+	return self.WithEnsureCommittableFiles(func() error {
+		self.commitsHelper.OpenCommitMessagePanel(
+			&OpenCommitMessagePanelOpts{
+				CommitIndex:      context.NoCommitIndex,
+				InitialMessage:   initialMessage,
+				SummaryTitle:     desktimers.TitleWithTaskPrefix(self.c.Tr.CommitSummaryTitle, taskPrefix),
+				DescriptionTitle: self.c.Tr.CommitDescriptionTitle,
+				PreserveMessage:  true,
+				OnConfirm: func(summary string, description string) error {
+					return self.handleCommit(desktimers.ComposeWithTaskPrefix(taskPrefix, summary), description, false)
+				},
+				OnSwitchToEditor: func(filepath string) error {
+					// The prefix isn't in the buffer; the prepare-commit-msg
+					// hook prepends the picked task's code in the editor flow.
+					return self.switchFromCommitMessagePanelToEditor(filepath, false)
+				},
+				ForceSkipHooks:  false,
+				SkipHooksPrefix: self.c.UserConfig().Git.SkipHookPrefix,
+			},
+		)
+
+		return nil
 	})
 }
 

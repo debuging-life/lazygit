@@ -57,18 +57,21 @@ type DesktimersConfig struct {
 	// If true, pushes containing commits without a task code are blocked
 	// (sets strict mode for the pre-push hook).
 	StrictPush bool `yaml:"strictPush"`
-	// If true (default), committing opens the task picker first and the
-	// message is prefilled with the chosen task's code. False restores the
-	// passive behavior (the pre-selected task is applied by the git hook).
+	// If true (default), committing opens the task picker first; the chosen
+	// task's code is shown readonly in the summary title and prepended to
+	// the message on confirm. False restores the passive behavior (the
+	// pre-selected task is applied by the git hook).
 	RequireTaskForCommit bool `yaml:"requireTaskForCommit"`
-	// If true (default), creating a branch opens the task picker first and
-	// the branch name is prefilled from branchPrefixTemplate.
+	// If true (default), creating a branch opens the task picker first; the
+	// prefix from branchPrefixTemplate is shown readonly in the prompt title
+	// and prepended to the typed name on confirm.
 	RequireTaskForBranch bool `yaml:"requireTaskForBranch"`
-	// Branch name prefix template; {{code}} is replaced with the task code.
+	// Branch name prefix template ({{code}} = task code); shown readonly and
+	// prepended on confirm.
 	BranchPrefixTemplate string `yaml:"branchPrefixTemplate"`
-	// Commit message prefix template; {{code}} is replaced with the task
-	// code. Note: the prepare-commit-msg hook always uses the default
-	// '{{code}}/'.
+	// Commit message prefix template ({{code}} = task code); shown readonly
+	// and prepended on confirm. Note: the prepare-commit-msg hook always
+	// uses the default '{{code}}/'.
 	CommitPrefixTemplate string `yaml:"commitPrefixTemplate"`
 }
 

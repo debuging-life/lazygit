@@ -338,22 +338,22 @@
         },
         "requireTaskForCommit": {
           "type": "boolean",
-          "description": "If true (default), committing opens the task picker first and the\nmessage is prefilled with the chosen task's code. False restores the\npassive behavior (the pre-selected task is applied by the git hook).",
+          "description": "If true (default), committing opens the task picker first; the chosen\ntask's code is shown readonly in the summary title and prepended to\nthe message on confirm. False restores the passive behavior (the\npre-selected task is applied by the git hook).",
           "default": true
         },
         "requireTaskForBranch": {
           "type": "boolean",
-          "description": "If true (default), creating a branch opens the task picker first and\nthe branch name is prefilled from branchPrefixTemplate.",
+          "description": "If true (default), creating a branch opens the task picker first; the\nprefix from branchPrefixTemplate is shown readonly in the prompt title\nand prepended to the typed name on confirm.",
           "default": true
         },
         "branchPrefixTemplate": {
           "type": "string",
-          "description": "Branch name prefix template; {{code}} is replaced with the task code.",
+          "description": "Branch name prefix template ({{code}} = task code); shown readonly and\nprepended on confirm.",
           "default": "feature/{{code}}-"
         },
         "commitPrefixTemplate": {
           "type": "string",
-          "description": "Commit message prefix template; {{code}} is replaced with the task\ncode. Note: the prepare-commit-msg hook always uses the default\n'{{code}}/'.",
+          "description": "Commit message prefix template ({{code}} = task code); shown readonly\nand prepended on confirm. Note: the prepare-commit-msg hook always\nuses the default '{{code}}/'.",
           "default": "{{code}}/"
         }
       },

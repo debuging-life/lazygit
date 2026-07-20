@@ -63,6 +63,40 @@ func TestPickerColumns(t *testing.T) {
 	}
 }
 
+func TestComposeWithTaskPrefix(t *testing.T) {
+	tests := []struct {
+		name   string
+		prefix string
+		typed  string
+		want   string
+	}{
+		{"prepends to plain text", "LOUD-124/", "fix images", "LOUD-124/fix images"},
+		{"branch prefix", "feature/LOUD-124-", "image-cache", "feature/LOUD-124-image-cache"},
+		{"no double prefix: same code typed", "LOUD-124/", "LOUD-124/fix images", "LOUD-124/fix images"},
+		{"different code typed wins (override)", "LOUD-124/", "LOUD-99/other thing", "LOUD-99/other thing"},
+		{"code anywhere in typed text wins", "LOUD-124/", "revert LOUD-77 change", "revert LOUD-77 change"},
+		{"empty typed stays empty (stays invalid)", "LOUD-124/", "", ""},
+		{"whitespace-only typed unchanged", "LOUD-124/", "   ", "   "},
+		{"no prefix (no-task valve) unchanged", "", "fix images", "fix images"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ComposeWithTaskPrefix(tt.prefix, tt.typed); got != tt.want {
+				t.Errorf("ComposeWithTaskPrefix(%q, %q) = %q, want %q", tt.prefix, tt.typed, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTitleWithTaskPrefix(t *testing.T) {
+	if got := TitleWithTaskPrefix("Commit summary", "LOUD-124/"); got != "Commit summary — LOUD-124/" {
+		t.Errorf("got %q", got)
+	}
+	if got := TitleWithTaskPrefix("Commit summary", ""); got != "Commit summary" {
+		t.Errorf("no prefix should leave the title unchanged, got %q", got)
+	}
+}
+
 func TestApplyPrefixTemplate(t *testing.T) {
 	tests := []struct {
 		name     string

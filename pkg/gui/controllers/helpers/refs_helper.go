@@ -365,37 +365,41 @@ func (self *RefsHelper) NewBranch(from string, fromFormattedName string, suggest
 		}
 	}
 
-	return self.withTaskForBranch(suggestedBranchName, func(prefilledName string) error {
-		return self.promptNewBranch(from, fromFormattedName, prefilledName)
+	return self.withTaskForBranch(suggestedBranchName, func(taskPrefix string, suggested string) error {
+		return self.promptNewBranch(from, fromFormattedName, suggested, taskPrefix)
 	})
 }
 
 // withTaskForBranch wraps a new-branch flow: when requireTaskForBranch is on
 // and the suggested name doesn't already carry a task code, the task picker
-// runs first and the branch name gets the task prefix
-// (branchPrefixTemplate). Escape in the picker aborts the flow.
-func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(string) error) error {
+// runs first and `then` receives the readonly task prefix
+// (branchPrefixTemplate) to display and prepend on confirm. Escape in the
+// picker aborts the flow.
+func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(taskPrefix string, suggested string) error) error {
 	cfg := self.c.UserConfig().Desktimers
 	if !cfg.RequireTaskForBranch || desktimers.ExtractCode(suggestedBranchName) != "" {
-		return then(suggestedBranchName)
+		return then("", suggestedBranchName)
 	}
 
 	return self.desktimersHelper.PickTaskForAction(func(task desktimers.Task) error {
 		if task.Code == "" { // "continue without a task"
-			return then(suggestedBranchName)
+			return then("", suggestedBranchName)
 		}
 		prefix := desktimers.ApplyPrefixTemplate(cfg.BranchPrefixTemplate, desktimers.DefaultBranchPrefixTemplate, task.Code)
-		return then(prefix + suggestedBranchName)
+		return then(prefix, suggestedBranchName)
 	})
 }
 
-func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, suggestedBranchName string) error {
+func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, suggestedBranchName string, taskPrefix string) error {
 	message := utils.ResolvePlaceholderString(
 		self.c.Tr.NewBranchNameBranchOff,
 		map[string]string{
 			"branchName": fromFormattedName,
 		},
 	)
+	// The task prefix is readonly: shown in the prompt title, prepended to
+	// the typed name on confirm (ComposeWithTaskPrefix).
+	message = desktimers.TitleWithTaskPrefix(message, taskPrefix)
 
 	refresh := func() {
 		if self.c.Context().Current() != self.c.Contexts().Branches {
@@ -416,7 +420,7 @@ func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, s
 		InitialContent: suggestedBranchName,
 		HandleConfirm: func(response string) error {
 			self.c.LogAction(self.c.Tr.Actions.CreateBranch)
-			newBranchName := SanitizedBranchName(response)
+			newBranchName := SanitizedBranchName(desktimers.ComposeWithTaskPrefix(taskPrefix, response))
 			newBranchFunc := self.c.Git().Branch.New
 			if newBranchName != suggestedBranchName {
 				newBranchFunc = self.c.Git().Branch.NewWithoutTracking
@@ -474,13 +478,13 @@ func (self *RefsHelper) MoveCommitsToNewBranch() error {
 			return err
 		}
 
-		return self.withTaskForBranch(suggestedBranchName, func(prefilledName string) error {
+		return self.withTaskForBranch(suggestedBranchName, func(taskPrefix string, suggested string) error {
 			self.c.Prompt(types.PromptOpts{
-				Title:          prompt,
-				InitialContent: prefilledName,
+				Title:          desktimers.TitleWithTaskPrefix(prompt, taskPrefix),
+				InitialContent: suggested,
 				HandleConfirm: func(response string) error {
 					self.c.LogAction(self.c.Tr.MoveCommitsToNewBranch)
-					newBranchName := SanitizedBranchName(response)
+					newBranchName := SanitizedBranchName(desktimers.ComposeWithTaskPrefix(taskPrefix, response))
 					return self.c.WithWaitingStatus(self.c.Tr.MovingCommitsToNewBranchStatus, func(gocui.Task) error {
 						return f(newBranchName)
 					})

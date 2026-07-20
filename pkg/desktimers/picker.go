@@ -66,3 +66,27 @@ func ApplyPrefixTemplate(template string, fallback string, code string) string {
 	}
 	return strings.ReplaceAll(template, "{{code}}", code)
 }
+
+// ComposeWithTaskPrefix prepends the readonly task prefix to what the user
+// typed. The typed text wins unchanged when it's blank (so the usual
+// empty-input validation still fires), when there is no prefix (no-task
+// valve), or when it already carries a task code — same or different; a
+// different code is an intentional override.
+func ComposeWithTaskPrefix(prefix string, typed string) string {
+	if prefix == "" || strings.TrimSpace(typed) == "" {
+		return typed
+	}
+	if ExtractCode(typed) != "" {
+		return typed
+	}
+	return prefix + typed
+}
+
+// TitleWithTaskPrefix renders a panel/prompt title carrying the readonly
+// task prefix, e.g. `Commit summary — LOUD-124/`.
+func TitleWithTaskPrefix(baseTitle string, prefix string) string {
+	if prefix == "" {
+		return baseTitle
+	}
+	return baseTitle + " — " + prefix
+}
