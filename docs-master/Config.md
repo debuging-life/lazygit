@@ -854,9 +854,21 @@ desktimers:
   # and prepended to the typed name on confirm.
   requireTaskForBranch: true
 
-  # Branch name prefix template ({{code}} = task code); shown readonly and
-  # prepended on confirm.
-  branchPrefixTemplate: feature/{{code}}-
+  # Branch name prefix template ({{type}} = chosen branch type, {{code}} =
+  # task code); shown readonly and prepended on confirm. A template
+  # without {{type}} skips the branch-type menu entirely.
+  branchPrefixTemplate: '{{type}}/{{code}}-'
+
+  # Branch types offered by the new-branch type menu, in menu order; the
+  # first entry is the preselected default.
+  branchTypes:
+    - feature
+    - bugfix
+    - hotfix
+    - release
+    - chore
+    - refactor
+    - docs
 
   # Commit message prefix template ({{code}} = task code); shown readonly
   # and prepended on confirm. Note: the prepare-commit-msg hook always

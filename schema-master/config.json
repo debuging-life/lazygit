@@ -348,8 +348,24 @@
         },
         "branchPrefixTemplate": {
           "type": "string",
-          "description": "Branch name prefix template ({{code}} = task code); shown readonly and\nprepended on confirm.",
-          "default": "feature/{{code}}-"
+          "description": "Branch name prefix template ({{type}} = chosen branch type, {{code}} =\ntask code); shown readonly and prepended on confirm. A template\nwithout {{type}} skips the branch-type menu entirely.",
+          "default": "{{type}}/{{code}}-"
+        },
+        "branchTypes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Branch types offered by the new-branch type menu, in menu order; the\nfirst entry is the preselected default.",
+          "default": [
+            "feature",
+            "bugfix",
+            "hotfix",
+            "release",
+            "chore",
+            "refactor",
+            "docs"
+          ]
         },
         "commitPrefixTemplate": {
           "type": "string",

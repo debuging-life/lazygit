@@ -242,6 +242,30 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 	})
 }
 
+// PickBranchTypeThen shows the branch-type menu (feature/bugfix/hotfix/...)
+// and calls then with the chosen type. The first configured type is
+// preselected; Escape/cancel closes the menu without calling then, aborting
+// the surrounding flow.
+func (self *DesktimersHelper) PickBranchTypeThen(branchTypes []string, then func(branchType string) error) error {
+	if len(branchTypes) == 0 {
+		branchTypes = desktimers.DefaultBranchTypes
+	}
+
+	menuItems := lo.Map(branchTypes, func(branchType string, _ int) *types.MenuItem {
+		return &types.MenuItem{
+			Label: branchType,
+			OnPress: func() error {
+				return then(branchType)
+			},
+		}
+	})
+
+	return self.c.Menu(types.CreateMenuOptions{
+		Title: self.c.Tr.DesktimersBranchTypeTitle,
+		Items: menuItems,
+	})
+}
+
 func (self *DesktimersHelper) selectTask(task desktimers.Task) error {
 	state := desktimers.NewState(task)
 	if err := desktimers.SaveState(".", state); err != nil {

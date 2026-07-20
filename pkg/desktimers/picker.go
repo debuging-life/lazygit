@@ -6,11 +6,16 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
-// Default prefix templates; {{code}} is replaced with the task code.
+// Default prefix templates; {{code}} is replaced with the task code and
+// {{type}} (branch template only) with the chosen branch type.
 const (
 	DefaultCommitPrefixTemplate = "{{code}}/"
-	DefaultBranchPrefixTemplate = "feature/{{code}}-"
+	DefaultBranchPrefixTemplate = "{{type}}/{{code}}-"
 )
+
+// DefaultBranchTypes is the branch-type menu, in menu order; the first entry
+// is the preselected default. Overridable via desktimers.branchTypes.
+var DefaultBranchTypes = []string{"feature", "bugfix", "hotfix", "release", "chore", "refactor", "docs"}
 
 // StatusInProgress is the task status the picker floats to the top.
 const StatusInProgress = "in_progress"
@@ -58,13 +63,43 @@ func PickerColumns(task Task) []string {
 	return []string{task.Code, utils.TruncateWithEllipsis(task.Title, 60), project, marker}
 }
 
+// effectiveTemplate resolves a possibly-blank user template to fallback.
+func effectiveTemplate(template string, fallback string) string {
+	if strings.TrimSpace(template) == "" {
+		return fallback
+	}
+	return template
+}
+
 // ApplyPrefixTemplate expands a prefix template, replacing {{code}} with the
 // task code. A blank template falls back to fallback.
 func ApplyPrefixTemplate(template string, fallback string, code string) string {
-	if strings.TrimSpace(template) == "" {
-		template = fallback
+	return strings.ReplaceAll(effectiveTemplate(template, fallback), "{{code}}", code)
+}
+
+// BranchTemplateUsesType reports whether the (fallback-resolved) branch
+// prefix template contains {{type}} — when it doesn't, the user's template
+// fully controls the prefix and the branch-type menu is skipped.
+func BranchTemplateUsesType(template string) bool {
+	return strings.Contains(effectiveTemplate(template, DefaultBranchPrefixTemplate), "{{type}}")
+}
+
+// ApplyBranchPrefixTemplate expands the branch prefix template with the
+// chosen branch type and task code, e.g. "{{type}}/{{code}}-" →
+// "bugfix/LOUD-183-".
+func ApplyBranchPrefixTemplate(template string, branchType string, code string) string {
+	t := effectiveTemplate(template, DefaultBranchPrefixTemplate)
+	t = strings.ReplaceAll(t, "{{type}}", branchType)
+	return strings.ReplaceAll(t, "{{code}}", code)
+}
+
+// FirstBranchType returns the default (first) branch type of a configured
+// list, falling back to the built-in defaults.
+func FirstBranchType(types []string) string {
+	if len(types) == 0 {
+		return DefaultBranchTypes[0]
 	}
-	return strings.ReplaceAll(template, "{{code}}", code)
+	return types[0]
 }
 
 // ComposeWithTaskPrefix prepends the readonly task prefix to what the user

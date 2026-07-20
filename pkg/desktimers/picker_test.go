@@ -63,6 +63,56 @@ func TestPickerColumns(t *testing.T) {
 	}
 }
 
+func TestApplyBranchPrefixTemplate(t *testing.T) {
+	tests := []struct {
+		name       string
+		template   string
+		branchType string
+		code       string
+		want       string
+	}{
+		{"default template", "", "bugfix", "LOUD-183", "bugfix/LOUD-183-"},
+		{"explicit default", "{{type}}/{{code}}-", "feature", "LOUD-124", "feature/LOUD-124-"},
+		{"custom with type", "{{type}}--{{code}}/", "hotfix", "LOUD-9", "hotfix--LOUD-9/"},
+		{"custom without type", "wip/{{code}}-", "feature", "LOUD-124", "wip/LOUD-124-"},
+		{"blank falls back to default", "  ", "docs", "LOUD-7", "docs/LOUD-7-"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ApplyBranchPrefixTemplate(tt.template, tt.branchType, tt.code); got != tt.want {
+				t.Errorf("ApplyBranchPrefixTemplate(%q, %q, %q) = %q, want %q", tt.template, tt.branchType, tt.code, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBranchTemplateUsesType(t *testing.T) {
+	tests := []struct {
+		template string
+		want     bool
+	}{
+		{"", true},    // blank → default template, which has {{type}}
+		{"   ", true}, // whitespace → default
+		{"{{type}}/{{code}}-", true},
+		{"feature/{{code}}-", false}, // custom template without {{type}} → skip the type menu
+		{"{{code}}/", false},
+	}
+	for _, tt := range tests {
+		if got := BranchTemplateUsesType(tt.template); got != tt.want {
+			t.Errorf("BranchTemplateUsesType(%q) = %v, want %v", tt.template, got, tt.want)
+		}
+	}
+}
+
+func TestFirstBranchType(t *testing.T) {
+	if got := FirstBranchType(nil); got != "feature" {
+		t.Errorf("empty list should fall back to the built-in default, got %q", got)
+	}
+	if got := FirstBranchType([]string{"chore", "feature"}); got != "chore" {
+		t.Errorf("expected first configured type, got %q", got)
+	}
+}
+
 func TestComposeWithTaskPrefix(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -106,9 +156,7 @@ func TestApplyPrefixTemplate(t *testing.T) {
 		want     string
 	}{
 		{"commit default", "{{code}}/", DefaultCommitPrefixTemplate, "LOUD-124", "LOUD-124/"},
-		{"branch default", "feature/{{code}}-", DefaultBranchPrefixTemplate, "LOUD-124", "feature/LOUD-124-"},
 		{"custom", "[{{code}}] ", DefaultCommitPrefixTemplate, "LOUD-124", "[LOUD-124] "},
-		{"blank falls back", "", DefaultBranchPrefixTemplate, "LOUD-124", "feature/LOUD-124-"},
 		{"whitespace falls back", "  ", DefaultCommitPrefixTemplate, "LOUD-124", "LOUD-124/"},
 	}
 	for _, tt := range tests {

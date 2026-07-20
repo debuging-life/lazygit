@@ -371,23 +371,37 @@ func (self *RefsHelper) NewBranch(from string, fromFormattedName string, suggest
 }
 
 // withTaskForBranch wraps a new-branch flow: when requireTaskForBranch is on
-// and the suggested name doesn't already carry a task code, the task picker
-// runs first and `then` receives the readonly task prefix
-// (branchPrefixTemplate) to display and prepend on confirm. Escape in the
-// picker aborts the flow.
+// and the suggested name doesn't already carry a task code, the branch-type
+// menu runs first (skipped when the template has no {{type}}), then the task
+// picker, and `then` receives the composed readonly prefix
+// (e.g. "bugfix/LOUD-183-") to display and prepend on confirm. Escape at
+// either menu aborts the flow.
 func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(taskPrefix string, suggested string) error) error {
 	cfg := self.c.UserConfig().Desktimers
 	if !cfg.RequireTaskForBranch || desktimers.ExtractCode(suggestedBranchName) != "" {
 		return then("", suggestedBranchName)
 	}
 
-	return self.desktimersHelper.PickTaskForAction(func(task desktimers.Task) error {
-		if task.Code == "" { // "continue without a task"
-			return then("", suggestedBranchName)
-		}
-		prefix := desktimers.ApplyPrefixTemplate(cfg.BranchPrefixTemplate, desktimers.DefaultBranchPrefixTemplate, task.Code)
-		return then(prefix, suggestedBranchName)
-	})
+	pickTask := func(branchType string) error {
+		return self.desktimersHelper.PickTaskForAction(func(task desktimers.Task) error {
+			if task.Code == "" { // "continue without a task"
+				if branchType == "" {
+					return then("", suggestedBranchName)
+				}
+				// Type was still chosen; it stays readonly in the title.
+				return then(branchType+"/", suggestedBranchName)
+			}
+			prefix := desktimers.ApplyBranchPrefixTemplate(cfg.BranchPrefixTemplate, branchType, task.Code)
+			return then(prefix, suggestedBranchName)
+		})
+	}
+
+	if !desktimers.BranchTemplateUsesType(cfg.BranchPrefixTemplate) {
+		// The user's custom template fully controls the prefix.
+		return pickTask("")
+	}
+
+	return self.desktimersHelper.PickBranchTypeThen(cfg.BranchTypes, pickTask)
 }
 
 func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, suggestedBranchName string, taskPrefix string) error {
@@ -675,7 +689,9 @@ func (self *RefsHelper) getSuggestedBranchName() (string, error) {
 	cfg := self.c.UserConfig().Desktimers
 	if !cfg.RequireTaskForBranch {
 		if state, err := desktimers.LoadState("."); err == nil && state != nil && state.Code != "" {
-			return desktimers.ApplyPrefixTemplate(cfg.BranchPrefixTemplate, desktimers.DefaultBranchPrefixTemplate, state.Code), nil
+			// No type menu in passive mode; the default (first) type fills
+			// the template's {{type}} slot.
+			return desktimers.ApplyBranchPrefixTemplate(cfg.BranchPrefixTemplate, desktimers.FirstBranchType(cfg.BranchTypes), state.Code), nil
 		}
 	}
 

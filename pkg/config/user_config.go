@@ -66,9 +66,13 @@ type DesktimersConfig struct {
 	// prefix from branchPrefixTemplate is shown readonly in the prompt title
 	// and prepended to the typed name on confirm.
 	RequireTaskForBranch bool `yaml:"requireTaskForBranch"`
-	// Branch name prefix template ({{code}} = task code); shown readonly and
-	// prepended on confirm.
+	// Branch name prefix template ({{type}} = chosen branch type, {{code}} =
+	// task code); shown readonly and prepended on confirm. A template
+	// without {{type}} skips the branch-type menu entirely.
 	BranchPrefixTemplate string `yaml:"branchPrefixTemplate"`
+	// Branch types offered by the new-branch type menu, in menu order; the
+	// first entry is the preselected default.
+	BranchTypes []string `yaml:"branchTypes"`
 	// Commit message prefix template ({{code}} = task code); shown readonly
 	// and prepended on confirm. Note: the prepare-commit-msg hook always
 	// uses the default '{{code}}/'.
@@ -1027,7 +1031,8 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			StrictPush:           false,
 			RequireTaskForCommit: true,
 			RequireTaskForBranch: true,
-			BranchPrefixTemplate: "feature/{{code}}-",
+			BranchPrefixTemplate: "{{type}}/{{code}}-",
+			BranchTypes:          []string{"feature", "bugfix", "hotfix", "release", "chore", "refactor", "docs"},
 			CommitPrefixTemplate: "{{code}}/",
 		},
 		Keybinding: KeybindingConfig{

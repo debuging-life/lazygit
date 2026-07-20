@@ -503,6 +503,7 @@ type TranslationSet struct {
 	DesktimersLoadingTasks                string
 	DesktimersTaskMenuTitle               string
 	DesktimersPickTaskTitle               string
+	DesktimersBranchTypeTitle             string
 	DesktimersContinueWithoutTask         string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
@@ -1677,6 +1678,7 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersLoadingTasks:               "Loading DeskTimers tasks",
 		DesktimersTaskMenuTitle:              "DeskTimers tasks",
 		DesktimersPickTaskTitle:              "Pick a task for this work",
+		DesktimersBranchTypeTitle:            "Branch type",
 		DesktimersContinueWithoutTask:        "Continue without a task",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
