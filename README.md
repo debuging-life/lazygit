@@ -67,6 +67,7 @@ Tokens are scoped per device (revocable in DeskTimers under **Settings → Git C
 | Open a task in the browser | `o` on any highlighted task in the pickers, or the **Open task in browser** item in the `alt+t` menu |
 | Commit outside deskgit | The `prepare-commit-msg` hook prepends `LOUD-124/` (your picked task) unless the message already has a code |
 | Push | Commits without a task code **block the push** by default (strict mode). One-off escape hatch: `DT_STRICT=0 git push`. Set `desktimers.strictPush: false` for warn-only |
+| Open a pull request | `o` in the branches panel as usual — on GitHub, the PR form comes prefilled with the branch's task code as the title and a `Task: <link>` body |
 
 The pick-first steps can be turned off with `desktimers.requireTaskForCommit: false` / `requireTaskForBranch: false`, and the prefix formats customized via `commitPrefixTemplate` (default `{{code}}/`) and `branchPrefixTemplate` (default `{{type}}/{{code}}-`; a template without `{{type}}` skips the branch-type menu) — the git hook always uses the default commit format.
 
@@ -86,7 +87,7 @@ deskgit and the DeskTimers desktop timer know about each other:
 
 deskgit installs two hooks per repo. By default (`autoInstallHooks: auto`) this happens **silently for work repos only**: when the origin remote's owner is in `desktimers.hookOrgs` (default `debuging-life`, `loudowls`), hooks are installed/refreshed and strict-push config synced on repo open; any other repo — or a repo with no origin remote — is left completely untouched. Set `autoInstallHooks: prompt` to be asked per repo instead (`always`/`never` also available).
 
-- **prepare-commit-msg** — prepends the selected task's code to the message. Skips merges, squashes, and amends; never double-prefixes; exits silently on any problem (it will never break a commit).
+- **prepare-commit-msg** — prepends the selected task's code to the message and appends a `Task: <link>` trailer (when the task has a webapp link) so the task is one click away from every commit. Skips merges, squashes, and amends; never duplicates either; exits silently on any problem (it will never break a commit).
 - **pre-push** — flags pushed commits that carry no task code in the message **and** no code in the branch name. deskgit syncs `git config desktimers.strictpush` into each repo it opens from your `desktimers.strictPush` setting (default **true** = block). Precedence: `DT_STRICT` env (`1`/`true` strict, `0`/`false` off) > repo git config > warn-only default. `DT_STRICT=0 git push` pushes anyway this once.
 
 Existing hooks are preserved: they're renamed to `<hook>.local` and chained before ours. Repos using `core.hooksPath` (e.g. Husky) are detected and left alone with a notice. Manual control:
@@ -111,7 +112,8 @@ desktimers:
     - debuging-life
     - loudowls
   strictPush: true                         # block pushes with untagged commits
-  checkForUpdates: true                    # brew-tap update notice, max once/24h
+  checkForUpdates: true                    # brew-tap update notice, max once/24h;
+                                           # Homebrew installs get an "Update now" button
   requireTaskForCommit: true               # commit opens the task picker first
   requireTaskForBranch: true               # new branch: type menu + task picker
   commitPrefixTemplate: '{{code}}/'        # readonly prefix on commit messages

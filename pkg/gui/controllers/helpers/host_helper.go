@@ -1,7 +1,10 @@
 package helpers
 
 import (
+	"strings"
+
 	"github.com/jesseduffield/lazygit/pkg/commands/hosting_service"
+	"github.com/jesseduffield/lazygit/pkg/desktimers"
 )
 
 // this helper just wraps our hosting_service package
@@ -23,7 +26,18 @@ func (self *HostHelper) GetPullRequestURL(from string, to string) (string, error
 	if err != nil {
 		return "", err
 	}
-	return mgr.GetPullRequestURL(from, to)
+	prURL, err := mgr.GetPullRequestURL(from, to)
+	if err != nil {
+		return "", err
+	}
+
+	// deskgit: GitHub PRs from task-coded branches get the title (and, when
+	// the deep link resolves, body) prefilled. Best effort — the title needs
+	// no network; the body lookup silently skips on failure.
+	if code := desktimers.ExtractCode(from); code != "" && strings.HasPrefix(prURL, "https://github.com/") {
+		prURL = desktimers.AugmentGitHubPullRequestURL(prURL, from, desktimers.TaskURLForCode(".", code))
+	}
+	return prURL, nil
 }
 
 func (self *HostHelper) GetCommitURL(commitHash string) (string, error) {

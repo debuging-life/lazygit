@@ -290,6 +290,7 @@ func (gui *Gui) onInitialViewsCreation() error {
 	// check the Homebrew tap for a newer deskgit release.
 	gui.helpers.Desktimers.PromptToInstallHooksInBackground()
 	gui.helpers.Desktimers.CheckForUpdateInBackground(gui.Config.GetVersion())
+	gui.helpers.Desktimers.RefreshWorkReposInBackground()
 
 	gui.waitForIntro.Done()
 

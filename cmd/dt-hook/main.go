@@ -99,9 +99,10 @@ func runPrepareCommitMsg(args []string) {
 	if err != nil {
 		return
 	}
-	rewritten, changed := desktimers.PrefixCommitMessage(string(data), state.Code, source)
-	if !changed {
+	content, prefixed := desktimers.PrefixCommitMessage(string(data), state.Code, source)
+	content, trailed := desktimers.AppendTaskTrailer(content, state.URL, source)
+	if !prefixed && !trailed {
 		return
 	}
-	_ = os.WriteFile(msgFile, []byte(rewritten), 0o644)
+	_ = os.WriteFile(msgFile, []byte(content), 0o644)
 }

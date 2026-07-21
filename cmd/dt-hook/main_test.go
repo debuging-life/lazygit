@@ -2,9 +2,13 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jesseduffield/lazygit/pkg/desktimers"
 )
 
 func runGit(t *testing.T, dir string, args ...string) string {
@@ -141,5 +145,54 @@ func TestPrePushAllCommitsMapped(t *testing.T) {
 	code := runPrePush([]string{"origin", "ignored-url"}, stdin, stderr, repo)
 	if code != 0 || stderr.Len() != 0 {
 		t.Fatalf("fully mapped push should be silent, got code=%d stderr=%q", code, stderr.String())
+	}
+}
+
+func TestPrepareCommitMsgEndToEnd(t *testing.T) {
+	repo, _ := setupRepo(t)
+	if err := desktimers.SaveState(repo, &desktimers.State{
+		Code:  "MOB-102",
+		Title: "Fix images",
+		URL:   "https://leads.desktimers.com/t/MOB-102",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(repo)
+
+	msgFile := filepath.Join(repo, "COMMIT_EDITMSG")
+	if err := os.WriteFile(msgFile, []byte("fix images\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	runPrepareCommitMsg([]string{msgFile, "message"})
+
+	data, err := os.ReadFile(msgFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	if !strings.HasPrefix(got, "MOB-102/fix images") {
+		t.Errorf("expected code prefix, got:\n%s", got)
+	}
+	if !strings.Contains(got, "\n\nTask: https://leads.desktimers.com/t/MOB-102") {
+		t.Errorf("expected task trailer, got:\n%s", got)
+	}
+
+	// Re-running must not duplicate either the prefix or the trailer.
+	runPrepareCommitMsg([]string{msgFile, "message"})
+	again, _ := os.ReadFile(msgFile)
+	if string(again) != got {
+		t.Errorf("second run changed the message:\nbefore:\n%s\nafter:\n%s", got, string(again))
+	}
+
+	// Amend-style sources are left alone entirely.
+	amendFile := filepath.Join(repo, "AMEND_MSG")
+	if err := os.WriteFile(amendFile, []byte("existing message\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runPrepareCommitMsg([]string{amendFile, "commit"})
+	amended, _ := os.ReadFile(amendFile)
+	if string(amended) != "existing message\n" {
+		t.Errorf("amend source must be untouched, got:\n%s", string(amended))
 	}
 }

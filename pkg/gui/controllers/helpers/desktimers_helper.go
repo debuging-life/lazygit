@@ -252,10 +252,7 @@ func (self *DesktimersHelper) checkForUpdatesNow() error {
 	}
 
 	if desktimers.IsNewerVersion(latest, self.version) {
-		self.c.Alert(self.c.Tr.DesktimersUpdateAvailableTitle, utils.ResolvePlaceholderString(
-			self.c.Tr.DesktimersUpdateAvailable,
-			map[string]string{"version": latest},
-		))
+		return self.showUpdateAvailable(latest)
 	} else {
 		self.c.Alert(self.c.Tr.DesktimersCheckForUpdatesNow, utils.ResolvePlaceholderString(
 			self.c.Tr.DesktimersUpToDate,
@@ -504,14 +501,63 @@ func (self *DesktimersHelper) CheckForUpdateInBackground(currentVersion string) 
 			return
 		}
 		self.c.OnUIThread(func() error {
-			message := utils.ResolvePlaceholderString(
-				self.c.Tr.DesktimersUpdateAvailable,
-				map[string]string{"version": latest},
-			)
-			self.c.Alert(self.c.Tr.DesktimersUpdateAvailableTitle, message)
-			return nil
+			return self.showUpdateAvailable(latest)
 		})
 	}()
+}
+
+// RefreshWorkReposInBackground refreshes the server-provided work-repo list
+// (used by auto hook installation) when the 24h cache is stale.
+func (self *DesktimersHelper) RefreshWorkReposInBackground() {
+	if _, fresh := desktimers.CachedWorkRepos(); fresh {
+		return
+	}
+	log := self.c.Log
+	go func() {
+		if err := desktimers.RefreshWorkRepos(); err != nil {
+			log.Debugf("deskgit: work-repo refresh failed: %v", err)
+		}
+	}()
+}
+
+// showUpdateAvailable offers "Update now / Later" for Homebrew installs
+// (binary under the Cellar); other installs get the instruction-only alert.
+func (self *DesktimersHelper) showUpdateAvailable(latest string) error {
+	message := utils.ResolvePlaceholderString(
+		self.c.Tr.DesktimersUpdateAvailable,
+		map[string]string{"version": latest},
+	)
+
+	exe, err := os.Executable()
+	if err != nil || !strings.Contains(exe, "/Cellar/") {
+		self.c.Alert(self.c.Tr.DesktimersUpdateAvailableTitle, message)
+		return nil
+	}
+
+	return self.c.Menu(types.CreateMenuOptions{
+		Title:  self.c.Tr.DesktimersUpdateAvailableTitle,
+		Prompt: message,
+		Items: []*types.MenuItem{
+			{
+				Label:   self.c.Tr.DesktimersUpdateNow,
+				OnPress: self.runBrewUpgrade,
+			},
+			{
+				Label:   self.c.Tr.DesktimersUpdateLater,
+				OnPress: func() error { return nil },
+			},
+		},
+	})
+}
+
+// runBrewUpgrade upgrades deskgit via Homebrew with the gui suspended (same
+// mechanism as re-auth), then asks for a restart.
+func (self *DesktimersHelper) runBrewUpgrade() error {
+	if err := self.c.RunSubprocessAndRefresh(self.c.OS().Cmd.New([]string{"brew", "upgrade", "debuging-life/tap/deskgit"})); err != nil {
+		return err
+	}
+	self.c.Alert(self.c.Tr.DesktimersUpdateAvailableTitle, self.c.Tr.DesktimersRestartAfterUpdate)
+	return nil
 }
 
 // PickBranchTypeThen shows the branch-type menu (feature/bugfix/hotfix/...)
@@ -584,8 +630,9 @@ func (self *DesktimersHelper) reportTaskSelectedInBackground(code string) {
 // log-only; no dialogs, no toasts.
 func (self *DesktimersHelper) autoInstallHooksForWorkRepo(cfg config.DesktimersConfig) {
 	slug := desktimers.RepoSlug(".")
-	if !desktimers.OwnerMatchesOrgs(desktimers.SlugOwner(slug), cfg.HookOrgs) {
-		self.c.Log.Debugf("deskgit: repo %q is not in hookOrgs — leaving it alone", slug)
+	workRepos, _ := desktimers.CachedWorkRepos()
+	if !desktimers.RepoIsWork(slug, workRepos, cfg.HookOrgs) {
+		self.c.Log.Debugf("deskgit: repo %q is not a known work repo — leaving it alone", slug)
 		return
 	}
 

@@ -524,6 +524,11 @@ type TranslationSet struct {
 	DesktimersNewTaskTitlePrompt          string
 	DesktimersCreatingTask                string
 	DesktimersTaskTitleEmpty              string
+	DesktimersTaskMismatchTitle           string
+	DesktimersTaskMismatchPrompt          string
+	DesktimersUpdateNow                   string
+	DesktimersUpdateLater                 string
+	DesktimersRestartAfterUpdate          string
 	DesktimersContinueWithoutTask         string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
@@ -1721,6 +1726,11 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersNewTaskTitlePrompt:         "New task in {{project}}",
 		DesktimersCreatingTask:               "Creating task",
 		DesktimersTaskTitleEmpty:             "Task title cannot be empty",
+		DesktimersTaskMismatchTitle:          "Branch / task mismatch",
+		DesktimersTaskMismatchPrompt:         "This branch is {{branchCode}} but you picked {{taskCode}} — commit as {{taskCode}}?",
+		DesktimersUpdateNow:                  "Update now",
+		DesktimersUpdateLater:                "Later",
+		DesktimersRestartAfterUpdate:         "Update finished — restart deskgit to run the new version.",
 		DesktimersContinueWithoutTask:        "Continue without a task",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",

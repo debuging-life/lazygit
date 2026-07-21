@@ -5,10 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jesseduffield/lazygit/pkg/constants"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/presentation"
-	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
@@ -144,16 +142,14 @@ func cursorInSubstring(cx int, prefix string, substring string) bool {
 	return cx >= runeCount(prefix) && cx < runeCount(prefix+substring)
 }
 
-func lazygitTitle() string {
+func deskgitTitle() string {
 	return `
-   _                       _ _
-  | |                     (_) |
-  | | __ _ _____   _  __ _ _| |_
-  | |/ _` + "`" + ` |_  / | | |/ _` + "`" + ` | | __|
-  | | (_| |/ /| |_| | (_| | | |_
-  |_|\__,_/___|\__, |\__, |_|\__|
-                __/ | __/ |
-               |___/ |___/       `
+      _           _         _ _
+   __| | ___  ___| | ____ _(_) |_
+  / _` + "`" + ` |/ _ \/ __| |/ / _` + "`" + ` | | __|
+ | (_| |  __/\__ \   < (_| | | |_
+  \__,_|\___||___/_|\_\__, |_|\__|
+                      |___/       `
 }
 
 func (self *StatusController) editConfig() error {
@@ -202,25 +198,18 @@ func (self *StatusController) switchToOrRotateAllBranchesLogsBackward() {
 }
 
 func (self *StatusController) showDashboard() {
-	versionStr := "master"
-	version, err := types.ParseVersionNumber(self.c.GetConfig().GetVersion())
-	if err == nil {
-		// Don't just take the version string as is, but format it again. This
-		// way it will be correct even if a distribution omits the "v", or the
-		// ".0" at the end.
-		versionStr = fmt.Sprintf("v%d.%d.%d", version.Major, version.Minor, version.Patch)
-	}
-
 	dashboardString := strings.Join(
 		[]string{
-			lazygitTitle(),
-			fmt.Sprintf("Copyright %d Jesse Duffield", time.Now().Year()),
-			fmt.Sprintf("Keybindings: %s", fmt.Sprintf(constants.Links.Docs.Keybindings, versionStr)),
-			fmt.Sprintf("Config Options: %s", fmt.Sprintf(constants.Links.Docs.Config, versionStr)),
-			fmt.Sprintf("Tutorial: %s", constants.Links.Docs.Tutorial),
-			fmt.Sprintf("Raise an Issue: %s", constants.Links.Issues),
-			fmt.Sprintf("Release Notes: %s", constants.Links.Releases),
-			style.FgMagenta.Sprintf("Become a sponsor: %s", constants.Links.Donate), // caffeine ain't free
+			deskgitTitle(),
+			"DeskTimers — task-bound git client\nPick your task; every branch, commit, and push maps back to it in DeskTimers.",
+			"Website: https://www.desktimers.com",
+			"deskgit repo: https://github.com/debuging-life/lazygit",
+			"Install: brew install debuging-life/tap/deskgit — https://github.com/debuging-life/homebrew-tap",
+			"Keybindings: https://github.com/debuging-life/lazygit/blob/main/docs/keybindings/Keybindings_en.md",
+			"Config Options: https://github.com/debuging-life/lazygit/blob/main/docs/Config.md",
+			"Raise an issue: https://github.com/debuging-life/lazygit/issues",
+			"Based on lazygit by Jesse Duffield (MIT): https://github.com/jesseduffield/lazygit",
+			fmt.Sprintf("Copyright %d LoudOwls · lazygit Copyright Jesse Duffield", time.Now().Year()),
 		}, "\n\n") + "\n"
 
 	self.c.RenderToMainViews(types.RefreshMainOpts{

@@ -14,6 +14,7 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
+	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/samber/lo"
 )
 
@@ -243,8 +244,32 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 		if task.Code == "" { // "continue without a task"
 			return self.HandleCommitPressWithMessage(initialMessage, false)
 		}
-		prefix := desktimers.ApplyPrefixTemplate(cfg.CommitPrefixTemplate, desktimers.DefaultCommitPrefixTemplate, task.Code)
-		return self.handleCommitPressWithTaskPrefix(messageTail, prefix)
+
+		commitWithTask := func() error {
+			prefix := desktimers.ApplyPrefixTemplate(cfg.CommitPrefixTemplate, desktimers.DefaultCommitPrefixTemplate, task.Code)
+			return self.handleCommitPressWithTaskPrefix(messageTail, prefix)
+		}
+
+		// Mismatch guard: committing task B on a branch named for task A is
+		// usually a mistake — confirm before proceeding.
+		branchCode := desktimers.ExtractCode(self.refHelper.GetCheckedOutRef().Name)
+		if branchCode == "" || branchCode == task.Code {
+			return commitWithTask()
+		}
+
+		self.c.Confirm(types.ConfirmOpts{
+			Title: self.c.Tr.DesktimersTaskMismatchTitle,
+			Prompt: utils.ResolvePlaceholderString(
+				self.c.Tr.DesktimersTaskMismatchPrompt,
+				map[string]string{"branchCode": branchCode, "taskCode": task.Code},
+			),
+			HandleConfirm: commitWithTask,
+			HandleClose: func() error {
+				// Escape returns to the picker.
+				return self.HandleCommitPress()
+			},
+		})
+		return nil
 	})
 }
 
