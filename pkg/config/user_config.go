@@ -1039,7 +1039,7 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 		NotARepository:               "prompt",
 		PromptToReturnFromSubprocess: true,
 		Desktimers: DesktimersConfig{
-			ApiBaseUrl:           "https://api-leads.loudowls.com",
+			ApiBaseUrl:           "https://staging.desktimers.com",
 			AutoInstallHooks:     "auto",
 			HookOrgs:             []string{"debuging-life", "loudowls"},
 			StrictPush:           true,

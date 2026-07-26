@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// DefaultAPIBaseURL is the production DeskTimers API.
-const DefaultAPIBaseURL = "https://api-leads.loudowls.com"
+// DefaultAPIBaseURL is the DeskTimers staging API.
+const DefaultAPIBaseURL = "https://staging.desktimers.com"
 
 const tokenFileName = "token.json"
 
