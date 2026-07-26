@@ -319,7 +319,7 @@
         "apiBaseUrl": {
           "type": "string",
           "description": "Base URL of the DeskTimers API. Override for staging/self-hosted.",
-          "default": "https://staging.desktimers.com"
+          "default": "https://staging-api.desktimers.com"
         },
         "autoInstallHooks": {
           "type": "string",

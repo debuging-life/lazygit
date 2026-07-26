@@ -11,7 +11,7 @@ import (
 )
 
 // DefaultAPIBaseURL is the DeskTimers staging API.
-const DefaultAPIBaseURL = "https://staging.desktimers.com"
+const DefaultAPIBaseURL = "https://staging-api.desktimers.com"
 
 const tokenFileName = "token.json"
 
