@@ -78,14 +78,11 @@ func TestResolveBaseURL(t *testing.T) {
 	t.Setenv("DESKTIMERS_API_URL", "")
 	os.Unsetenv("DESKTIMERS_API_URL")
 
-	if got := ResolveBaseURL(nil); got != DefaultAPIBaseURL {
+	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
 		t.Errorf("default base URL = %q", got)
 	}
-	if got := ResolveBaseURL(&Token{APIBaseURL: "https://staging.desktimers.com/"}); got != "https://staging.desktimers.com" {
-		t.Errorf("token base URL = %q", got)
-	}
 	t.Setenv("DESKTIMERS_API_URL", "http://localhost:3000/")
-	if got := ResolveBaseURL(&Token{APIBaseURL: "https://staging.desktimers.com"}); got != "http://localhost:3000" {
+	if got := ResolveBaseURL(); got != "http://localhost:3000" {
 		t.Errorf("env base URL = %q", got)
 	}
 }

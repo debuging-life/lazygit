@@ -204,10 +204,7 @@ func (a *AuthClient) requestToken(ctx context.Context, deviceCode string) (*Toke
 // openBrowser may be nil; browser-open failures are ignored (the printed URL
 // is the fallback).
 func RunDeviceFlow(w io.Writer, openBrowser func(url string) error) (*Token, error) {
-	// Reuse the stored token's base URL (if any) so re-auth against a
-	// custom deployment keeps working.
-	stored, _ := LoadToken()
-	baseURL := ResolveBaseURL(stored)
+	baseURL := ResolveBaseURL()
 	auth := NewAuthClient(baseURL)
 
 	ctx := context.Background()

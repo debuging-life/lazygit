@@ -41,7 +41,7 @@ func NewClientFromToken() (*Client, error) {
 	if !token.Valid() {
 		return nil, ErrUnauthorized
 	}
-	return NewClient(ResolveBaseURL(token), token.AccessToken), nil
+	return NewClient(ResolveBaseURL(), token.AccessToken), nil
 }
 
 type tasksResponse struct {

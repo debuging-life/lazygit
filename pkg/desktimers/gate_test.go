@@ -148,20 +148,20 @@ func TestSetConfiguredBaseURL(t *testing.T) {
 	os.Unsetenv("DESKTIMERS_API_URL")
 
 	SetConfiguredBaseURL("https://staging.desktimers.com/")
-	if got := ResolveBaseURL(nil); got != "https://staging.desktimers.com" {
+	if got := ResolveBaseURL(); got != "https://staging.desktimers.com" {
 		t.Errorf("config URL should win over default, got %s", got)
 	}
 
-	// The default value acts as "unset" so a token's URL can still apply.
+	// With config left at the default (treated as "unset"), the built-in
+	// default wins — a stored token no longer pins a (possibly stale) URL.
 	SetConfiguredBaseURL(DefaultAPIBaseURL)
-	token := &Token{APIBaseURL: "https://selfhosted.example.com"}
-	if got := ResolveBaseURL(token); got != "https://selfhosted.example.com" {
-		t.Errorf("token URL should apply when config is default, got %s", got)
+	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
+		t.Errorf("default should win when config is unset, got %s", got)
 	}
 
 	t.Setenv("DESKTIMERS_API_URL", "http://env.example.com")
 	SetConfiguredBaseURL("https://staging.desktimers.com")
-	if got := ResolveBaseURL(nil); got != "http://env.example.com" {
+	if got := ResolveBaseURL(); got != "http://env.example.com" {
 		t.Errorf("env should win over config, got %s", got)
 	}
 }

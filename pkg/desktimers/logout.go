@@ -3,6 +3,7 @@ package desktimers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // RevokeToken revokes this device's token server-side
@@ -62,7 +63,14 @@ func Logout() (LogoutOutcome, error) {
 	}
 
 	outcome := LogoutOutcome{Result: LogoutRevoked}
-	client := NewClient(ResolveBaseURL(token), token.AccessToken)
+	// Revoke against the API that ISSUED the token — that's where it's valid —
+	// which may differ from the currently active API (e.g. after the default
+	// moved). Fall back to the active URL for older tokens with no stored host.
+	revokeURL := strings.TrimSuffix(token.APIBaseURL, "/")
+	if revokeURL == "" {
+		revokeURL = ResolveBaseURL()
+	}
+	client := NewClient(revokeURL, token.AccessToken)
 	if revokeErr := client.RevokeToken(); revokeErr != nil {
 		outcome = LogoutOutcome{Result: LogoutLocalOnly, RevokeErr: revokeErr}
 	}

@@ -112,18 +112,20 @@ func DeleteToken() error {
 	return nil
 }
 
-// ResolveBaseURL picks the API base URL: DESKTIMERS_API_URL env var first,
-// then the user config's desktimers.apiBaseUrl, then the stored token's
-// apiBaseUrl, then the production default.
-func ResolveBaseURL(token *Token) string {
+// ResolveBaseURL picks the API base URL: DESKTIMERS_API_URL env var first, then
+// the user config's desktimers.apiBaseUrl, otherwise the built-in default.
+//
+// A stored token deliberately does not pin the URL. It used to, but a token
+// minted against an older default then kept overriding a newer one, so anyone
+// who had ever logged in stayed stuck on the retired host after upgrading and
+// could never be moved onto the current API. A custom deployment is selected
+// with the env var or config instead.
+func ResolveBaseURL() string {
 	if env := os.Getenv("DESKTIMERS_API_URL"); env != "" {
 		return strings.TrimSuffix(env, "/")
 	}
 	if configuredBaseURL != "" {
 		return configuredBaseURL
-	}
-	if token != nil && token.APIBaseURL != "" {
-		return strings.TrimSuffix(token.APIBaseURL, "/")
 	}
 	return DefaultAPIBaseURL
 }

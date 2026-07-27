@@ -80,16 +80,13 @@ func runDesktimersDoctor(w io.Writer, version string) int {
 	if err != nil {
 		fail("config dir: %v", err)
 	} else {
-		token, _ := desktimers.LoadToken()
-		baseURL := desktimers.ResolveBaseURL(token)
+		baseURL := desktimers.ResolveBaseURL()
 		source := "default"
 		switch {
 		case os.Getenv("DESKTIMERS_API_URL") != "":
 			source = "env DESKTIMERS_API_URL"
 		case userConfig != nil && userConfig.Desktimers.ApiBaseUrl != "" && userConfig.Desktimers.ApiBaseUrl != desktimers.DefaultAPIBaseURL:
 			source = "config"
-		case token != nil && token.APIBaseURL != "" && token.APIBaseURL != desktimers.DefaultAPIBaseURL:
-			source = "token file"
 		}
 		pass("config: %s — apiBaseUrl %s (%s)", configDir, baseURL, source)
 	}
@@ -104,7 +101,7 @@ func runDesktimersDoctor(w io.Writer, version string) int {
 	case !token.Valid():
 		fail("token: expired — run: deskgit login")
 	default:
-		client := desktimers.NewClient(desktimers.ResolveBaseURL(token), token.AccessToken)
+		client := desktimers.NewClient(desktimers.ResolveBaseURL(), token.AccessToken)
 		client.HTTPClient.Timeout = 3 * time.Second
 		tasks, err := client.GetTasks("active")
 		switch {
