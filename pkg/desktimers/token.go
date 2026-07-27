@@ -13,6 +13,25 @@ import (
 // DefaultAPIBaseURL is the DeskTimers staging API.
 const DefaultAPIBaseURL = "https://staging-api.desktimers.com"
 
+// retiredHosts are API hosts deskgit used to point at — a baked default or the
+// old README config sample — that are now dead or wrong. A config/env value
+// pointing at one is treated as unset (isRetiredBaseURL), so users who copied
+// the old sample fall through to the current default instead of a host that no
+// longer serves the API. Trim this list once those configs age out.
+var retiredHosts = []string{
+	"api-leads.loudowls.com", // original leads API, removed
+	"staging.desktimers.com", // frontend host; 405s on /api (a bad 0.5.1 default)
+}
+
+func isRetiredBaseURL(url string) bool {
+	for _, h := range retiredHosts {
+		if strings.Contains(url, h) {
+			return true
+		}
+	}
+	return false
+}
+
 const tokenFileName = "token.json"
 
 // Token is the stored git-client credential for a machine.
@@ -121,8 +140,8 @@ func DeleteToken() error {
 // could never be moved onto the current API. A custom deployment is selected
 // with the env var or config instead.
 func ResolveBaseURL() string {
-	if env := os.Getenv("DESKTIMERS_API_URL"); env != "" {
-		return strings.TrimSuffix(env, "/")
+	if env := strings.TrimSuffix(os.Getenv("DESKTIMERS_API_URL"), "/"); env != "" && !isRetiredBaseURL(env) {
+		return env
 	}
 	if configuredBaseURL != "" {
 		return configuredBaseURL

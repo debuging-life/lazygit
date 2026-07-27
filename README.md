@@ -106,7 +106,7 @@ The hooks read the selected task from `<git-dir>/desktimers-task` (per worktree)
 
 ```yaml
 desktimers:
-  apiBaseUrl: https://api-leads.loudowls.com   # point at staging/local if needed
+  apiBaseUrl: https://staging-api.desktimers.com   # override to point at another API
   autoInstallHooks: auto                   # auto | prompt | always | never
   hookOrgs:                                # "work" owners for auto mode
     - debuging-life

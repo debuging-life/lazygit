@@ -7,11 +7,13 @@ import "strings"
 // the token file in the base-URL resolution order.
 var configuredBaseURL string
 
-// SetConfiguredBaseURL records the apiBaseUrl from the loaded user config.
-// An empty or default value clears the override.
+// SetConfiguredBaseURL records the apiBaseUrl from the loaded user config. An
+// empty, default, or retired value clears the override — the last so a config
+// copied from the old README sample (which pinned a now-dead host) falls
+// through to the current default instead of overriding it.
 func SetConfiguredBaseURL(url string) {
 	url = strings.TrimSuffix(strings.TrimSpace(url), "/")
-	if url == DefaultAPIBaseURL {
+	if url == DefaultAPIBaseURL || isRetiredBaseURL(url) {
 		url = ""
 	}
 	configuredBaseURL = url

@@ -147,20 +147,33 @@ func TestSetConfiguredBaseURL(t *testing.T) {
 	t.Cleanup(func() { SetConfiguredBaseURL("") })
 	os.Unsetenv("DESKTIMERS_API_URL")
 
-	SetConfiguredBaseURL("https://staging.desktimers.com/")
-	if got := ResolveBaseURL(); got != "https://staging.desktimers.com" {
+	SetConfiguredBaseURL("https://custom.example.com/")
+	if got := ResolveBaseURL(); got != "https://custom.example.com" {
 		t.Errorf("config URL should win over default, got %s", got)
 	}
 
-	// With config left at the default (treated as "unset"), the built-in
-	// default wins — a stored token no longer pins a (possibly stale) URL.
+	// Config left at the default (treated as "unset") → built-in default wins.
 	SetConfiguredBaseURL(DefaultAPIBaseURL)
 	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
 		t.Errorf("default should win when config is unset, got %s", got)
 	}
 
+	// A config copied from the old README sample points at a retired host; it
+	// must fall through to the current default, not pin the dead host.
+	SetConfiguredBaseURL("https://api-leads.loudowls.com")
+	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
+		t.Errorf("retired config host should fall through to default, got %s", got)
+	}
+
+	// A retired env var is ignored too.
+	SetConfiguredBaseURL("")
+	t.Setenv("DESKTIMERS_API_URL", "https://api-leads.loudowls.com")
+	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
+		t.Errorf("retired env host should fall through to default, got %s", got)
+	}
+
 	t.Setenv("DESKTIMERS_API_URL", "http://env.example.com")
-	SetConfiguredBaseURL("https://staging.desktimers.com")
+	SetConfiguredBaseURL("https://custom.example.com")
 	if got := ResolveBaseURL(); got != "http://env.example.com" {
 		t.Errorf("env should win over config, got %s", got)
 	}
