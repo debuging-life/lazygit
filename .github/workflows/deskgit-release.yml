@@ -1,0 +1,89 @@
+name: Release deskgit
+
+# Publishes a deskgit release when a deskgit-vX.Y.Z tag is pushed:
+#   • bumps the Homebrew tap formula (url / sha256 / version) to the tag
+#   • creates a GitHub Release with generated notes
+# The tap is a source-build formula, so no binaries are built here.
+#
+# Requires a repo secret TAP_PUSH_TOKEN — a token (fine-grained PAT or classic)
+# with contents:write on debuging-life/homebrew-tap. The built-in GITHUB_TOKEN
+# only reaches this repo, so it can't push to the separate tap repo.
+
+on:
+  push:
+    tags:
+      - 'deskgit-v*'
+
+permissions:
+  contents: write # create the GitHub Release on this repo
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute version, tarball, checksum
+        id: meta
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#deskgit-v}"
+          tarball="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${tag}.tar.gz"
+          # GitHub generates the source tarball on demand; give it a few tries.
+          sha=""
+          for i in 1 2 3 4 5; do
+            sha="$(curl -fsSL "$tarball" | sha256sum | awk '{print $1}')" && [ -n "$sha" ] && break
+            echo "waiting for source tarball (attempt $i)…"; sleep 3
+          done
+          [ -n "$sha" ] || { echo "could not checksum $tarball"; exit 1; }
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "tarball=$tarball"
+            echo "sha=$sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: debuging-life/homebrew-tap
+          token: ${{ secrets.TAP_PUSH_TOKEN }}
+          path: tap
+
+      - name: Bump formula
+        env:
+          TARBALL: ${{ steps.meta.outputs.tarball }}
+          SHA: ${{ steps.meta.outputs.sha }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          f=tap/Formula/deskgit.rb
+          # /e evaluates the replacement as Perl, so $ENV{...} is read directly —
+          # no shell interpolation of URLs/hashes into the regex.
+          perl -i -pe 's{^(\s*url\s+).*}{$1."\"$ENV{TARBALL}\""}e'      "$f"
+          perl -i -pe 's{^(\s*sha256\s+).*}{$1."\"$ENV{SHA}\""}e'       "$f"
+          perl -i -pe 's{^(\s*version\s+).*}{$1."\"$ENV{VERSION}\""}e'  "$f"
+          grep -E '^\s*(url|sha256|version) ' "$f"
+
+      - name: Commit + push formula
+        working-directory: tap
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "formula already at $VERSION — nothing to push"
+          else
+            git add Formula/deskgit.rb
+            git commit -m "deskgit $VERSION"
+            git push
+          fi
+
+      - name: Create GitHub Release
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: deskgit ${{ steps.meta.outputs.version }}
+          generate_release_notes: true
