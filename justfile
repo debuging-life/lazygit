@@ -8,6 +8,11 @@ build:
 install:
     go install
 
+# Cut a deskgit release: tag main + bump the Homebrew tap formula.
+# `just release` bumps the patch; pass minor/major or an explicit vX.Y.Z.
+release bump="patch":
+    scripts/release-deskgit.sh {{bump}}
+
 run: build
     ./lazygit
 
