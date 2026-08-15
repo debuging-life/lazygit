@@ -551,6 +551,7 @@ type TranslationSet struct {
 	DesktimersContinueWithoutTask         string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
+	DesktimersJustCreated                 string
 	DesktimersReauthNeeded                string
 	DesktimersLoginExpiredTitle           string
 	DesktimersLoginExpiredPrompt          string
@@ -1774,6 +1775,7 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersContinueWithoutTask:        "Continue without a task",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
+		DesktimersJustCreated:                "Just created",
 		DesktimersReauthNeeded:               "Your DeskTimers session is no longer valid. Restart deskgit to log in again.",
 		DesktimersLoginExpiredTitle:          "DeskTimers login expired",
 		DesktimersLoginExpiredPrompt:         "Your DeskTimers login expired — log in again now?\n\ndeskgit will drop to the terminal for the device flow and return here.",

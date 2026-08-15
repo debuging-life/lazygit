@@ -30,6 +30,10 @@ type DesktimersHelper struct {
 	// cached "is there a usable token" answer, same reason as above.
 	authChecked   bool
 	authenticated bool
+
+	// code of the most-recently created task this session, so the picker can
+	// float it to the top under a "Just created" section header.
+	recentlyCreatedCode string
 }
 
 func NewDesktimersHelper(c *HelperCommon, version string) *DesktimersHelper {
@@ -159,6 +163,7 @@ func (self *DesktimersHelper) promptNewTaskTitle(project desktimers.Project, onC
 				return reopenPicker()
 			}
 
+			self.recentlyCreatedCode = task.Code
 			if err := self.selectTask(task); err != nil {
 				return err
 			}
@@ -166,6 +171,47 @@ func (self *DesktimersHelper) promptNewTaskTitle(project desktimers.Project, onC
 		},
 	})
 	return nil
+}
+
+// buildTaskMenuItems converts an ordered task list into menu items, floating
+// the recently-created task (if any) to the top under its own section header.
+// makeItem receives the task and must return the OnPress/OnOpen/OnInfo callbacks
+// appropriate for the caller (OpenTaskMenu vs PickTaskForAction).
+func (self *DesktimersHelper) buildTaskMenuItems(
+	ordered []desktimers.Task,
+	makeItem func(desktimers.Task) *types.MenuItem,
+) []*types.MenuItem {
+	recentCode := self.recentlyCreatedCode
+
+	justCreatedSection := &types.MenuSection{Title: self.c.Tr.DesktimersJustCreated, Column: 0}
+	activeSection := &types.MenuSection{Title: "", Column: 0}
+
+	items := make([]*types.MenuItem, 0, len(ordered))
+
+	// Recently-created task pinned at top (separate section).
+	for _, t := range ordered {
+		if recentCode != "" && t.Code == recentCode {
+			item := makeItem(t)
+			item.Section = justCreatedSection
+			items = append(items, item)
+			break
+		}
+	}
+
+	// All other tasks.
+	useSections := recentCode != ""
+	for _, t := range ordered {
+		if recentCode != "" && t.Code == recentCode {
+			continue
+		}
+		item := makeItem(t)
+		if useSections {
+			item.Section = activeSection
+		}
+		items = append(items, item)
+	}
+
+	return items
 }
 
 // createTaskMenuItem builds the shared "＋ Create task…" picker item.
@@ -359,7 +405,7 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 	}
 	ordered, selectedIdx := desktimers.OrderTasksForPicker(tasks, currentCode)
 
-	menuItems := lo.Map(ordered, func(task desktimers.Task, _ int) *types.MenuItem {
+	menuItems := self.buildTaskMenuItems(ordered, func(task desktimers.Task) *types.MenuItem {
 		return &types.MenuItem{
 			LabelColumns: desktimers.PickerColumns(task),
 			OnPress: func() error {
@@ -466,7 +512,7 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 	}
 	ordered, selectedIdx := desktimers.OrderTasksForPicker(tasks, currentCode)
 
-	menuItems := lo.Map(ordered, func(task desktimers.Task, _ int) *types.MenuItem {
+	menuItems := self.buildTaskMenuItems(ordered, func(task desktimers.Task) *types.MenuItem {
 		return &types.MenuItem{
 			LabelColumns: desktimers.PickerColumns(task),
 			OnPress: func() error {
