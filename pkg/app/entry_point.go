@@ -200,6 +200,7 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 		if err := runDesktimersGate(appConfig); err != nil {
 			log.Fatal(err.Error())
 		}
+		runFirstLaunchUpdateCheck(appConfig, buildInfo.Version, os.Stderr)
 	}
 
 	parsedGitArg := parseGitArg(cliArgs.GitArg)

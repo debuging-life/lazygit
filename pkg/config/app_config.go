@@ -741,6 +741,9 @@ type AppState struct {
 
 	HideCommandLog bool
 
+	// Set to true after the first-launch OTA update check so it never runs again.
+	DesktimersFirstLaunchUpdateDone bool
+
 	// Cache of GitHub pull requests per repo path, so that PR info can be
 	// shown instantly on startup before the async refresh completes.
 	GithubPullRequests map[string][]CachedPullRequest `yaml:"githubPullRequests"`

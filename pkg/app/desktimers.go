@@ -32,6 +32,30 @@ func runDesktimersGate(appConfig *config.AppConfig) error {
 	return err
 }
 
+// runFirstLaunchUpdateCheck runs exactly once (guarded by AppState) after the
+// user is authenticated. If a newer version is available on R2 it updates the
+// binary in place before the TUI opens, then prints a blank line as a visual
+// separator. Silently skips on network errors or if already up to date.
+func runFirstLaunchUpdateCheck(appConfig *config.AppConfig, currentVersion string, w io.Writer) {
+	state := appConfig.GetAppState()
+	if state.DesktimersFirstLaunchUpdateDone || os.Getenv("DESKGIT_SKIP_AUTH") == "1" {
+		return
+	}
+	// Mark done immediately so a crash or kill during the download never
+	// shows this again.
+	state.DesktimersFirstLaunchUpdateDone = true
+	_ = appConfig.SaveAppState()
+
+	manifest, err := desktimers.FetchManifest()
+	if err != nil || !desktimers.IsNewerVersion(manifest.Version, currentVersion) {
+		return
+	}
+
+	fmt.Fprintln(w)
+	runDesktimersUpdate(w, currentVersion)
+	fmt.Fprintln(w)
+}
+
 // loadUserConfigForCLI best-effort loads the deskgit user config for the
 // terminal subcommands (login/doctor) and applies the configured API base
 // URL. Returns nil when the config can't be loaded.
