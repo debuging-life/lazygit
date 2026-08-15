@@ -189,8 +189,9 @@ func timerSpinnerFrame() string {
 }
 
 // styledTaskColumns applies ANSI color to a task's label columns.
-// Tracking tasks are rendered yellow+bold with an animated spinner;
-// in-progress tasks are rendered in cyan.
+// Tracking tasks are rendered yellow+bold with a spinner prepended to the
+// code column (column 0) — always visible regardless of terminal width.
+// In-progress tasks are rendered in cyan.
 func styledTaskColumns(columns []string, task desktimers.Task) []string {
 	if len(columns) == 0 {
 		return columns
@@ -199,10 +200,8 @@ func styledTaskColumns(columns []string, task desktimers.Task) []string {
 	copy(out, columns)
 	switch {
 	case task.Tracking:
-		// Animate the marker column (index 3) with a spinner.
-		if len(out) >= 4 {
-			out[3] = timerSpinnerFrame() + " " + out[3]
-		}
+		// Prepend spinner to the code column so it's always visible.
+		out[0] = timerSpinnerFrame() + " " + out[0]
 		for i, c := range out {
 			out[i] = style.FgYellow.SetBold().Sprint(c)
 		}
