@@ -33,7 +33,38 @@ type ReleaseAsset struct {
 type ReleaseManifest struct {
 	Version     string                  `json:"version"`
 	PublishedAt string                  `json:"published_at"`
+	Changelog   string                  `json:"changelog"`
 	Assets      map[string]ReleaseAsset `json:"assets"` // key: "darwin/arm64", "linux/amd64", …
+}
+
+// VersionEntry is one entry in the versions.json history index.
+type VersionEntry struct {
+	Version     string `json:"version"`
+	PublishedAt string `json:"published_at"`
+	Changelog   string `json:"changelog"`
+}
+
+// VersionsManifest is the JSON structure at <base>/versions.json.
+type VersionsManifest struct {
+	Versions []VersionEntry `json:"versions"`
+}
+
+// FetchVersions downloads the full version history manifest.
+func FetchVersions() (*VersionsManifest, error) {
+	client := &http.Client{Timeout: manifestTimeout}
+	resp, err := client.Get(releasesBaseURL() + "/versions.json")
+	if err != nil {
+		return nil, fmt.Errorf("fetching versions: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetching versions: status %d", resp.StatusCode)
+	}
+	var m VersionsManifest
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&m); err != nil {
+		return nil, fmt.Errorf("parsing versions: %w", err)
+	}
+	return &m, nil
 }
 
 // releasesBaseURL returns the effective base URL (env override or constant).

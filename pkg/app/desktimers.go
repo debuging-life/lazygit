@@ -174,6 +174,9 @@ func runDesktimersUpdate(w io.Writer, currentVersion string) int {
 	}
 
 	fmt.Fprintf(w, "New version available: %s → %s\n", currentVersion, manifest.Version)
+	if manifest.Changelog != "" {
+		fmt.Fprintf(w, "\nWhat's new in %s:\n%s\n\n", manifest.Version, manifest.Changelog)
+	}
 
 	key := desktimers.PlatformKey()
 	asset, ok := manifest.Assets[key]
@@ -235,6 +238,30 @@ func runDesktimersUpdate(w io.Writer, currentVersion string) int {
 	}
 
 	fmt.Fprintf(w, "Updated to deskgit %s. Restart to use the new version.\n", manifest.Version)
+	return 0
+}
+
+// runDesktimersChangelog implements `deskgit changelog`: fetches versions.json
+// from R2 and prints the full version history with changelogs.
+func runDesktimersChangelog(w io.Writer) int {
+	vm, err := desktimers.FetchVersions()
+	if err != nil {
+		fmt.Fprintf(w, "Could not fetch changelog: %v\n", err)
+		return 1
+	}
+	if len(vm.Versions) == 0 {
+		fmt.Fprintln(w, "No version history available.")
+		return 0
+	}
+	for _, v := range vm.Versions {
+		fmt.Fprintf(w, "── deskgit %s (%s) ──\n", v.Version, v.PublishedAt)
+		if v.Changelog != "" {
+			fmt.Fprintln(w, v.Changelog)
+		} else {
+			fmt.Fprintln(w, "(no changelog)")
+		}
+		fmt.Fprintln(w)
+	}
 	return 0
 }
 

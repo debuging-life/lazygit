@@ -118,12 +118,33 @@ $fragment"
   fi
 done
 
+# ── Changelog ────────────────────────────────────────────────────────────────
+CHANGELOG=""
+CHANGELOG_FILE="changelogs/${VERSION}.md"
+if [ -f "$CHANGELOG_FILE" ]; then
+  CHANGELOG="$(cat "$CHANGELOG_FILE")"
+  echo "Including changelog from $CHANGELOG_FILE"
+else
+  echo "Warning: no changelog file at $CHANGELOG_FILE — changelog will be empty"
+fi
+
+# JSON-encode the changelog: escape backslashes, double quotes, newlines, tabs.
+changelog_json() {
+  printf '%s' "$1" \
+    | sed 's/\\/\\\\/g' \
+    | sed 's/"/\\"/g' \
+    | sed ':a;N;$!ba;s/\n/\\n/g' \
+    | sed 's/\t/\\t/g'
+}
+CHANGELOG_ESCAPED="$(changelog_json "$CHANGELOG")"
+
 # ── Write + upload latest.json ────────────────────────────────────────────────
 MANIFEST_FILE="$OUT/latest.json"
 cat > "$MANIFEST_FILE" <<JSON
 {
   "version": "$VERSION",
   "published_at": "$DATE",
+  "changelog": "$CHANGELOG_ESCAPED",
   "assets": {
 $MANIFEST_ASSETS
   }
@@ -140,6 +161,44 @@ s3 cp "$MANIFEST_FILE" "s3://$BUCKET/latest.json" \
   --content-type application/json \
   --cache-control "no-cache, no-store"
 
+# ── Update versions.json (version history) ───────────────────────────────────
+VERSIONS_FILE="$OUT/versions.json"
+VERSIONS_TMP="$OUT/versions_existing.json"
+
+# Try to fetch existing versions.json; start fresh if not found.
+if aws --endpoint-url "$ENDPOINT" s3 cp "s3://$BUCKET/versions.json" "$VERSIONS_TMP" 2>/dev/null; then
+  # Prepend new entry to existing versions array.
+  NEW_ENTRY="{\"version\":\"$VERSION\",\"published_at\":\"$DATE\",\"changelog\":\"$CHANGELOG_ESCAPED\"}"
+  python3 - "$VERSIONS_TMP" "$NEW_ENTRY" "$VERSIONS_FILE" <<'PYEOF'
+import json, sys
+existing_path, new_entry_json, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(existing_path) as f:
+    data = json.load(f)
+versions = data.get("versions", [])
+new_entry = json.loads(new_entry_json)
+# Remove any existing entry for this version, then prepend.
+versions = [v for v in versions if v.get("version") != new_entry["version"]]
+versions.insert(0, new_entry)
+with open(out_path, "w") as f:
+    json.dump({"versions": versions}, f, indent=2)
+PYEOF
+else
+  # No existing versions.json — create one with just this release.
+  python3 - "$VERSIONS_FILE" "$VERSION" "$DATE" "$CHANGELOG_ESCAPED" <<'PYEOF'
+import json, sys
+out_path, version, published_at, changelog = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+entry = {"version": version, "published_at": published_at, "changelog": changelog}
+with open(out_path, "w") as f:
+    json.dump({"versions": [entry]}, f, indent=2)
+PYEOF
+fi
+
+echo "Uploading versions.json..."
+s3 cp "$VERSIONS_FILE" "s3://$BUCKET/versions.json" \
+  --content-type application/json \
+  --cache-control "no-cache, no-store"
+
 echo ""
 echo "Done. deskgit $VERSION is live at $PUBLIC_URL/latest.json"
 echo "Users can update with:  deskgit update"
+echo "Users can view history: deskgit changelog"
