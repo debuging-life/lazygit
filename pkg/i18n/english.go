@@ -1499,7 +1499,7 @@ func EnglishTranslationSet() *TranslationSet {
 		UnsupportedGitService:                `Unsupported git service`,
 		UnsupportedGitServiceHelp: `Remote URL not recognized as a supported git service (GitHub, GitLab, Bitbucket, …).
 
-If you use an SSH config alias (e.g. git@github-work:owner/repo.git), add to your lazygit config:
+If you use an SSH config alias (e.g. git@github-work:owner/repo.git), add to ~/.config/deskgit/config.yml:
 
   services:
     'github-work': 'github:github.com'
