@@ -136,7 +136,14 @@ func runDesktimersDoctor(w io.Writer, version string) int {
 		case err != nil:
 			fail("API: unreachable (%v)", err)
 		default:
-			pass("API ok, %d task(s) visible", len(tasks))
+			tracked := ""
+			for _, t := range tasks {
+				if t.Tracking {
+					tracked = " (⏱ tracking: " + t.Code + " — " + t.Title + ")"
+					break
+				}
+			}
+			pass("API ok, %d task(s) visible%s", len(tasks), tracked)
 		}
 	}
 
@@ -285,6 +292,45 @@ func runDesktimersChangelog(w io.Writer) int {
 			fmt.Fprintln(w, "(no changelog)")
 		}
 		fmt.Fprintln(w)
+	}
+	return 0
+}
+
+// runDesktimersTasksList implements `deskgit tasks`: prints the user's active
+// tasks, with the timer-tracked task (if any) highlighted at the top.
+func runDesktimersTasksList(w io.Writer) int {
+	loadUserConfigForCLI()
+	client, err := desktimers.NewClientFromToken()
+	if err != nil {
+		fmt.Fprintf(w, "Not logged in — run: deskgit login\n")
+		return 1
+	}
+	client.HTTPClient.Timeout = 5 * time.Second
+
+	tasks, err := client.GetTasks("active")
+	if err != nil {
+		fmt.Fprintf(w, "Could not fetch tasks: %v\n", err)
+		return 1
+	}
+	if len(tasks) == 0 {
+		fmt.Fprintln(w, "No active tasks.")
+		return 0
+	}
+
+	ordered, _ := desktimers.OrderTasksForPicker(tasks, "")
+	fmt.Fprintf(w, "Active tasks (%d):\n", len(ordered))
+	for _, t := range ordered {
+		marker := "  "
+		if t.Tracking {
+			marker = "⏱ "
+		} else if t.Status == desktimers.StatusInProgress {
+			marker = "● "
+		}
+		project := ""
+		if t.Project != "" {
+			project = "  (" + t.Project + ")"
+		}
+		fmt.Fprintf(w, "  %s%-12s  %s%s\n", marker, t.Code, t.Title, project)
 	}
 	return 0
 }

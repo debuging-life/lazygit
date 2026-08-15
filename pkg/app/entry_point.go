@@ -69,6 +69,8 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 			os.Exit(runDesktimersUpdate(os.Stdout, buildInfo.Version))
 		case "changelog":
 			os.Exit(runDesktimersChangelog(os.Stdout))
+		case "tasks":
+			os.Exit(runDesktimersTasksList(os.Stdout))
 		}
 	}
 
