@@ -2,17 +2,29 @@ package desktimers
 
 import (
 	"strings"
+	"time"
 
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
+// timerFrames is the set of clock-face emoji that cycle to animate the timer.
+var timerFrames = []string{"🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛"}
+
+// TimerFrame returns a clock emoji that cycles once per second.
+// Because StatusLineSegment is called on every layout pass, this produces a
+// real-time spinning animation in the status bar.
+func TimerFrame() string {
+	return timerFrames[time.Now().Unix()%int64(len(timerFrames))]
+}
+
 // StatusLineSegment renders the selected task for the status/information
-// line, e.g. "⏱ MOB-101 Fix login redirect", truncated to maxWidth.
+// line, e.g. "🕐 MOB-101 Fix login redirect", truncated to maxWidth.
+// The clock emoji rotates every second to indicate a running timer.
 func StatusLineSegment(state *State, maxWidth int) string {
 	if state == nil || state.Code == "" {
 		return ""
 	}
-	segment := "⏱ " + state.Code
+	segment := TimerFrame() + " " + state.Code
 	if state.Title != "" {
 		segment += " " + state.Title
 	}

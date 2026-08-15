@@ -37,6 +37,11 @@ type DesktimersHelper struct {
 	// code of the most-recently created task this session, so the picker can
 	// float it to the top under a "Just created" section header.
 	recentlyCreatedCode string
+
+	// code of the task currently being tracked by the desktop timer (Tracking:
+	// true in the API response). Updated on each task fetch so the picker
+	// highlights it even without a real-time stream.
+	trackingCode string
 }
 
 func NewDesktimersHelper(c *HelperCommon, version string) *DesktimersHelper {
@@ -442,6 +447,15 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 		return err
 	}
 
+	// Cache the code of the task the desktop timer is currently running,
+	// so the picker can highlight it even if the API result changes later.
+	for _, t := range tasks {
+		if t.Tracking {
+			self.trackingCode = t.Code
+			break
+		}
+	}
+
 	currentCode := ""
 	if state := self.SelectedTask(); state != nil {
 		currentCode = state.Code
@@ -547,6 +561,13 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 			return self.promptReauthThen(func() error { return self.PickTaskForAction(onPick) })
 		}
 		return err
+	}
+
+	for _, t := range tasks {
+		if t.Tracking {
+			self.trackingCode = t.Code
+			break
+		}
 	}
 
 	currentCode := ""
