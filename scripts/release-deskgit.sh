@@ -5,7 +5,7 @@
 #   scripts/release-deskgit.sh <version>           # OTA-only (default)
 #   scripts/release-deskgit.sh <version> --tap     # also push tag → update Homebrew formula
 #
-# The Homebrew formula is pinned at 0.5.7 as a permanent OTA-capable
+# The Homebrew formula is pinned at 0.5.8 as a permanent OTA-capable
 # baseline. Use --tap only when you deliberately want to bump the formula
 # (e.g. a new baseline with a breaking change). Routine releases go to R2
 # only — deskgit's first-launch check and `deskgit update` handle delivery.
