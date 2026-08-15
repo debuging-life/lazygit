@@ -24,7 +24,7 @@ cd "$(dirname "$0")/.."
 
 # ── Config ───────────────────────────────────────────────────────────────────
 BUCKET="${R2_BUCKET:-deskgit-releases}"
-PUBLIC_URL="${R2_PUBLIC_URL:-https://cdn.desktimers.com/deskgit}"
+PUBLIC_URL="${R2_PUBLIC_URL:-https://cdn.desktimers.com}"
 ENDPOINT="${R2_ENDPOINT:?R2_ENDPOINT not set — export it before running}"
 
 # ── Version ──────────────────────────────────────────────────────────────────

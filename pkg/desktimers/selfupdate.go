@@ -13,7 +13,7 @@ import (
 )
 
 // ReleasesBaseURL is the R2 public bucket root. Override via DESKGIT_RELEASES_URL.
-const ReleasesBaseURL = "https://cdn.desktimers.com/deskgit"
+const ReleasesBaseURL = "https://cdn.desktimers.com"
 
 // manifestTimeout is how long we wait for the manifest fetch.
 const manifestTimeout = 10 * time.Second
