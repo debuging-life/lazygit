@@ -64,6 +64,9 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 		case "doctor":
 			mergeBuildInfo(buildInfo)
 			os.Exit(runDesktimersDoctor(os.Stdout, buildInfo.Version))
+		case "update":
+			mergeBuildInfo(buildInfo)
+			os.Exit(runDesktimersUpdate(os.Stdout, buildInfo.Version))
 		}
 	}
 

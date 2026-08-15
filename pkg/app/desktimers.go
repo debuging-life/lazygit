@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/jesseduffield/lazygit/pkg/config"
@@ -149,6 +151,90 @@ func runDesktimersDoctor(w io.Writer, version string) int {
 	if failed {
 		return 1
 	}
+	return 0
+}
+
+// runDesktimersUpdate implements `deskgit update`: fetches the release
+// manifest from R2, downloads a newer binary if one exists, verifies its
+// checksum, and replaces the running executable in-place. On macOS the
+// replacement is ad-hoc signed so Gatekeeper lets it run. Prints progress
+// to w. Returns a non-zero exit code on hard failure.
+func runDesktimersUpdate(w io.Writer, currentVersion string) int {
+	fmt.Fprintf(w, "Checking for updates (current: %s)…\n", currentVersion)
+
+	manifest, err := desktimers.FetchManifest()
+	if err != nil {
+		fmt.Fprintf(w, "Update check failed: %v\n", err)
+		return 1
+	}
+
+	if !desktimers.IsNewerVersion(manifest.Version, currentVersion) {
+		fmt.Fprintf(w, "Already up to date (%s).\n", currentVersion)
+		return 0
+	}
+
+	fmt.Fprintf(w, "New version available: %s → %s\n", currentVersion, manifest.Version)
+
+	key := desktimers.PlatformKey()
+	asset, ok := manifest.Assets[key]
+	if !ok {
+		fmt.Fprintf(w, "No binary available for %s — build from source: https://github.com/debuging-life/lazygit\n", key)
+		return 1
+	}
+
+	// Find the paths of the executables to replace.
+	execPath, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(w, "Cannot determine executable path: %v\n", err)
+		return 1
+	}
+	hookPath := execPath[:len(execPath)-len("deskgit")] + "dt-hook"
+
+	// Download and verify the main binary.
+	fmt.Fprintf(w, "Downloading deskgit %s for %s…\n", manifest.Version, key)
+	tmpBin, err := desktimers.DownloadAndVerify(asset.URL, asset.SHA256)
+	if err != nil {
+		fmt.Fprintf(w, "Download failed: %v\n", err)
+		return 1
+	}
+	defer os.Remove(tmpBin)
+
+	// Download and verify dt-hook.
+	var tmpHook string
+	if asset.HookURL != "" && asset.HookSHA256 != "" {
+		fmt.Fprintf(w, "Downloading dt-hook %s…\n", manifest.Version)
+		tmpHook, err = desktimers.DownloadAndVerify(asset.HookURL, asset.HookSHA256)
+		if err != nil {
+			fmt.Fprintf(w, "dt-hook download failed: %v\n", err)
+			return 1
+		}
+		defer os.Remove(tmpHook)
+	}
+
+	// Replace the binaries.
+	fmt.Fprintf(w, "Installing…\n")
+	if err := desktimers.ReplaceExecutable(tmpBin, execPath); err != nil {
+		fmt.Fprintf(w, "Failed to replace deskgit: %v\n", err)
+		fmt.Fprintf(w, "Try: sudo deskgit update\n")
+		return 1
+	}
+	if tmpHook != "" {
+		if err := desktimers.ReplaceExecutable(tmpHook, hookPath); err != nil {
+			// Non-fatal: the main binary was already updated.
+			fmt.Fprintf(w, "Warning: failed to replace dt-hook: %v\n", err)
+		}
+	}
+
+	// Ad-hoc sign on macOS so Gatekeeper doesn't kill the replacement binary.
+	if runtime.GOOS == "darwin" {
+		for _, path := range []string{execPath, hookPath} {
+			if err := exec.Command("codesign", "--sign", "-", "--force", path).Run(); err != nil {
+				fmt.Fprintf(w, "Warning: codesign failed for %s: %v\n", path, err)
+			}
+		}
+	}
+
+	fmt.Fprintf(w, "Updated to deskgit %s. Restart to use the new version.\n", manifest.Version)
 	return 0
 }
 
