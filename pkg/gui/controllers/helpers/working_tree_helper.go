@@ -250,8 +250,8 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 			return self.handleCommitPressWithTaskPrefix(messageTail, prefix)
 		}
 
-		// Mismatch guard: committing task B on a branch named for task A is
-		// usually a mistake — confirm before proceeding.
+		// Mismatch guard: if the branch carries a task code, the user must
+		// commit under that code — picking a different task is blocked.
 		branchCode := desktimers.ExtractCode(self.refHelper.GetCheckedOutRef().Name)
 		if branchCode == "" || branchCode == task.Code {
 			return commitWithTask()
@@ -261,13 +261,10 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 			Title: self.c.Tr.DesktimersTaskMismatchTitle,
 			Prompt: utils.ResolvePlaceholderString(
 				self.c.Tr.DesktimersTaskMismatchPrompt,
-				map[string]string{"branchCode": branchCode, "taskCode": task.Code},
+				map[string]string{"branchCode": branchCode},
 			),
-			HandleConfirm: commitWithTask,
-			HandleClose: func() error {
-				// Escape returns to the picker.
-				return self.HandleCommitPress()
-			},
+			HandleConfirm: self.HandleCommitPress,
+			HandleClose:   self.HandleCommitPress,
 		})
 		return nil
 	})
