@@ -250,8 +250,9 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 			return self.handleCommitPressWithTaskPrefix(messageTail, prefix)
 		}
 
-		// Mismatch guard: if the branch carries a task code, the user must
-		// commit under that code — picking a different task is blocked.
+		// Mismatch guard: if the branch carries a task code, the picked task
+		// must match it. Offer to create a new branch for the picked task
+		// rather than silently logging work against the wrong task.
 		branchCode := desktimers.ExtractCode(self.refHelper.GetCheckedOutRef().Name)
 		if branchCode == "" || branchCode == task.Code {
 			return commitWithTask()
@@ -261,12 +262,38 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 			Title: self.c.Tr.DesktimersTaskMismatchTitle,
 			Prompt: utils.ResolvePlaceholderString(
 				self.c.Tr.DesktimersTaskMismatchPrompt,
-				map[string]string{"branchCode": branchCode},
+				map[string]string{"branchCode": branchCode, "taskCode": task.Code},
 			),
-			HandleConfirm: self.HandleCommitPress,
-			HandleClose:   self.HandleCommitPress,
+			HandleConfirm: func() error {
+				return self.pickParentBranchForTask(task)
+			},
+			HandleClose: self.HandleCommitPress,
 		})
 		return nil
+	})
+}
+
+// pickParentBranchForTask shows a menu of local branches so the user can
+// choose the parent for the new branch being created for task.
+func (self *WorkingTreeHelper) pickParentBranchForTask(task desktimers.Task) error {
+	branches := self.c.Model().Branches
+	if len(branches) == 0 {
+		return nil
+	}
+	menuItems := lo.Map(branches, func(b *models.Branch, _ int) *types.MenuItem {
+		return &types.MenuItem{
+			Label: b.Name,
+			OnPress: func() error {
+				return self.refHelper.NewBranchForTask(b.Name, b.Name, task.Code)
+			},
+		}
+	})
+	return self.c.Menu(types.CreateMenuOptions{
+		Title: utils.ResolvePlaceholderString(
+			self.c.Tr.DesktimersTaskMismatchNewBranch,
+			map[string]string{"taskCode": task.Code},
+		),
+		Items: menuItems,
 	})
 }
 

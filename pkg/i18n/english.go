@@ -526,6 +526,8 @@ type TranslationSet struct {
 	DesktimersTaskTitleEmpty              string
 	DesktimersTaskMismatchTitle           string
 	DesktimersTaskMismatchPrompt          string
+	DesktimersTaskMismatchNewBranch       string
+	DesktimersPickParentBranchTitle       string
 	DesktimersTaskInfoTitle               string
 	DesktimersTaskInfoPrompt              string
 	DesktimersShowTaskInfo                string
@@ -1730,7 +1732,9 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersCreatingTask:               "Creating task",
 		DesktimersTaskTitleEmpty:             "Task title cannot be empty",
 		DesktimersTaskMismatchTitle:          "Branch / task mismatch",
-		DesktimersTaskMismatchPrompt:         "This branch is {{branchCode}} — you can only commit as {{branchCode}} or without a task.",
+		DesktimersTaskMismatchPrompt:         "This branch is {{branchCode}} but you picked {{taskCode}} — create a new branch for {{taskCode}}?",
+		DesktimersTaskMismatchNewBranch:      "Pick parent branch for {{taskCode}}",
+		DesktimersPickParentBranchTitle:      "Pick parent branch",
 		DesktimersTaskInfoTitle:              "Task details",
 		DesktimersTaskInfoPrompt:             "Code:    {{code}}\nTitle:   {{title}}\nProject: {{project}}\nStatus:  {{status}}",
 		DesktimersShowTaskInfo:               "Show task details",

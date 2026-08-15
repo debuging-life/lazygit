@@ -404,6 +404,23 @@ func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(
 	return self.desktimersHelper.PickBranchTypeThen(cfg.BranchTypes, pickTask)
 }
 
+// NewBranchForTask creates a new branch from `from` whose name carries the
+// prefix derived from taskCode. If the configured branch template uses {{type}},
+// the branch-type menu is shown first; otherwise the prefix is built directly.
+// Called from the mismatch handler when the user picks a task that doesn't
+// match the current branch's task code.
+func (self *RefsHelper) NewBranchForTask(from string, fromFormattedName string, taskCode string) error {
+	cfg := self.c.UserConfig().Desktimers
+	buildPrefix := func(branchType string) error {
+		prefix := desktimers.ApplyBranchPrefixTemplate(cfg.BranchPrefixTemplate, branchType, taskCode)
+		return self.promptNewBranch(from, fromFormattedName, "", prefix)
+	}
+	if !desktimers.BranchTemplateUsesType(cfg.BranchPrefixTemplate) {
+		return buildPrefix("")
+	}
+	return self.desktimersHelper.PickBranchTypeThen(cfg.BranchTypes, buildPrefix)
+}
+
 func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, suggestedBranchName string, taskPrefix string) error {
 	message := utils.ResolvePlaceholderString(
 		self.c.Tr.NewBranchNameBranchOff,
