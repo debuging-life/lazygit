@@ -67,20 +67,16 @@ func OrderTasksForPicker(tasks []Task, currentCode string) ([]Task, int) {
 }
 
 // PickerColumns renders a task as picker-menu columns:
-// CODE, title, (project), tracking/in-progress marker.
+// CODE, title, project, status marker.
 func PickerColumns(task Task) []string {
 	marker := ""
 	switch {
 	case task.Tracking:
-		marker = "⏱ tracking"
+		marker = "tracking"
 	case task.Status == StatusInProgress:
-		marker = "● in progress"
+		marker = "in progress"
 	}
-	project := ""
-	if task.Project != "" {
-		project = "(" + task.Project + ")"
-	}
-	return []string{task.Code, utils.TruncateWithEllipsis(task.Title, 60), project, marker}
+	return []string{task.Code, utils.TruncateWithEllipsis(task.Title, 60), task.Project, marker}
 }
 
 // ProjectsSpanWorkspaces reports whether the projects belong to more than

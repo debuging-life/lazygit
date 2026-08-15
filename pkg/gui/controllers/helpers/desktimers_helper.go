@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
+	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/samber/lo"
@@ -174,6 +176,39 @@ func (self *DesktimersHelper) promptNewTaskTitle(project desktimers.Project, onC
 	return nil
 }
 
+// timerSpinnerFrame returns a spinning character that cycles each second,
+// giving an animated feel each time the menu is (re-)opened.
+func timerSpinnerFrame() string {
+	frames := []string{"◐", "◓", "◑", "◒"}
+	return frames[time.Now().Unix()%int64(len(frames))]
+}
+
+// styledTaskColumns applies ANSI color to a task's label columns.
+// Tracking tasks are rendered yellow+bold with an animated spinner;
+// in-progress tasks are rendered in cyan.
+func styledTaskColumns(columns []string, task desktimers.Task) []string {
+	if len(columns) == 0 {
+		return columns
+	}
+	out := make([]string, len(columns))
+	copy(out, columns)
+	switch {
+	case task.Tracking:
+		// Animate the marker column (index 3) with a spinner.
+		if len(out) >= 4 {
+			out[3] = timerSpinnerFrame() + " " + out[3]
+		}
+		for i, c := range out {
+			out[i] = style.FgYellow.SetBold().Sprint(c)
+		}
+	case task.Status == desktimers.StatusInProgress:
+		for i, c := range out {
+			out[i] = style.FgCyan.Sprint(c)
+		}
+	}
+	return out
+}
+
 // buildTaskMenuItems converts an ordered task list into menu items, floating
 // the recently-created task (if any) to the top under its own section header.
 // makeItem receives the task and must return the OnPress/OnOpen/OnInfo callbacks
@@ -193,6 +228,7 @@ func (self *DesktimersHelper) buildTaskMenuItems(
 	for _, t := range ordered {
 		if recentCode != "" && t.Code == recentCode {
 			item := makeItem(t)
+			item.LabelColumns = styledTaskColumns(item.LabelColumns, t)
 			item.Section = justCreatedSection
 			items = append(items, item)
 			break
@@ -206,6 +242,7 @@ func (self *DesktimersHelper) buildTaskMenuItems(
 			continue
 		}
 		item := makeItem(t)
+		item.LabelColumns = styledTaskColumns(item.LabelColumns, t)
 		if useSections {
 			item.Section = activeSection
 		}
