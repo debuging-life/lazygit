@@ -547,6 +547,12 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 		headBranch = branch.UpstreamBranch
 	}
 
+	// Guard: strip any "origin/" prefix for comparison, then reject head == base.
+	normalised := strings.TrimPrefix(baseBranch, "origin/")
+	if normalised != "" && normalised == strings.TrimPrefix(headBranch, "origin/") {
+		return errors.New(self.c.Tr.PRSameBranch)
+	}
+
 	// Pre-fill from the last commit message.
 	defaultTitle := ""
 	defaultBody := ""

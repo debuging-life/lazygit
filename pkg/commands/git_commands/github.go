@@ -358,12 +358,20 @@ type createPRRequest struct {
 	Base  string `json:"base"`
 }
 
+type createPRResponseError struct {
+	Message  string `json:"message"`
+	Resource string `json:"resource"`
+	Field    string `json:"field"`
+	Code     string `json:"code"`
+}
+
 type createPRResponse struct {
-	Number  int    `json:"number"`
-	HtmlURL string `json:"html_url"`
-	State   string `json:"state"`
-	Title   string `json:"title"`
-	Message string `json:"message"` // present on error responses
+	Number  int                     `json:"number"`
+	HtmlURL string                  `json:"html_url"`
+	State   string                  `json:"state"`
+	Title   string                  `json:"title"`
+	Message string                  `json:"message"` // present on error responses
+	Errors  []createPRResponseError `json:"errors"`  // details on validation errors
 }
 
 // CreatePullRequest creates a pull request via the GitHub REST API.
@@ -398,7 +406,21 @@ func (self *GitHubCommands) CreatePullRequest(owner, repo, title, body, head, ba
 		return nil, fmt.Errorf("creating pull request: %w", err)
 	}
 	if resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("creating pull request: %s", parsed.Message)
+		// Prefer the first error detail message if GitHub provided one.
+		for _, e := range parsed.Errors {
+			if e.Message != "" {
+				return nil, fmt.Errorf("%s", e.Message)
+			}
+		}
+		// Translate common terse GitHub messages into something actionable.
+		msg := parsed.Message
+		switch {
+		case strings.Contains(strings.ToLower(msg), "validation failed"):
+			msg = "No changes to compare — the head and base branches are identical or the branch has no commits ahead of the base."
+		case strings.Contains(strings.ToLower(msg), "already exists"):
+			msg = "A pull request for this branch already exists."
+		}
+		return nil, fmt.Errorf("%s", msg)
 	}
 
 	return &models.GithubPullRequest{

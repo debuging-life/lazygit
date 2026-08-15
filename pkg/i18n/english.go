@@ -289,6 +289,7 @@ type TranslationSet struct {
 	NoPullRequestForBranch                string
 	CreatePullRequestViaAPI               string
 	PRTitle                               string
+	PRSameBranch                          string
 	PRBaseBranch                          string
 	PRBody                                string
 	PRNoGHToken                           string
@@ -1510,6 +1511,7 @@ func EnglishTranslationSet() *TranslationSet {
 		CreatePullRequest:                    `Create pull request`,
 		CreatePullRequestViaAPI:              `Create pull request (in-app)`,
 		PRTitle:                              `PR title`,
+		PRSameBranch:                         `Cannot create a pull request from a branch to itself — head and base are the same.`,
 		PRBaseBranch:                         `Base branch`,
 		PRBody:                               `PR description (leave blank to skip)`,
 		PRNoGHToken:                          `No GitHub token — run: gh auth login`,
