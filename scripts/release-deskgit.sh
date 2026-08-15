@@ -1,70 +1,55 @@
 #!/usr/bin/env bash
-# Cut a deskgit release by tagging main. Pushing the `deskgit-vX.Y.Z` tag fires
-# the "Release deskgit" workflow (.github/workflows/deskgit-release.yml), which
-# bumps the Homebrew tap formula and creates the GitHub Release. This script
-# only computes the next version and pushes the tag — the tap update is the
-# pipeline's job, so the two never race to push the same formula.
+# One-command deskgit release.
 #
 # Usage:
-#   scripts/release-deskgit.sh [patch|minor|major]   # bump from the latest tag (default: patch)
-#   scripts/release-deskgit.sh vX.Y.Z                # release an explicit version
-#   scripts/release-deskgit.sh -y patch              # skip the confirmation prompt
+#   scripts/release-deskgit.sh <version>    e.g.  scripts/release-deskgit.sh 0.5.8
 #
-# Assumes: clean tree, on `main`, HEAD already pushed to origin/main.
+# What it does:
+#   1. Tags HEAD as deskgit-v<version>
+#   2. Pushes the tag → GitHub Actions updates the Homebrew tap formula
+#   3. Uploads cross-platform binaries + latest.json + versions.json to R2
+#      (requires R2 credentials: source .env.r2 first, or export them manually)
+#
+# Prerequisites:
+#   • R2 credentials exported (see scripts/upload-deskgit.sh header)
+#   • gh CLI authenticated
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-assume_yes=false
-if [ "${1:-}" = "-y" ]; then
-  assume_yes=true
-  shift
+VERSION="${1:-}"
+if [[ -z "$VERSION" ]]; then
+  echo "Usage: scripts/release-deskgit.sh <version>  (e.g. 0.5.8)" >&2
+  exit 1
 fi
-arg="${1:-patch}"
+VERSION="${VERSION#v}"  # strip leading v if supplied
+TAG="deskgit-v$VERSION"
 
-die() { echo "error: $*" >&2; exit 1; }
-
-# ── Preflight ────────────────────────────────────────────────────────────────
-[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || die "not on main"
-[ -z "$(git status --porcelain)" ] || die "working tree is dirty — commit or stash first"
-
-git fetch --quiet origin main --tags
-[ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || \
-  die "HEAD is not in sync with origin/main — push (or pull) first"
-
-# ── Determine the new version ────────────────────────────────────────────────
-latest="$(git tag --list 'deskgit-v*' --sort=-v:refname | head -1)"
-[ -n "$latest" ] || latest="deskgit-v0.0.0"
-cur="${latest#deskgit-v}"
-IFS='.' read -r major minor patch <<<"$cur"
-
-case "$arg" in
-  patch) patch=$((patch + 1)) ;;
-  minor) minor=$((minor + 1)); patch=0 ;;
-  major) major=$((major + 1)); minor=0; patch=0 ;;
-  v*.*.*|*.*.*)
-    version="${arg#v}"
-    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "invalid version: $arg (expected X.Y.Z)"
-    ;;
-  *) die "unknown bump '$arg' (use patch|minor|major or an explicit vX.Y.Z)" ;;
-esac
-version="${version:-$major.$minor.$patch}"
-tag="deskgit-v$version"
-
-git rev-parse -q --verify "refs/tags/$tag" >/dev/null && die "tag $tag already exists"
-
-echo "Latest release : ${latest#deskgit-v}"
-echo "New release    : $version  (tag $tag)"
-echo "Commit         : $(git rev-parse --short HEAD)"
-if [ "$assume_yes" != true ]; then
-  read -r -p "Tag and push $tag? [y/N] " reply
-  [ "$reply" = "y" ] || [ "$reply" = "Y" ] || die "aborted"
+# Sanity checks
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "error: working tree is not clean — commit or stash changes first" >&2
+  exit 1
+fi
+if git tag --list "$TAG" | grep -q .; then
+  echo "error: tag $TAG already exists locally" >&2
+  exit 1
 fi
 
-git tag "$tag" -a -m "Release $tag"
-git push origin "refs/tags/$tag"
+echo "==> Releasing deskgit $VERSION"
 
-echo
-echo "Pushed $tag. The 'Release deskgit' workflow will bump the tap formula and"
-echo "publish the release. Users update with:"
-echo "  brew update && brew upgrade deskgit    # or: brew reinstall deskgit"
+# 1. Tag
+git tag "$TAG"
+echo "    tagged $TAG"
+
+# 2. Push tag (DT_STRICT=0 because release commits have no task code)
+echo "    pushing $TAG to GitHub (triggers tap update)…"
+DT_STRICT=0 git push origin "$TAG"
+
+# 3. Upload to R2
+echo "    uploading binaries to R2…"
+scripts/upload-deskgit.sh "$VERSION"
+
+echo ""
+echo "Done! deskgit $VERSION is released."
+echo "  Homebrew tap:  brew upgrade deskgit"
+echo "  OTA update:    deskgit update"

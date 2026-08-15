@@ -928,17 +928,19 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			TimeFormat:               "02 Jan 06",
 			ShortTimeFormat:          time.Kitchen,
 			Theme: ThemeConfig{
-				ActiveBorderColor:               []string{"green", "bold"},
-				SearchingActiveBorderColor:      []string{"cyan", "bold"},
-				InactiveBorderColor:             []string{"default"},
-				OptionsTextColor:                []string{"blue"},
-				SelectedLineBgColor:             []string{"blue"},
+				// deskgit: DeskTimers brand palette
+				// Emerald 500 accent, Dark 700 warm-grey borders, Red 500 danger
+				ActiveBorderColor:               []string{"#3EE9B1", "bold"}, // Emerald 500
+				SearchingActiveBorderColor:      []string{"#88E8C8", "bold"}, // Emerald 400
+				InactiveBorderColor:             []string{"#625750"},         // Dark 700
+				OptionsTextColor:                []string{"#3EE9B1"},         // Emerald 500
+				SelectedLineBgColor:             []string{"#0D7351"},         // Emerald 800
 				InactiveViewSelectedLineBgColor: []string{"bold"},
-				CherryPickedCommitBgColor:       []string{"cyan"},
-				CherryPickedCommitFgColor:       []string{"blue"},
-				MarkedBaseCommitBgColor:         []string{"yellow"},
-				MarkedBaseCommitFgColor:         []string{"blue"},
-				UnstagedChangesColor:            []string{"red"},
+				CherryPickedCommitBgColor:       []string{"#B3A475"}, // Cream 500
+				CherryPickedCommitFgColor:       []string{"#2A2623"}, // Dark 900
+				MarkedBaseCommitBgColor:         []string{"#C9C1A6"}, // Cream 400
+				MarkedBaseCommitFgColor:         []string{"#2A2623"}, // Dark 900
+				UnstagedChangesColor:            []string{"#DD4A4A"}, // Red 500
 				DefaultFgColor:                  []string{"default"},
 			},
 			CommitLength:                        CommitLengthConfig{Show: true},
