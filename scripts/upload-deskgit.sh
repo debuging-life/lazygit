@@ -128,15 +128,12 @@ else
   echo "Warning: no changelog file at $CHANGELOG_FILE — changelog will be empty"
 fi
 
-# JSON-encode the changelog: escape backslashes, double quotes, newlines, tabs.
-changelog_json() {
-  printf '%s' "$1" \
-    | sed 's/\\/\\\\/g' \
-    | sed 's/"/\\"/g' \
-    | sed ':a;N;$!ba;s/\n/\\n/g' \
-    | sed 's/\t/\\t/g'
-}
-CHANGELOG_ESCAPED="$(changelog_json "$CHANGELOG")"
+# JSON-encode the changelog using Python so all special chars are escaped.
+if [ -n "$CHANGELOG" ]; then
+  CHANGELOG_ESCAPED="$(python3 -c "import sys,json; print(json.dumps(sys.stdin.read())[1:-1])" <<< "$CHANGELOG")"
+else
+  CHANGELOG_ESCAPED=""
+fi
 
 # ── Write + upload latest.json ────────────────────────────────────────────────
 MANIFEST_FILE="$OUT/latest.json"
