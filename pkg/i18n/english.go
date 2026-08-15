@@ -558,10 +558,19 @@ type TranslationSet struct {
 	DesktimersInstallHooksTitle           string
 	DesktimersInstallHooksPrompt          string
 	DesktimersCustomHooksPathNotice       string
-	DesktimersLogout                      string
-	DesktimersLogoutConfirm               string
-	DesktimersLoggedOut                   string
-	DesktimersLoggedOutOffline            string
+	DesktimersSetupRepo                   string
+	DesktimersSetupRepoTitle             string
+	DesktimersSetupRepoSelectRemote      string
+	DesktimersSetupRepoAddNew            string
+	DesktimersSetupRepoNamePrompt        string
+	DesktimersSetupRepoURLPrompt         string
+	DesktimersSetupRepoURLUpdatePrompt   string
+	DesktimersSetupRepoAdded             string
+	DesktimersSetupRepoUpdated           string
+	DesktimersLogout                     string
+	DesktimersLogoutConfirm              string
+	DesktimersLoggedOut                  string
+	DesktimersLoggedOutOffline           string
 	ShellCommand                          string
 	CommitChangesWithoutHook              string
 	ResetTo                               string
@@ -1782,6 +1791,15 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersInstallHooksTitle:          "Install DeskTimers git hooks",
 		DesktimersInstallHooksPrompt:         "Install DeskTimers git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
 		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTimers hooks were not installed. Add them to your hook manager manually.",
+		DesktimersSetupRepo:                  "Setup repository...",
+		DesktimersSetupRepoTitle:             "Setup repository",
+		DesktimersSetupRepoSelectRemote:      "Select remote to update",
+		DesktimersSetupRepoAddNew:            "Add new remote",
+		DesktimersSetupRepoNamePrompt:        "Remote name (e.g. origin):",
+		DesktimersSetupRepoURLPrompt:         "Remote URL (e.g. git@github.com:owner/repo.git):",
+		DesktimersSetupRepoURLUpdatePrompt:   "New URL for remote '%s':",
+		DesktimersSetupRepoAdded:             "Remote '%s' added.",
+		DesktimersSetupRepoUpdated:           "Remote '%s' URL updated.",
 		DesktimersLogout:                     "Log out of DeskTimers",
 		DesktimersLogoutConfirm:              "Log out of DeskTimers on this machine?\n\nThe device token is revoked and deskgit will ask you to log in again on the next launch.",
 		DesktimersLoggedOut:                  "Logged out. Restart deskgit to log in again.",

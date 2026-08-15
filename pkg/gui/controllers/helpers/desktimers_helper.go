@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -265,6 +266,11 @@ func (self *DesktimersHelper) OpenDeskTimersMenu() error {
 			OnPress:        self.clearSelectedTask,
 			Keys:           menuKey('c'),
 			DisabledReason: noTaskReason,
+		},
+		{
+			Label:   self.c.Tr.DesktimersSetupRepo,
+			OnPress: self.setupRepositoryRemote,
+			Keys:    menuKey('s'),
 		},
 		{
 			Label:   self.c.Tr.DesktimersCheckForUpdatesNow,
@@ -832,4 +838,94 @@ func (self *DesktimersHelper) PromptToInstallHooksInBackground() {
 		})
 		return nil
 	})
+}
+
+// setupRepositoryRemote lets the user add a new remote or update an existing
+// one's URL — from the DeskTimers menu.
+func (self *DesktimersHelper) setupRepositoryRemote() error {
+	remotes, err := self.c.Git().Loaders.RemoteLoader.GetRemotes()
+	if err != nil {
+		return err
+	}
+
+	if len(remotes) == 0 {
+		return self.promptAddRemote("")
+	}
+
+	// Build menu: one item per existing remote + "Add new remote"
+	items := make([]*types.MenuItem, 0, len(remotes)+1)
+	for _, r := range remotes {
+		r := r
+		displayURL := ""
+		if len(r.Urls) > 0 {
+			displayURL = r.Urls[0]
+		}
+		items = append(items, &types.MenuItem{
+			LabelColumns: []string{r.Name, displayURL},
+			OnPress: func() error {
+				return self.promptUpdateRemote(r.Name, displayURL)
+			},
+		})
+	}
+	items = append(items, &types.MenuItem{
+		Label: self.c.Tr.DesktimersSetupRepoAddNew,
+		OnPress: func() error {
+			return self.promptAddRemote("")
+		},
+	})
+
+	return self.c.Menu(types.CreateMenuOptions{
+		Title: self.c.Tr.DesktimersSetupRepoSelectRemote,
+		Items: items,
+	})
+}
+
+func (self *DesktimersHelper) promptAddRemote(initialName string) error {
+	self.c.Prompt(types.PromptOpts{
+		Title:          self.c.Tr.DesktimersSetupRepoNamePrompt,
+		InitialContent: initialName,
+		HandleConfirm: func(name string) error {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				return nil
+			}
+			self.c.Prompt(types.PromptOpts{
+				Title: self.c.Tr.DesktimersSetupRepoURLPrompt,
+				HandleConfirm: func(url string) error {
+					url = strings.TrimSpace(url)
+					if url == "" {
+						return nil
+					}
+					if err := self.c.Git().Remote.AddRemote(name, url); err != nil {
+						return err
+					}
+					self.c.Toast(fmt.Sprintf(self.c.Tr.DesktimersSetupRepoAdded, name))
+					self.c.Refresh(types.RefreshOptions{Mode: types.ASYNC, Scope: []types.RefreshableView{types.REMOTES}})
+					return nil
+				},
+			})
+			return nil
+		},
+	})
+	return nil
+}
+
+func (self *DesktimersHelper) promptUpdateRemote(name, currentURL string) error {
+	self.c.Prompt(types.PromptOpts{
+		Title:          fmt.Sprintf(self.c.Tr.DesktimersSetupRepoURLUpdatePrompt, name),
+		InitialContent: currentURL,
+		HandleConfirm: func(url string) error {
+			url = strings.TrimSpace(url)
+			if url == "" || url == currentURL {
+				return nil
+			}
+			if err := self.c.Git().Remote.UpdateRemoteUrl(name, url); err != nil {
+				return err
+			}
+			self.c.Toast(fmt.Sprintf(self.c.Tr.DesktimersSetupRepoUpdated, name))
+			self.c.Refresh(types.RefreshOptions{Mode: types.ASYNC, Scope: []types.RefreshableView{types.REMOTES}})
+			return nil
+		},
+	})
+	return nil
 }

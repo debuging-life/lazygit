@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/gookit/color"
@@ -1050,14 +1051,17 @@ func (self *BranchesController) showUnsupportedServiceHelp() error {
 
 	snippet := fmt.Sprintf("services:\n  '%s': 'github:github.com'", alias)
 
+	// Use the real config path that deskgit is actually reading from.
+	configPath := filepath.Join(self.c.GetConfig().GetUserConfigDir(), "config.yml")
+
 	urlLine := ""
 	if remoteURL != "" {
 		urlLine = fmt.Sprintf("\n\nRemote URL: %s", remoteURL)
 	}
 
 	prompt := fmt.Sprintf(
-		"Remote URL not recognized as a supported git service.%s\n\nAdd to ~/.config/deskgit/config.yml:\n\n  services:\n    '%s': 'github:github.com'\n\nPress Enter to copy the snippet — then paste it into your config.",
-		urlLine, alias,
+		"Remote URL not recognized as a supported git service.%s\n\nAdd to %s:\n\n  services:\n    '%s': 'github:github.com'\n\nPress Enter to copy the snippet — then paste it into your config.",
+		urlLine, configPath, alias,
 	)
 
 	self.c.Confirm(types.ConfirmOpts{
@@ -1067,7 +1071,7 @@ func (self *BranchesController) showUnsupportedServiceHelp() error {
 			if err := self.c.OS().CopyToClipboard(snippet); err != nil {
 				return err
 			}
-			self.c.Toast("Snippet copied — paste into ~/.config/deskgit/config.yml")
+			self.c.Toast(fmt.Sprintf("Snippet copied — paste into %s", configPath))
 			return nil
 		},
 	})
