@@ -34,3 +34,4 @@ result
 result-*
 .direnv
 .envrc
+.env.r2
