@@ -500,8 +500,11 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 
 func (self *BranchesController) handleCreatePRViaAPI(branch *models.Branch) error {
 	svcInfo, err := self.c.Helpers().Host.GetServiceInfo()
-	if err != nil || svcInfo.Provider != "github" {
-		// Fall back to browser for non-GitHub remotes
+	if err != nil {
+		return errors.New(self.c.Tr.UnsupportedGitServiceHelp)
+	}
+	if svcInfo.Provider != "github" {
+		// Recognized service but not GitHub — open in browser instead.
 		return self.handleCreatePullRequest(branch)
 	}
 
@@ -1030,6 +1033,9 @@ func (self *BranchesController) promptForTargetBranchNameAndCreatePullRequest(fr
 func (self *BranchesController) createPullRequest(from string, to string) error {
 	url, err := self.c.Helpers().Host.GetPullRequestURL(from, to)
 	if err != nil {
+		if err.Error() == self.c.Tr.UnsupportedGitService {
+			return errors.New(self.c.Tr.UnsupportedGitServiceHelp)
+		}
 		return err
 	}
 
