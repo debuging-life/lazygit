@@ -83,12 +83,6 @@ func (self *BranchesController) GetKeybindings(opts types.KeybindingsOpts) []*ty
 			Description:       self.c.Tr.CreatePullRequest,
 		},
 		{
-			Keys:              opts.GetKeys(opts.Config.Branches.CreatePullRequestViaAPI),
-			Handler:           self.withItem(self.handleCreatePRViaAPI),
-			GetDisabledReason: self.require(self.singleItemSelected()),
-			Description:       self.c.Tr.CreatePullRequestViaAPI,
-		},
-		{
 			Keys:              opts.GetKeys(opts.Config.Branches.ViewPullRequestOptions),
 			Handler:           self.withItem(self.handleCreatePullRequestMenu),
 			GetDisabledReason: self.require(self.singleItemSelected()),
@@ -920,7 +914,20 @@ func (self *BranchesController) newBranch(selectedBranch *models.Branch) error {
 }
 
 func (self *BranchesController) createPullRequestMenu(selectedBranch *models.Branch, checkedOutBranch *models.Branch) error {
-	menuItems := make([]*types.MenuItem, 0, 4)
+	menuItems := make([]*types.MenuItem, 0, 6)
+
+	// In-app PR creation via GitHub REST API (shown first when GitHub is detected)
+	if svcInfo, err := self.c.Helpers().Host.GetServiceInfo(); err == nil && svcInfo.Provider == "github" {
+		if self.c.Git().GitHub.GetAuthToken(svcInfo.WebDomain) != "" {
+			capturedBranch := selectedBranch
+			menuItems = append(menuItems, &types.MenuItem{
+				LabelColumns: []string{self.c.Tr.CreatePullRequestViaAPI},
+				OnPress: func() error {
+					return self.handleCreatePRViaAPI(capturedBranch)
+				},
+			})
+		}
+	}
 
 	fromToLabelColumns := func(from string, to string) []string {
 		return []string{fmt.Sprintf("%s → %s", from, to)}

@@ -1043,20 +1043,6 @@
           ],
           "default": "o"
         },
-        "createPullRequestViaAPI": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            }
-          ],
-          "default": "p"
-        },
         "viewPullRequestOptions": {
           "oneOf": [
             {
