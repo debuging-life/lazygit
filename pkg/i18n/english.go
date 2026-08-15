@@ -301,6 +301,8 @@ type TranslationSet struct {
 	PRMergeConfirmTitle                   string
 	PRMergeConfirmPrompt                  string
 	PRMerged                              string
+	PRCreatingPR                          string
+	PROpenPullRequests                    string
 	NoBranchOnRemote                      string
 	Fetch                                 string
 	FetchTooltip                          string
@@ -1520,6 +1522,8 @@ func EnglishTranslationSet() *TranslationSet {
 		PRMergeConfirmTitle:                  `Merge PR #{{number}}`,
 		PRMergeConfirmPrompt:                 `Merge PR #{{number}}: {{title}}?`,
 		PRMerged:                             `Pull request merged`,
+		PRCreatingPR:                         `Creating pull request...`,
+		PROpenPullRequests:                   `Pull requests`,
 		CopyPullRequestURL:                   `Copy pull request URL to clipboard`,
 		OpenPullRequestInBrowser:             `Open pull request in browser`,
 		NoPullRequestForBranch:               `No pull request found for this branch`,

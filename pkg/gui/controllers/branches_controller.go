@@ -499,55 +499,94 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 	return self.createPullRequest(selectedBranch.UpstreamBranch, "")
 }
 
-func (self *BranchesController) handleCreatePRViaAPI(branch *models.Branch) error {
+// getGitHubAuth returns GitHub service info and token, or (zero, zero, false) if
+// GitHub is not configured or no token is available.
+func (self *BranchesController) getGitHubAuth() (hosting_service.ServiceInfo, string, bool) {
 	svcInfo, err := self.c.Helpers().Host.GetServiceInfo()
-	if err != nil {
-		return self.showUnsupportedServiceHelp()
+	if err != nil || svcInfo.Provider != "github" {
+		return hosting_service.ServiceInfo{}, "", false
 	}
-	if svcInfo.Provider != "github" {
-		// Recognized service but not GitHub — open in browser instead.
-		return self.handleCreatePullRequest(branch)
-	}
-
 	token := self.c.Git().GitHub.GetAuthToken(svcInfo.WebDomain)
 	if token == "" {
-		return errors.New(self.c.Tr.PRNoGHToken)
+		return hosting_service.ServiceInfo{}, "", false
 	}
+	return svcInfo, token, true
+}
 
+// handleCreatePRViaAPI shows the base-branch picker, pre-fills title/body from
+// the last commit, then creates the PR via the GitHub API.
+func (self *BranchesController) handleCreatePRViaAPI(branch *models.Branch) error {
+	svcInfo, token, ok := self.getGitHubAuth()
+	if !ok {
+		return self.handleCreatePullRequest(branch)
+	}
+	self.c.Prompt(types.PromptOpts{
+		Title:               self.c.Tr.PRBaseBranch,
+		FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
+		HandleConfirm: func(baseBranch string) error {
+			return self.createPRViaAPIWithBase(branch, baseBranch, svcInfo, token)
+		},
+	})
+	return nil
+}
+
+// handleCreatePRViaAPIToDefault creates a PR targeting the repo's default branch.
+func (self *BranchesController) handleCreatePRViaAPIToDefault(branch *models.Branch) error {
+	svcInfo, token, ok := self.getGitHubAuth()
+	if !ok {
+		return self.handleCreatePullRequest(branch)
+	}
+	return self.createPRViaAPIWithBase(branch, "", svcInfo, token)
+}
+
+// createPRViaAPIWithBase prompts for title/body (pre-filled from last commit),
+// then calls the GitHub REST API to create the PR with a progress spinner.
+func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, baseBranch string, svcInfo hosting_service.ServiceInfo, token string) error {
 	headBranch := branch.Name
 	if branch.IsTrackingRemote() {
 		headBranch = branch.UpstreamBranch
 	}
 
+	// Pre-fill from the last commit message.
+	defaultTitle := ""
+	defaultBody := ""
+	if msg, err := self.c.Git().Commit.GetCommitMessage(branch.CommitHash); err == nil && msg != "" {
+		parts := strings.SplitN(msg, "\n", 2)
+		defaultTitle = parts[0]
+		if len(parts) > 1 {
+			defaultBody = strings.TrimLeft(parts[1], "\n")
+		}
+	}
+
 	self.c.Prompt(types.PromptOpts{
-		Title: self.c.Tr.PRTitle,
+		Title:          self.c.Tr.PRTitle,
+		InitialContent: defaultTitle,
 		HandleConfirm: func(title string) error {
 			self.c.Prompt(types.PromptOpts{
-				Title:               self.c.Tr.PRBaseBranch,
-				FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
-				HandleConfirm: func(baseBranch string) error {
-					self.c.Prompt(types.PromptOpts{
-						Title: self.c.Tr.PRBody,
-						HandleConfirm: func(body string) error {
-							self.c.LogAction(self.c.Tr.Actions.CreatePullRequestViaAPI)
-							pr, err := self.c.Git().GitHub.CreatePullRequest(
-								svcInfo.Owner, svcInfo.Repository,
-								title, body, headBranch, baseBranch,
-								svcInfo.WebDomain, token,
-							)
-							if err != nil {
-								return err
-							}
-							msg := utils.ResolvePlaceholderString(
-								self.c.Tr.PRCreated,
-								map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-							)
-							self.c.Toast(msg)
-							_ = self.c.OS().OpenLink(pr.Url)
-							self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-							return nil
-						},
+				Title:          self.c.Tr.PRBody,
+				InitialContent: defaultBody,
+				HandleConfirm: func(body string) error {
+					self.c.LogAction(self.c.Tr.Actions.CreatePullRequestViaAPI)
+					var pr *models.GithubPullRequest
+					err := self.c.WithWaitingStatusSync(self.c.Tr.PRCreatingPR, func() error {
+						var createErr error
+						pr, createErr = self.c.Git().GitHub.CreatePullRequest(
+							svcInfo.Owner, svcInfo.Repository,
+							title, body, headBranch, baseBranch,
+							svcInfo.WebDomain, token,
+						)
+						return createErr
 					})
+					if err != nil {
+						return err
+					}
+					createdMsg := utils.ResolvePlaceholderString(
+						self.c.Tr.PRCreated,
+						map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
+					)
+					self.c.Toast(createdMsg)
+					_ = self.c.OS().OpenLink(pr.Url)
+					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
 					return nil
 				},
 			})
@@ -920,58 +959,47 @@ func (self *BranchesController) newBranch(selectedBranch *models.Branch) error {
 func (self *BranchesController) createPullRequestMenu(selectedBranch *models.Branch, checkedOutBranch *models.Branch) error {
 	menuItems := make([]*types.MenuItem, 0, 6)
 
-	// In-app PR creation via GitHub REST API (shown first when GitHub is detected)
-	if svcInfo, err := self.c.Helpers().Host.GetServiceInfo(); err == nil && svcInfo.Provider == "github" {
-		if self.c.Git().GitHub.GetAuthToken(svcInfo.WebDomain) != "" {
-			capturedBranch := selectedBranch
-			menuItems = append(menuItems, &types.MenuItem{
-				LabelColumns: []string{self.c.Tr.CreatePullRequestViaAPI},
-				OnPress: func() error {
-					return self.handleCreatePRViaAPI(capturedBranch)
-				},
-			})
-		}
-	}
+	// Resolve GitHub auth once — used to decide in-app vs browser for every item.
+	svcInfo, token, isGitHub := self.getGitHubAuth()
 
 	fromToLabelColumns := func(from string, to string) []string {
 		return []string{fmt.Sprintf("%s → %s", from, to)}
 	}
 
 	menuItemsForBranch := func(branch *models.Branch) []*types.MenuItem {
-		return []*types.MenuItem{
-			{
-				LabelColumns: fromToLabelColumns(branch.Name, self.c.Tr.DefaultBranch),
-				OnPress: func() error {
-					return self.handleCreatePullRequest(branch)
-				},
-			},
-			{
-				LabelColumns: fromToLabelColumns(branch.Name, self.c.Tr.SelectBranch),
-				OnPress: func() error {
-					if !branch.IsTrackingRemote() {
-						return errors.New(self.c.Tr.PullRequestNoUpstream)
-					}
-
-					if len(self.c.Model().Remotes) == 1 {
-						toRemote := self.c.Model().Remotes[0].Name
-						self.c.Log.Debugf("PR will target the only existing remote '%s'", toRemote)
-						return self.promptForTargetBranchNameAndCreatePullRequest(branch, toRemote)
-					}
-
-					self.c.Prompt(types.PromptOpts{
-						Title:               self.c.Tr.SelectTargetRemote,
-						FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteSuggestionsFunc(),
-						HandleConfirm: func(toRemote string) error {
-							self.c.Log.Debugf("PR will target remote '%s'", toRemote)
-
-							return self.promptForTargetBranchNameAndCreatePullRequest(branch, toRemote)
-						},
-					})
-
-					return nil
-				},
+		toDefault := &types.MenuItem{
+			LabelColumns: fromToLabelColumns(branch.Name, self.c.Tr.DefaultBranch),
+			OnPress: func() error {
+				if isGitHub {
+					return self.createPRViaAPIWithBase(branch, "", svcInfo, token)
+				}
+				return self.handleCreatePullRequest(branch)
 			},
 		}
+		toSelect := &types.MenuItem{
+			LabelColumns: fromToLabelColumns(branch.Name, self.c.Tr.SelectBranch),
+			OnPress: func() error {
+				if isGitHub {
+					return self.handleCreatePRViaAPI(branch)
+				}
+				if !branch.IsTrackingRemote() {
+					return errors.New(self.c.Tr.PullRequestNoUpstream)
+				}
+				if len(self.c.Model().Remotes) == 1 {
+					toRemote := self.c.Model().Remotes[0].Name
+					return self.promptForTargetBranchNameAndCreatePullRequest(branch, toRemote)
+				}
+				self.c.Prompt(types.PromptOpts{
+					Title:               self.c.Tr.SelectTargetRemote,
+					FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteSuggestionsFunc(),
+					HandleConfirm: func(toRemote string) error {
+						return self.promptForTargetBranchNameAndCreatePullRequest(branch, toRemote)
+					},
+				})
+				return nil
+			},
+		}
+		return []*types.MenuItem{toDefault, toSelect}
 	}
 
 	if selectedBranch != checkedOutBranch {
@@ -991,21 +1019,19 @@ func (self *BranchesController) createPullRequestMenu(selectedBranch *models.Bra
 
 	menuItems = append(menuItems, menuItemsForBranch(selectedBranch)...)
 
-	// Merge PR option — only shown if the branch has an open PR and the remote is GitHub
-	if pr, ok := self.c.Model().PullRequestsMap[selectedBranch.Name]; ok && pr != nil {
-		if svcInfo, err := self.c.Helpers().Host.GetServiceInfo(); err == nil && svcInfo.Provider == "github" {
-			if token := self.c.Git().GitHub.GetAuthToken(svcInfo.WebDomain); token != "" {
-				capturedPR := pr
-				capturedSvc := svcInfo
-				capturedToken := token
-				menuItems = append(menuItems, &types.MenuItem{
-					LabelColumns: []string{fmt.Sprintf("%s #%d: %s", self.c.Tr.PRMergePR, capturedPR.Number, capturedPR.Title)},
-					OnPress: func() error {
-						return self.handleMergePRViaAPI(capturedPR, capturedSvc, capturedToken)
-					},
-				})
-			}
-		}
+	// Open PR section — only shown when the PR is still OPEN.
+	if pr, ok := self.c.Model().PullRequestsMap[selectedBranch.Name]; ok && pr != nil && pr.State == "OPEN" && isGitHub {
+		prSection := &types.MenuSection{Title: self.c.Tr.PROpenPullRequests, Column: 0}
+		capturedPR := pr
+		capturedSvc := svcInfo
+		capturedToken := token
+		menuItems = append(menuItems, &types.MenuItem{
+			Section:      prSection,
+			LabelColumns: []string{fmt.Sprintf("#%d: %s", capturedPR.Number, capturedPR.Title)},
+			OnPress: func() error {
+				return self.handleMergePRViaAPI(capturedPR, capturedSvc, capturedToken)
+			},
+		})
 	}
 
 	return self.c.Menu(types.CreateMenuOptions{Title: fmt.Sprint(self.c.Tr.CreatePullRequestOptions), Items: menuItems})
