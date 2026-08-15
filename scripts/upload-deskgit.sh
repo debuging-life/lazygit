@@ -11,7 +11,7 @@
 #       export AWS_SECRET_ACCESS_KEY=<your-r2-secret-access-key>
 #       export R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 #       export R2_BUCKET=<bucket-name>            # default: deskgit-releases
-#       export R2_PUBLIC_URL=https://releases.desktimers.com/deskgit
+#       export R2_PUBLIC_URL=https://cdn.desktimers.com/deskgit
 #
 # Usage:
 #   scripts/upload-deskgit.sh [vX.Y.Z]   # defaults to latest deskgit-v* tag
@@ -41,7 +41,7 @@ COMMIT="$(git rev-parse --short HEAD)"
 DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 LDFLAGS="-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE -X main.buildSource=r2"
 
-echo "Building deskgit $VERSION ($COMMIT) for all platforms…"
+echo "Building deskgit $VERSION ($COMMIT) for all platforms..."
 
 # ── Platforms ────────────────────────────────────────────────────────────────
 PLATFORMS=(
@@ -79,7 +79,7 @@ for platform in "${PLATFORMS[@]}"; do
   bin_out="$OUT/$bin_name"
   hook_out="$OUT/$hook_name"
 
-  echo "  compiling $platform…"
+  echo "  compiling ${platform}..."
   GOOS="$GOOS" GOARCH="$GOARCH" CGO_ENABLED=0 \
     go build -ldflags "$LDFLAGS" -o "$bin_out" . 2>/dev/null
   GOOS="$GOOS" GOARCH="$GOARCH" CGO_ENABLED=0 \
@@ -92,11 +92,11 @@ for platform in "${PLATFORMS[@]}"; do
   bin_url="$PUBLIC_URL/$r2_prefix/$bin_name"
   hook_url="$PUBLIC_URL/$r2_prefix/$hook_name"
 
-  echo "  uploading $bin_name…"
+  echo "  uploading $bin_name..."
   s3 cp "$bin_out" "s3://$BUCKET/$r2_prefix/$bin_name" \
     --content-type application/octet-stream
 
-  echo "  uploading $hook_name…"
+  echo "  uploading $hook_name..."
   s3 cp "$hook_out" "s3://$BUCKET/$r2_prefix/$hook_name" \
     --content-type application/octet-stream
 
@@ -135,7 +135,7 @@ echo "Manifest:"
 cat "$MANIFEST_FILE"
 echo ""
 
-echo "Uploading latest.json…"
+echo "Uploading latest.json..."
 s3 cp "$MANIFEST_FILE" "s3://$BUCKET/latest.json" \
   --content-type application/json \
   --cache-control "no-cache, no-store"
