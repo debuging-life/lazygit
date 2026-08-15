@@ -319,6 +319,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` <enter> `` | 実行 |  |
 | `` <esc> `` | 閉じる/キャンセル |  |
 | `` o `` | Open highlighted item in browser |  |
+| `` I `` | Show task details |  |
 | `` / `` | 現在のビューをテキストでフィルタリング |  |
 
 ## リフログ
@@ -383,6 +384,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` N `` | コミットを新しいブランチに移動 | Create a new branch and move the unpushed commits of the current branch to it. Useful if you meant to start new work and forgot to create a new branch first.<br><br>Note that this disregards the selection, the new branch is always created either from the main branch or stacked on top of the current branch (you get to choose which). |
 | `` w `` | 新しいワークツリー |  |
 | `` o `` | プルリクエストを作成 |  |
+| `` p `` | Create pull request (in-app) |  |
 | `` O `` | プルリクエスト作成オプションを表示 |  |
 | `` G `` | Open pull request in browser |  |
 | `` <ctrl+y> `` | プルリクエストURLをクリップボードにコピー |  |

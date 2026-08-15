@@ -7,6 +7,7 @@ import (
 
 	"github.com/gookit/color"
 	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
+	"github.com/jesseduffield/lazygit/pkg/commands/hosting_service"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
@@ -80,6 +81,12 @@ func (self *BranchesController) GetKeybindings(opts types.KeybindingsOpts) []*ty
 			Handler:           self.withItem(self.handleCreatePullRequest),
 			GetDisabledReason: self.require(self.singleItemSelected()),
 			Description:       self.c.Tr.CreatePullRequest,
+		},
+		{
+			Keys:              opts.GetKeys(opts.Config.Branches.CreatePullRequestViaAPI),
+			Handler:           self.withItem(self.handleCreatePRViaAPI),
+			GetDisabledReason: self.require(self.singleItemSelected()),
+			Description:       self.c.Tr.CreatePullRequestViaAPI,
 		},
 		{
 			Keys:              opts.GetKeys(opts.Config.Branches.ViewPullRequestOptions),
@@ -497,6 +504,100 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 	return self.createPullRequest(selectedBranch.UpstreamBranch, "")
 }
 
+func (self *BranchesController) handleCreatePRViaAPI(branch *models.Branch) error {
+	svcInfo, err := self.c.Helpers().Host.GetServiceInfo()
+	if err != nil || svcInfo.Provider != "github" {
+		// Fall back to browser for non-GitHub remotes
+		return self.handleCreatePullRequest(branch)
+	}
+
+	token := self.c.Git().GitHub.GetAuthToken(svcInfo.WebDomain)
+	if token == "" {
+		return errors.New(self.c.Tr.PRNoGHToken)
+	}
+
+	headBranch := branch.Name
+	if branch.IsTrackingRemote() {
+		headBranch = branch.UpstreamBranch
+	}
+
+	self.c.Prompt(types.PromptOpts{
+		Title: self.c.Tr.PRTitle,
+		HandleConfirm: func(title string) error {
+			self.c.Prompt(types.PromptOpts{
+				Title:               self.c.Tr.PRBaseBranch,
+				FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
+				HandleConfirm: func(baseBranch string) error {
+					self.c.Prompt(types.PromptOpts{
+						Title: self.c.Tr.PRBody,
+						HandleConfirm: func(body string) error {
+							self.c.LogAction(self.c.Tr.Actions.CreatePullRequestViaAPI)
+							pr, err := self.c.Git().GitHub.CreatePullRequest(
+								svcInfo.Owner, svcInfo.Repository,
+								title, body, headBranch, baseBranch,
+								svcInfo.WebDomain, token,
+							)
+							if err != nil {
+								return err
+							}
+							msg := utils.ResolvePlaceholderString(
+								self.c.Tr.PRCreated,
+								map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
+							)
+							self.c.Toast(msg)
+							_ = self.c.OS().OpenLink(pr.Url)
+							self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
+							return nil
+						},
+					})
+					return nil
+				},
+			})
+			return nil
+		},
+	})
+	return nil
+}
+
+func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string) error {
+	strategies := []struct {
+		label    string
+		strategy string
+	}{
+		{self.c.Tr.PRMergeStrategyMerge, "merge"},
+		{self.c.Tr.PRMergeStrategySquash, "squash"},
+		{self.c.Tr.PRMergeStrategyRebase, "rebase"},
+	}
+	menuItems := lo.Map(strategies, func(s struct {
+		label    string
+		strategy string
+	}, _ int,
+	) *types.MenuItem {
+		strat := s.strategy
+		return &types.MenuItem{
+			LabelColumns: []string{s.label},
+			OnPress: func() error {
+				self.c.LogAction(self.c.Tr.Actions.MergePullRequest)
+				if err := self.c.Git().GitHub.MergePullRequest(
+					svcInfo.Owner, svcInfo.Repository, pr.Number, strat, svcInfo.WebDomain, token,
+				); err != nil {
+					return err
+				}
+				self.c.Toast(self.c.Tr.PRMerged)
+				self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
+				return nil
+			},
+		}
+	})
+	return self.c.Menu(types.CreateMenuOptions{
+		Title: utils.ResolvePlaceholderString(
+			self.c.Tr.PRMergeConfirmTitle,
+			map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
+		),
+		Items: menuItems,
+	})
+}
+
 func (self *BranchesController) handleCreatePullRequestMenu(selectedBranch *models.Branch) error {
 	checkedOutBranch := self.c.Helpers().Refs.GetCheckedOutRef()
 
@@ -878,6 +979,23 @@ func (self *BranchesController) createPullRequestMenu(selectedBranch *models.Bra
 	}
 
 	menuItems = append(menuItems, menuItemsForBranch(selectedBranch)...)
+
+	// Merge PR option — only shown if the branch has an open PR and the remote is GitHub
+	if pr, ok := self.c.Model().PullRequestsMap[selectedBranch.Name]; ok && pr != nil {
+		if svcInfo, err := self.c.Helpers().Host.GetServiceInfo(); err == nil && svcInfo.Provider == "github" {
+			if token := self.c.Git().GitHub.GetAuthToken(svcInfo.WebDomain); token != "" {
+				capturedPR := pr
+				capturedSvc := svcInfo
+				capturedToken := token
+				menuItems = append(menuItems, &types.MenuItem{
+					LabelColumns: []string{fmt.Sprintf("%s #%d: %s", self.c.Tr.PRMergePR, capturedPR.Number, capturedPR.Title)},
+					OnPress: func() error {
+						return self.handleMergePRViaAPI(capturedPR, capturedSvc, capturedToken)
+					},
+				})
+			}
+		}
+	}
 
 	return self.c.Menu(types.CreateMenuOptions{Title: fmt.Sprint(self.c.Tr.CreatePullRequestOptions), Items: menuItems})
 }

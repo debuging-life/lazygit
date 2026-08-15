@@ -98,6 +98,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` N `` | Mover commits para uma nova branch | Create a new branch and move the unpushed commits of the current branch to it. Useful if you meant to start new work and forgot to create a new branch first.<br><br>Note that this disregards the selection, the new branch is always created either from the main branch or stacked on top of the current branch (you get to choose which). |
 | `` w `` | Nova árvore de trabalho |  |
 | `` o `` | Criar solicitação de pull |  |
+| `` p `` | Create pull request (in-app) |  |
 | `` O `` | View create pull request options |  |
 | `` G `` | Open pull request in browser |  |
 | `` <ctrl+y> `` | Copiar URL do pull request para área de transferência |  |
@@ -229,6 +230,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` <enter> `` | Executar |  |
 | `` <esc> `` | Fechar/Cancelar |  |
 | `` o `` | Open highlighted item in browser |  |
+| `` I `` | Show task details |  |
 | `` / `` | Filtrar a visualização atual por texto |  |
 
 ## Painel Principal (Normal)

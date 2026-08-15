@@ -106,6 +106,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` N `` | Verplaats commits naar nieuwe branch | Maak een nieuwe branch en verplaats niet-gepushte commits van de huidige branch hier naar toe. Gebruik dit in het geval dat je deze commits eigenlijk op een nieuwe branch had willen maken.<br><br>Let op dat de selectie genegeerd wordt. De nieuwe branch komt ofwel bovenop de main branch, of bovenop de huidige branch (je kan kiezen). |
 | `` w `` | New worktree |  |
 | `` o `` | Maak een pull-request |  |
+| `` p `` | Create pull request (in-app) |  |
 | `` O `` | Bekijk opties voor pull-aanvraag |  |
 | `` G `` | Open pull request in browser |  |
 | `` <ctrl+y> `` | Kopieer de URL van het pull-verzoek naar het klembord |  |
@@ -209,6 +210,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` <enter> `` | Uitvoeren |  |
 | `` <esc> `` | Sluiten |  |
 | `` o `` | Open highlighted item in browser |  |
+| `` I `` | Show task details |  |
 | `` / `` | Filter the current view by text |  |
 
 ## Mergen

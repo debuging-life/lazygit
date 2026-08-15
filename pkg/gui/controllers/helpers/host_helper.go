@@ -40,6 +40,16 @@ func (self *HostHelper) GetPullRequestURL(from string, to string) (string, error
 	return prURL, nil
 }
 
+// GetServiceInfo returns the hosting service info for the current repo's
+// origin remote. Used by deskgit's in-app PR create/merge flows.
+func (self *HostHelper) GetServiceInfo() (hosting_service.ServiceInfo, error) {
+	mgr, err := self.getHostingServiceMgr()
+	if err != nil {
+		return hosting_service.ServiceInfo{}, err
+	}
+	return mgr.GetServiceInfo()
+}
+
 func (self *HostHelper) GetCommitURL(commitHash string) (string, error) {
 	mgr, err := self.getHostingServiceMgr()
 	if err != nil {

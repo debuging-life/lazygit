@@ -174,26 +174,26 @@ gui:
   theme:
     # Border color of focused window
     activeBorderColor:
-      - green
+      - '#3EE9B1'
       - bold
 
     # Border color of non-focused windows
     inactiveBorderColor:
-      - default
+      - '#625750'
 
     # Border color of focused window when searching in that window
     searchingActiveBorderColor:
-      - cyan
+      - '#88E8C8'
       - bold
 
     # Color of keybindings help text in the bottom line
     optionsTextColor:
-      - blue
+      - '#3EE9B1'
 
     # Background color of selected line.
     # See https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md#highlighting-the-selected-line
     selectedLineBgColor:
-      - blue
+      - '#0D7351'
 
     # Background color of selected line when view doesn't have focus.
     inactiveViewSelectedLineBgColor:
@@ -201,23 +201,23 @@ gui:
 
     # Foreground color of copied commit
     cherryPickedCommitFgColor:
-      - blue
+      - '#2A2623'
 
     # Background color of copied commit
     cherryPickedCommitBgColor:
-      - cyan
+      - '#B3A475'
 
     # Foreground color of marked base commit (for rebase)
     markedBaseCommitFgColor:
-      - blue
+      - '#2A2623'
 
     # Background color of marked base commit (for rebase)
     markedBaseCommitBgColor:
-      - yellow
+      - '#C9C1A6'
 
     # Color for file with unstaged changes
     unstagedChangesColor:
-      - red
+      - '#DD4A4A'
 
     # Default text color
     defaultFgColor:
@@ -762,6 +762,7 @@ keybinding:
     expandAll: =
   branches:
     createPullRequest: o
+    createPullRequestViaAPI: p
     viewPullRequestOptions: O
     openPullRequestInBrowser: G
     copyPullRequestURL: <ctrl+y>

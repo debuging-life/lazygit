@@ -287,6 +287,20 @@ type TranslationSet struct {
 	CopyPullRequestURL                    string
 	OpenPullRequestInBrowser              string
 	NoPullRequestForBranch                string
+	CreatePullRequestViaAPI               string
+	PRTitle                               string
+	PRBaseBranch                          string
+	PRBody                                string
+	PRNoGHToken                           string
+	PRCreated                             string
+	PRMergeStrategy                       string
+	PRMergeStrategyMerge                  string
+	PRMergeStrategySquash                 string
+	PRMergeStrategyRebase                 string
+	PRMergePR                             string
+	PRMergeConfirmTitle                   string
+	PRMergeConfirmPrompt                  string
+	PRMerged                              string
 	NoBranchOnRemote                      string
 	Fetch                                 string
 	FetchTooltip                          string
@@ -1167,6 +1181,8 @@ type Actions struct {
 	BisectSkip                       string
 	BisectMark                       string
 	AddWorktree                      string
+	CreatePullRequestViaAPI          string
+	MergePullRequest                 string
 }
 
 const englishIntroPopupMessage = `
@@ -1480,6 +1496,20 @@ func EnglishTranslationSet() *TranslationSet {
 		AllBranchesLogGraphReverse:           `Show/cycle all branch logs (reverse)`,
 		UnsupportedGitService:                `Unsupported git service`,
 		CreatePullRequest:                    `Create pull request`,
+		CreatePullRequestViaAPI:              `Create pull request (in-app)`,
+		PRTitle:                              `PR title`,
+		PRBaseBranch:                         `Base branch`,
+		PRBody:                               `PR description (leave blank to skip)`,
+		PRNoGHToken:                          `No GitHub token — run: gh auth login`,
+		PRCreated:                            `Pull request #{{number}} created`,
+		PRMergeStrategy:                      `Merge strategy`,
+		PRMergeStrategyMerge:                 `Merge commit`,
+		PRMergeStrategySquash:                `Squash and merge`,
+		PRMergeStrategyRebase:                `Rebase and merge`,
+		PRMergePR:                            `Merge pull request`,
+		PRMergeConfirmTitle:                  `Merge PR #{{number}}`,
+		PRMergeConfirmPrompt:                 `Merge PR #{{number}}: {{title}}?`,
+		PRMerged:                             `Pull request merged`,
 		CopyPullRequestURL:                   `Copy pull request URL to clipboard`,
 		OpenPullRequestInBrowser:             `Open pull request in browser`,
 		NoPullRequestForBranch:               `No pull request found for this branch`,
@@ -2324,6 +2354,8 @@ func EnglishTranslationSet() *TranslationSet {
 			BisectSkip:                       "Bisect skip",
 			BisectMark:                       "Bisect mark",
 			AddWorktree:                      "Add worktree",
+			CreatePullRequestViaAPI:          "Create pull request",
+			MergePullRequest:                 "Merge pull request",
 		},
 		Bisect: Bisect{
 			Mark:                        "Mark current commit (%s) as %s",

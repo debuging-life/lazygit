@@ -231,6 +231,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` N `` | 移动提交至新分支 | 创建一个新分支，并将当前分支未推送的提交移动到该分支。如果您打算开始新工作但忘记先创建新分支，这会很有用。<br><br>请注意，此操作忽略选择，新分支总是从主分支创建或堆叠在当前分支之上（您可以选择哪种方式）。 |
 | `` w `` | 新建工作树 |  |
 | `` o `` | 创建拉取请求 |  |
+| `` p `` | Create pull request (in-app) |  |
 | `` O `` | 创建拉取请求选项 |  |
 | `` G `` | 在浏览器中打开拉取请求 |  |
 | `` <ctrl+y> `` | 复制拉取请求 URL 到剪贴板 |  |
@@ -367,6 +368,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` <enter> `` | 执行 |  |
 | `` <esc> `` | 关闭 |  |
 | `` o `` | Open highlighted item in browser |  |
+| `` I `` | Show task details |  |
 | `` / `` | 通过文本过滤当前视图 |  |
 
 ## 贮藏

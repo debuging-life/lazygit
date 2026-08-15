@@ -342,3 +342,115 @@ func graphQLEndpoint(host string) string {
 	}
 	return "https://" + host + "/api/graphql"
 }
+
+// restAPIBase returns the REST API base URL for the given GitHub host.
+func restAPIBase(host string) string {
+	if auth.NormalizeHostname(host) == "github.com" {
+		return "https://api.github.com"
+	}
+	return "https://" + host + "/api/v3"
+}
+
+type createPRRequest struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+	Head  string `json:"head"`
+	Base  string `json:"base"`
+}
+
+type createPRResponse struct {
+	Number  int    `json:"number"`
+	HtmlURL string `json:"html_url"`
+	State   string `json:"state"`
+	Title   string `json:"title"`
+	Message string `json:"message"` // present on error responses
+}
+
+// CreatePullRequest creates a pull request via the GitHub REST API.
+// owner and repo are the repository owner and name (e.g. "acme" and "myrepo").
+// head is the source branch, base is the target branch.
+func (self *GitHubCommands) CreatePullRequest(owner, repo, title, body, head, base, host, token string) (*models.GithubPullRequest, error) {
+	url := fmt.Sprintf("%s/repos/%s/%s/pulls", restAPIBase(host), owner, repo)
+
+	payload, err := json.Marshal(createPRRequest{Title: title, Body: body, Head: head, Base: base})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "token "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body2, _ := io.ReadAll(resp.Body)
+
+	var parsed createPRResponse
+	if err := json.Unmarshal(body2, &parsed); err != nil {
+		return nil, fmt.Errorf("creating pull request: %w", err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("creating pull request: %s", parsed.Message)
+	}
+
+	return &models.GithubPullRequest{
+		Number:      parsed.Number,
+		Title:       parsed.Title,
+		State:       "OPEN",
+		Url:         parsed.HtmlURL,
+		HeadRefName: head,
+	}, nil
+}
+
+type mergePRRequest struct {
+	MergeMethod string `json:"merge_method"`
+}
+
+type mergePRResponse struct {
+	Message string `json:"message"`
+}
+
+// MergePullRequest merges a pull request via the GitHub REST API.
+// strategy must be one of "merge", "squash", or "rebase".
+func (self *GitHubCommands) MergePullRequest(owner, repo string, number int, strategy, host, token string) error {
+	url := fmt.Sprintf("%s/repos/%s/%s/pulls/%d/merge", restAPIBase(host), owner, repo, number)
+
+	payload, err := json.Marshal(mergePRRequest{MergeMethod: strategy})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "token "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusOK {
+		return nil
+	}
+
+	body2, _ := io.ReadAll(resp.Body)
+	var parsed mergePRResponse
+	_ = json.Unmarshal(body2, &parsed)
+	if parsed.Message != "" {
+		return fmt.Errorf("merging pull request: %s", parsed.Message)
+	}
+	return fmt.Errorf("merging pull request: status %d", resp.StatusCode)
+}
