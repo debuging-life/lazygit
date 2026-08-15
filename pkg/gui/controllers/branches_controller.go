@@ -501,7 +501,7 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 func (self *BranchesController) handleCreatePRViaAPI(branch *models.Branch) error {
 	svcInfo, err := self.c.Helpers().Host.GetServiceInfo()
 	if err != nil {
-		return errors.New(self.c.Tr.UnsupportedGitServiceHelp)
+		return self.showUnsupportedServiceHelp()
 	}
 	if svcInfo.Provider != "github" {
 		// Recognized service but not GitHub — open in browser instead.
@@ -1030,11 +1030,55 @@ func (self *BranchesController) promptForTargetBranchNameAndCreatePullRequest(fr
 	return nil
 }
 
+// showUnsupportedServiceHelp shows a confirmation dialog explaining how to fix
+// an unrecognized remote URL. The confirm button copies the config snippet to
+// the clipboard so the user can paste it straight into their config file.
+func (self *BranchesController) showUnsupportedServiceHelp() error {
+	remoteURL, _ := self.c.Git().Remote.GetRemoteURL("origin")
+
+	// Extract the SSH host alias from the URL (everything between @ and the
+	// first : or /).  Falls back to a generic placeholder.
+	alias := "your-alias"
+	if remoteURL != "" {
+		if idx := strings.Index(remoteURL, "@"); idx >= 0 {
+			rest := remoteURL[idx+1:]
+			if end := strings.IndexAny(rest, ":/"); end >= 0 {
+				alias = rest[:end]
+			}
+		}
+	}
+
+	snippet := fmt.Sprintf("services:\n  '%s': 'github:github.com'", alias)
+
+	urlLine := ""
+	if remoteURL != "" {
+		urlLine = fmt.Sprintf("\n\nRemote URL: %s", remoteURL)
+	}
+
+	prompt := fmt.Sprintf(
+		"Remote URL not recognized as a supported git service.%s\n\nAdd to ~/.config/deskgit/config.yml:\n\n  services:\n    '%s': 'github:github.com'\n\nPress Enter to copy the snippet — then paste it into your config.",
+		urlLine, alias,
+	)
+
+	self.c.Confirm(types.ConfirmOpts{
+		Title:  "Unsupported git service — how to fix",
+		Prompt: prompt,
+		HandleConfirm: func() error {
+			if err := self.c.OS().CopyToClipboard(snippet); err != nil {
+				return err
+			}
+			self.c.Toast("Snippet copied — paste into ~/.config/deskgit/config.yml")
+			return nil
+		},
+	})
+	return nil
+}
+
 func (self *BranchesController) createPullRequest(from string, to string) error {
 	url, err := self.c.Helpers().Host.GetPullRequestURL(from, to)
 	if err != nil {
 		if err.Error() == self.c.Tr.UnsupportedGitService {
-			return errors.New(self.c.Tr.UnsupportedGitServiceHelp)
+			return self.showUnsupportedServiceHelp()
 		}
 		return err
 	}

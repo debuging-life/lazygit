@@ -284,7 +284,6 @@ type TranslationSet struct {
 	AllBranchesLogGraph                   string
 	AllBranchesLogGraphReverse            string
 	UnsupportedGitService                 string
-	UnsupportedGitServiceHelp             string
 	CopyPullRequestURL                    string
 	OpenPullRequestInBrowser              string
 	NoPullRequestForBranch                string
@@ -1497,14 +1496,6 @@ func EnglishTranslationSet() *TranslationSet {
 		AllBranchesLogGraph:                  `Show/cycle all branch logs`,
 		AllBranchesLogGraphReverse:           `Show/cycle all branch logs (reverse)`,
 		UnsupportedGitService:                `Unsupported git service`,
-		UnsupportedGitServiceHelp: `Remote URL not recognized as a supported git service (GitHub, GitLab, Bitbucket, …).
-
-If you use an SSH config alias (e.g. git@github-work:owner/repo.git), add to ~/.config/deskgit/config.yml:
-
-  services:
-    'github-work': 'github:github.com'
-
-Run 'git remote get-url origin' to see the actual remote URL.`,
 		CreatePullRequest:                    `Create pull request`,
 		CreatePullRequestViaAPI:              `Create pull request (in-app)`,
 		PRTitle:                              `PR title`,
