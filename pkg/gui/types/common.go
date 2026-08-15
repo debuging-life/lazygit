@@ -167,6 +167,7 @@ type CreateMenuOptions struct {
 	AllowFilteringKeybindings  bool
 	KeepConflictingKeybindings bool // if true, the keybindings that match essential bindings such as confirm or return will not be removed from menu items
 	InitialSelectedIdx         int  // index of the item to preselect (0 = first item, the previous behavior)
+	MinWidth                   int  // minimum dialog width in columns (0 = use the global default)
 }
 
 type CreatePopupPanelOpts struct {
@@ -265,6 +266,11 @@ type MenuItem struct {
 	// while the item is highlighted, e.g. opening the item in a browser.
 	// Items without one ignore the key.
 	OnOpen func() error
+
+	// deskgit: optional info action invoked with 'I' while the item is
+	// highlighted, e.g. showing detailed task information. Items without
+	// one ignore the key.
+	OnInfo func() error
 
 	// Only applies when Label is used
 	OpensMenu bool

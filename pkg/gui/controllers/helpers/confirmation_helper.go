@@ -335,7 +335,7 @@ func (self *ConfirmationHelper) resizeMenu(parentPopupContext types.Context) {
 	// resize the window
 	itemCount := self.c.Contexts().Menu.UnfilteredLen()
 	offset := 3
-	panelWidth := self.getPopupPanelWidth(90)
+	panelWidth := self.getPopupPanelWidth(max(90, self.c.Contexts().Menu.MinWidth()))
 	contentWidth := panelWidth - 2 // minus 2 for the frame
 	promptLinesCount := self.layoutMenuPrompt(contentWidth)
 	x0, y0, x1, y1 := self.getPopupPanelDimensionsForContentHeight(contentWidth, itemCount+offset+promptLinesCount, parentPopupContext)

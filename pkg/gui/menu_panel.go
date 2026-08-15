@@ -66,6 +66,7 @@ func (gui *Gui) createMenu(opts types.CreateMenuOptions) error {
 	}
 
 	gui.State.Contexts.Menu.SetMenuItems(opts.Items, opts.ColumnAlignment)
+	gui.State.Contexts.Menu.SetMinWidth(opts.MinWidth)
 	gui.State.Contexts.Menu.SetPrompt(opts.Prompt)
 	gui.State.Contexts.Menu.SetAllowFilteringKeybindings(opts.AllowFilteringKeybindings)
 	gui.State.Contexts.Menu.SetKeybindingsTakePrecedence(!opts.KeepConflictingKeybindings)

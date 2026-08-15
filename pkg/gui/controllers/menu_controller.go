@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 )
@@ -56,6 +57,12 @@ func (self *MenuController) GetKeybindings(opts types.KeybindingsOpts) []*types.
 			GetDisabledReason: self.require(self.singleItemSelected()),
 			Description:       self.c.Tr.DesktimersOpenInBrowser,
 		},
+		{
+			Keys:              []gocui.Key{gocui.NewKeyStrMod("I", gocui.ModNone)},
+			Handler:           self.withItem(self.info),
+			GetDisabledReason: self.require(self.singleItemSelected()),
+			Description:       self.c.Tr.DesktimersShowTaskInfo,
+		},
 	}
 
 	return bindings
@@ -85,6 +92,15 @@ func (self *MenuController) open(selectedItem *types.MenuItem) error {
 		return nil
 	}
 	return selectedItem.OnOpen()
+}
+
+// info runs the highlighted item's info action (deskgit: show task details).
+// Items without one ignore the key.
+func (self *MenuController) info(selectedItem *types.MenuItem) error {
+	if selectedItem.OnInfo == nil {
+		return nil
+	}
+	return selectedItem.OnInfo()
 }
 
 func (self *MenuController) close() error {

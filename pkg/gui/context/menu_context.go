@@ -59,6 +59,7 @@ type MenuViewModel struct {
 	allowFilteringKeybindings bool
 	keybindingsTakePrecedence bool
 	onCancel                  func() error
+	minWidth                  int
 	*FilteredListViewModel[*types.MenuItem]
 }
 
@@ -105,6 +106,14 @@ func (self *MenuViewModel) SetMenuItems(items []*types.MenuItem, columnAlignment
 
 func (self *MenuViewModel) SetOnCancel(onCancel func() error) {
 	self.onCancel = onCancel
+}
+
+func (self *MenuViewModel) SetMinWidth(w int) {
+	self.minWidth = w
+}
+
+func (self *MenuViewModel) MinWidth() int {
+	return self.minWidth
 }
 
 func (self *MenuViewModel) GetPrompt() string {

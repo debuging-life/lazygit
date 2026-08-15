@@ -272,6 +272,24 @@ func (self *DesktimersHelper) openTaskInBrowser(url string) error {
 	return self.c.OS().OpenLink(url)
 }
 
+func (self *DesktimersHelper) showTaskInfo(task desktimers.Task) error {
+	status := task.Status
+	if status == "" {
+		status = "—"
+	}
+	prompt := utils.ResolvePlaceholderString(
+		self.c.Tr.DesktimersTaskInfoPrompt,
+		map[string]string{
+			"code":    task.Code,
+			"title":   task.Title,
+			"project": task.Project,
+			"status":  status,
+		},
+	)
+	self.c.Alert(self.c.Tr.DesktimersTaskInfoTitle, prompt)
+	return nil
+}
+
 func (self *DesktimersHelper) resetAuthCache() {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
@@ -350,6 +368,9 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 			OnOpen: func() error {
 				return self.openTaskInBrowser(task.URL)
 			},
+			OnInfo: func() error {
+				return self.showTaskInfo(task)
+			},
 		}
 	})
 
@@ -387,6 +408,7 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 		Title:              self.c.Tr.DesktimersTaskMenuTitle,
 		Items:              menuItems,
 		InitialSelectedIdx: selectedIdx,
+		MinWidth:           120,
 	})
 }
 
@@ -456,6 +478,9 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 			OnOpen: func() error {
 				return self.openTaskInBrowser(task.URL)
 			},
+			OnInfo: func() error {
+				return self.showTaskInfo(task)
+			},
 		}
 	})
 
@@ -480,6 +505,7 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 		Title:              self.c.Tr.DesktimersPickTaskTitle,
 		Items:              menuItems,
 		InitialSelectedIdx: selectedIdx,
+		MinWidth:           120,
 	})
 }
 
