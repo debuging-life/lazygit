@@ -632,26 +632,34 @@ func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest
 						self.c.Toast(self.c.Tr.PRMerged)
 						return nil
 					}
-					prompt := utils.ResolvePlaceholderString(
+					title := utils.ResolvePlaceholderString(
 						self.c.Tr.PRMoveToDonePrompt,
 						map[string]string{"code": taskCode},
 					)
-					self.c.Confirm(types.ConfirmOpts{
-						Title:  self.c.Tr.PRMoveToDoneTitle,
-						Prompt: prompt,
-						HandleConfirm: func() error {
-							go func() {
-								client, err := desktimers.NewClientFromToken()
-								if err == nil {
-									_ = client.MoveTaskToDone(taskCode)
-								}
-							}()
-							self.c.Toast(self.c.Tr.PRMerged)
-							return nil
-						},
-						HandleClose: func() error {
-							self.c.Toast(self.c.Tr.PRMerged)
-							return nil
+					capturedCode := taskCode
+					self.c.Menu(types.CreateMenuOptions{
+						Title: title,
+						Items: []*types.MenuItem{
+							{
+								LabelColumns: []string{self.c.Tr.PRMoveToDoneYes},
+								OnPress: func() error {
+									go func() {
+										client, err := desktimers.NewClientFromToken()
+										if err == nil {
+											_ = client.MoveTaskToDone(capturedCode)
+										}
+									}()
+									self.c.Toast(self.c.Tr.PRMerged)
+									return nil
+								},
+							},
+							{
+								LabelColumns: []string{self.c.Tr.PRMoveToDoneNo},
+								OnPress: func() error {
+									self.c.Toast(self.c.Tr.PRMerged)
+									return nil
+								},
+							},
 						},
 					})
 					return nil
