@@ -158,3 +158,29 @@ func (c *Client) CreateTask(projectID string, title string) (Task, error) {
 	}
 	return parsed.Data, nil
 }
+
+// MoveTaskToDone marks a task as done via PATCH /api/git-client/tasks/{code}.
+func (c *Client) MoveTaskToDone(code string) error {
+	body, err := json.Marshal(map[string]string{"status": "done"})
+	if err != nil {
+		return fmt.Errorf("encoding move-to-done request: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPatch, c.BaseURL+"/api/git-client/tasks/"+code, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("building move-to-done request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("moving task to done: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("moving task to done: unexpected status %d", resp.StatusCode)
+	}
+	return nil
+}

@@ -302,6 +302,8 @@ type TranslationSet struct {
 	PRMergeConfirmTitle                   string
 	PRMergeConfirmPrompt                  string
 	PRMerged                              string
+	PRMoveToDoneTitle                     string
+	PRMoveToDonePrompt                    string
 	PRCreatingPR                          string
 	PRMergingPR                          string
 	PROpenPullRequests                    string
@@ -1525,6 +1527,8 @@ func EnglishTranslationSet() *TranslationSet {
 		PRMergeConfirmTitle:                  `Merge PR #{{number}}`,
 		PRMergeConfirmPrompt:                 `Merge PR #{{number}}: {{title}}?`,
 		PRMerged:                             `Pull request merged`,
+		PRMoveToDoneTitle:                    `Move to Done?`,
+		PRMoveToDonePrompt:                   `PR merged. Move {{code}} to Done?`,
 		PRCreatingPR:                         `Creating pull request...`,
 		PRMergingPR:                          `Merging pull request...`,
 		PROpenPullRequests:                   `Pull requests`,

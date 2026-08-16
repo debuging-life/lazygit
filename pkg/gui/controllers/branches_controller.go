@@ -10,6 +10,7 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/hosting_service"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
+	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/controllers/helpers"
@@ -624,8 +625,35 @@ func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest
 					); err != nil {
 						return err
 					}
-					self.c.Toast(self.c.Tr.PRMerged)
 					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
+					// If the branch name contains a task code, ask whether to move to Done.
+					taskCode := desktimers.ExtractCode(pr.HeadRefName)
+					if taskCode == "" {
+						self.c.Toast(self.c.Tr.PRMerged)
+						return nil
+					}
+					prompt := utils.ResolvePlaceholderString(
+						self.c.Tr.PRMoveToDonePrompt,
+						map[string]string{"code": taskCode},
+					)
+					self.c.Confirm(types.ConfirmOpts{
+						Title:  self.c.Tr.PRMoveToDoneTitle,
+						Prompt: prompt,
+						HandleConfirm: func() error {
+							go func() {
+								client, err := desktimers.NewClientFromToken()
+								if err == nil {
+									_ = client.MoveTaskToDone(taskCode)
+								}
+							}()
+							self.c.Toast(self.c.Tr.PRMerged)
+							return nil
+						},
+						HandleClose: func() error {
+							self.c.Toast(self.c.Tr.PRMerged)
+							return nil
+						},
+					})
 					return nil
 				})
 			},
