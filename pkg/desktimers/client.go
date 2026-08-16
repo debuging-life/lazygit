@@ -159,28 +159,40 @@ func (c *Client) CreateTask(projectID string, title string) (Task, error) {
 	return parsed.Data, nil
 }
 
-// MoveTaskToDone marks a task as done via PATCH /api/git-client/tasks/{code}.
-func (c *Client) MoveTaskToDone(code string) error {
-	body, err := json.Marshal(map[string]string{"status": "done"})
+// SetTaskStatus updates a task's status via PATCH /api/git-client/tasks/{code}.
+// Common values: "done", "in_progress".
+func (c *Client) SetTaskStatus(code string, status string) error {
+	body, err := json.Marshal(map[string]string{"status": status})
 	if err != nil {
-		return fmt.Errorf("encoding move-to-done request: %w", err)
+		return fmt.Errorf("encoding set-status request: %w", err)
 	}
 	req, err := http.NewRequest(http.MethodPatch, c.BaseURL+"/api/git-client/tasks/"+code, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("building move-to-done request: %w", err)
+		return fmt.Errorf("building set-status request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("moving task to done: %w", err)
+		return fmt.Errorf("setting task status: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
 		return ErrUnauthorized
 	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("moving task to done: unexpected status %d", resp.StatusCode)
+		return fmt.Errorf("setting task status: unexpected status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// MoveTaskToDone marks a task as done.
+func (c *Client) MoveTaskToDone(code string) error {
+	return c.SetTaskStatus(code, "done")
+}
+
+// MoveTaskToInProgress reverts a task back to in_progress — used when the
+// GitHub webhook auto-moved it to Done but the user said "No" in deskgit.
+func (c *Client) MoveTaskToInProgress(code string) error {
+	return c.SetTaskStatus(code, "in_progress")
 }

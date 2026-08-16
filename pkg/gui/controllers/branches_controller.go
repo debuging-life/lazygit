@@ -664,6 +664,14 @@ func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest
 							{
 								LabelColumns: []string{self.c.Tr.PRMoveToDoneNo},
 								OnPress: func() error {
+									// The GitHub webhook may have already auto-moved the task to
+									// Done. Actively revert it back to in_progress.
+									go func() {
+										client, err := desktimers.NewClientFromToken()
+										if err == nil {
+											_ = client.MoveTaskToInProgress(capturedCode)
+										}
+									}()
 									self.c.Toast(self.c.Tr.PRMerged)
 									return nil
 								},
