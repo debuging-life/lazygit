@@ -626,8 +626,16 @@ func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest
 						return err
 					}
 					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-					// If the branch name contains a task code, ask whether to move to Done.
+					// Resolve task code: head branch → PR title → currently selected task.
 					taskCode := desktimers.ExtractCode(pr.HeadRefName)
+					if taskCode == "" {
+						taskCode = desktimers.ExtractCode(pr.Title)
+					}
+					if taskCode == "" {
+						if sel := self.c.Helpers().Desktimers.SelectedTask(); sel != nil {
+							taskCode = sel.Code
+						}
+					}
 					if taskCode == "" {
 						self.c.Toast(self.c.Tr.PRMerged)
 						return nil
@@ -637,7 +645,7 @@ func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest
 						map[string]string{"code": taskCode},
 					)
 					capturedCode := taskCode
-					self.c.Menu(types.CreateMenuOptions{
+					return self.c.Menu(types.CreateMenuOptions{
 						Title: title,
 						Items: []*types.MenuItem{
 							{
@@ -662,7 +670,6 @@ func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest
 							},
 						},
 					})
-					return nil
 				})
 			},
 		}
