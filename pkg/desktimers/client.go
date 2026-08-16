@@ -159,6 +159,96 @@ func (c *Client) CreateTask(projectID string, title string) (Task, error) {
 	return parsed.Data, nil
 }
 
+// Column represents a project board column returned by the API.
+type Column struct {
+	Slug     string `json:"slug"`
+	Name     string `json:"name"`
+	Role     string `json:"role"`
+	Position int    `json:"position"`
+}
+
+type columnsResponse struct {
+	Success bool     `json:"success"`
+	Data    []Column `json:"data"`
+}
+
+// GetTaskColumns returns the ordered column list for the project that owns
+// the task identified by code (e.g. "DESK-296").
+func (c *Client) GetTaskColumns(code string) ([]Column, error) {
+	req, err := http.NewRequest(http.MethodGet, c.BaseURL+"/api/git-client/tasks/"+code+"/columns", nil)
+	if err != nil {
+		return nil, fmt.Errorf("building columns request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching columns: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, ErrUnauthorized
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetching columns: unexpected status %d", resp.StatusCode)
+	}
+	parsed := columnsResponse{}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, fmt.Errorf("parsing columns response: %w", err)
+	}
+	return parsed.Data, nil
+}
+
+// MoveTaskToColumn moves a task to the given column slug and stops the active
+// timer if the column is not in_progress.
+func (c *Client) MoveTaskToColumn(code string, columnSlug string) error {
+	body, err := json.Marshal(map[string]string{"column": columnSlug})
+	if err != nil {
+		return fmt.Errorf("encoding move-task request: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPatch, c.BaseURL+"/api/git-client/tasks/"+code, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("building move-task request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("moving task: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("moving task: unexpected status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// SuppressAutoDone tells the backend to skip the webhook-driven move-to-Done
+// for this task. Call this BEFORE merging the PR when the user answers "Merge
+// only" — the flag is stored in Redis for 5 minutes, long enough to outlive
+// GitHub's webhook delivery.
+func (c *Client) SuppressAutoDone(code string) error {
+	req, err := http.NewRequest(http.MethodPost, c.BaseURL+"/api/git-client/tasks/"+code+"/suppress-done", nil)
+	if err != nil {
+		return fmt.Errorf("building suppress-done request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("suppress-done: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("suppress-done: unexpected status %d", resp.StatusCode)
+	}
+	return nil
+}
+
 // SetTaskStatus updates a task's status via PATCH /api/git-client/tasks/{code}.
 // Common values: "done", "in_progress".
 func (c *Client) SetTaskStatus(code string, status string) error {
