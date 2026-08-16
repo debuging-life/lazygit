@@ -80,6 +80,7 @@ type PullRequestEdge struct {
 type PullRequestNode struct {
 	Title               string                `json:"title"`
 	HeadRefName         string                `json:"headRefName"`
+	BaseRefName         string                `json:"baseRefName"`
 	Number              int                   `json:"number"`
 	Url                 string                `json:"url"`
 	HeadRepositoryOwner GithubRepositoryOwner `json:"headRepositoryOwner"`
@@ -117,6 +118,7 @@ func fetchPullRequestsQuery(branches []string, owner string, repo string) (strin
         node {
           title
           headRefName
+          baseRefName
           state
           number
           url
@@ -240,6 +242,7 @@ func (self *GitHubCommands) fetchRecentPRsAux(endpoint string, repoOwner string,
 			node := edge.Node
 			pr := &models.GithubPullRequest{
 				HeadRefName: node.HeadRefName,
+				BaseRefName: node.BaseRefName,
 				Number:      node.Number,
 				Title:       node.Title,
 				State:       lo.Ternary(node.IsDraft && node.State != "CLOSED", "DRAFT", node.State),
@@ -429,6 +432,7 @@ func (self *GitHubCommands) CreatePullRequest(owner, repo, title, body, head, ba
 		State:       "OPEN",
 		Url:         parsed.HtmlURL,
 		HeadRefName: head,
+		BaseRefName: base,
 	}, nil
 }
 

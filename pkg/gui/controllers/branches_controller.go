@@ -1030,9 +1030,13 @@ func (self *BranchesController) createPullRequestMenu(selectedBranch *models.Bra
 		capturedPR := pr
 		capturedSvc := svcInfo
 		capturedToken := token
+		prBase := capturedPR.BaseRefName
+		if prBase == "" {
+			prBase = self.c.Tr.DefaultBranch
+		}
 		menuItems = append(menuItems, &types.MenuItem{
 			Section:      prSection,
-			LabelColumns: []string{fmt.Sprintf("#%d: %s", capturedPR.Number, capturedPR.Title)},
+			LabelColumns: []string{fmt.Sprintf("#%d: %s → %s", capturedPR.Number, capturedPR.HeadRefName, prBase)},
 			OnPress: func() error {
 				return self.handleMergePRViaAPI(capturedPR, capturedSvc, capturedToken)
 			},

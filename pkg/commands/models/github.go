@@ -2,6 +2,7 @@ package models
 
 type GithubPullRequest struct {
 	HeadRefName         string                `json:"headRefName"`
+	BaseRefName         string                `json:"baseRefName"`
 	Number              int                   `json:"number"`
 	Title               string                `json:"title"`
 	State               string                `json:"state"` // "MERGED", "OPEN", "CLOSED", "DRAFT"
