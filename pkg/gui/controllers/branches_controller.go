@@ -573,27 +573,24 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 				InitialContent: defaultBody,
 				HandleConfirm: func(body string) error {
 					self.c.LogAction(self.c.Tr.Actions.CreatePullRequestViaAPI)
-					var pr *models.GithubPullRequest
-					err := self.c.WithWaitingStatusSync(self.c.Tr.PRCreatingPR, func() error {
-						var createErr error
-						pr, createErr = self.c.Git().GitHub.CreatePullRequest(
+					return self.c.WithWaitingStatus(self.c.Tr.PRCreatingPR, func(_ gocui.Task) error {
+						pr, err := self.c.Git().GitHub.CreatePullRequest(
 							svcInfo.Owner, svcInfo.Repository,
 							title, body, headBranch, baseBranch,
 							svcInfo.WebDomain, token,
 						)
-						return createErr
+						if err != nil {
+							return err
+						}
+						createdMsg := utils.ResolvePlaceholderString(
+							self.c.Tr.PRCreated,
+							map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
+						)
+						self.c.Toast(createdMsg)
+						_ = self.c.OS().OpenLink(pr.Url)
+						self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
+						return nil
 					})
-					if err != nil {
-						return err
-					}
-					createdMsg := utils.ResolvePlaceholderString(
-						self.c.Tr.PRCreated,
-						map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-					)
-					self.c.Toast(createdMsg)
-					_ = self.c.OS().OpenLink(pr.Url)
-					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-					return nil
 				},
 			})
 			return nil
@@ -621,14 +618,16 @@ func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest
 			LabelColumns: []string{s.label},
 			OnPress: func() error {
 				self.c.LogAction(self.c.Tr.Actions.MergePullRequest)
-				if err := self.c.Git().GitHub.MergePullRequest(
-					svcInfo.Owner, svcInfo.Repository, pr.Number, strat, svcInfo.WebDomain, token,
-				); err != nil {
-					return err
-				}
-				self.c.Toast(self.c.Tr.PRMerged)
-				self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-				return nil
+				return self.c.WithWaitingStatus(self.c.Tr.PRMergingPR, func(_ gocui.Task) error {
+					if err := self.c.Git().GitHub.MergePullRequest(
+						svcInfo.Owner, svcInfo.Repository, pr.Number, strat, svcInfo.WebDomain, token,
+					); err != nil {
+						return err
+					}
+					self.c.Toast(self.c.Tr.PRMerged)
+					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
+					return nil
+				})
 			},
 		}
 	})
