@@ -583,14 +583,41 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 						if err != nil {
 							return err
 						}
-						createdMsg := utils.ResolvePlaceholderString(
-							self.c.Tr.PRCreated,
+						self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
+						capturedPR := pr
+						capturedSvc := svcInfo
+						capturedTok := token
+						menuTitle := utils.ResolvePlaceholderString(
+							self.c.Tr.PRCreatedMenuTitle,
 							map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
 						)
-						self.c.Toast(createdMsg)
-						_ = self.c.OS().OpenLink(pr.Url)
-						self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-						return nil
+						return self.c.Menu(types.CreateMenuOptions{
+							Title: menuTitle,
+							Items: []*types.MenuItem{
+								{
+									LabelColumns: []string{self.c.Tr.PRCreatedOpenInBrowser},
+									OnPress: func() error {
+										return self.c.OS().OpenLink(capturedPR.Url)
+									},
+								},
+								{
+									LabelColumns: []string{self.c.Tr.PRCreatedCopyLink},
+									OnPress: func() error {
+										if err := self.c.OS().CopyToClipboard(capturedPR.Url); err != nil {
+											return err
+										}
+										self.c.Toast(self.c.Tr.PullRequestURLCopiedToClipboard)
+										return nil
+									},
+								},
+								{
+									LabelColumns: []string{self.c.Tr.PRCreatedMergeInApp},
+									OnPress: func() error {
+										return self.handleMergePRViaAPI(capturedPR, capturedSvc, capturedTok)
+									},
+								},
+							},
+						})
 					})
 				},
 			})
