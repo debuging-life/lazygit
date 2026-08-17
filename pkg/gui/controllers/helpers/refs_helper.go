@@ -382,7 +382,16 @@ func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(
 		return then("", suggestedBranchName)
 	}
 
+	noTaskTypes := cfg.NoTaskBranchTypes
 	pickTask := func(branchType string) error {
+		// Branch types that span multiple tasks (e.g. release) skip the task
+		// picker and go straight to the branch name prompt.
+		for _, t := range noTaskTypes {
+			if branchType == t {
+				prefix := branchType + "/"
+				return then(prefix, suggestedBranchName)
+			}
+		}
 		return self.desktimersHelper.PickTaskForAction(func(task desktimers.Task) error {
 			if task.Code == "" { // "continue without a task"
 				if branchType == "" {
