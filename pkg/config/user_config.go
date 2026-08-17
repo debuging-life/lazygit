@@ -81,6 +81,10 @@ type DesktimersConfig struct {
 	// Branch types offered by the new-branch type menu, in menu order; the
 	// first entry is the preselected default.
 	BranchTypes []string `yaml:"branchTypes"`
+	// Branch types for which the task picker is skipped — the branch is
+	// created with just the type prefix and no task code. Defaults to
+	// ["release"] since a release branch typically covers multiple tasks.
+	NoTaskBranchTypes []string `yaml:"noTaskBranchTypes"`
 	// Commit message prefix template ({{code}} = task code); shown readonly
 	// and prepended on confirm. Note: the prepare-commit-msg hook always
 	// uses the default '{{code}}/'.
@@ -1049,6 +1053,7 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			RequireTaskForBranch: true,
 			BranchPrefixTemplate: "{{type}}/{{code}}-",
 			BranchTypes:          []string{"feature", "bugfix", "hotfix", "release", "chore", "refactor", "docs"},
+			NoTaskBranchTypes:    []string{"release"},
 			CommitPrefixTemplate: "{{code}}/",
 			CheckForUpdates:      true,
 		},
