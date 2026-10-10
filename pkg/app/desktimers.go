@@ -17,8 +17,8 @@ import (
 // rebasing onto a new upstream release.
 const LazygitBaseVersion = "v0.63.1"
 
-// runDesktimersGate blocks until this machine has a DeskTimers git-client
-// token (running the device flow in plain terminal mode if needed). Offline
+// runDesktimersGate blocks until this machine has a DeskTick git-client
+// token (running the browser sign-in in plain terminal mode if needed). Offline
 // with a previously stored token is allowed. DESKGIT_SKIP_AUTH=1 bypasses the
 // gate entirely (CI, scripted use).
 func runDesktimersGate(appConfig *config.AppConfig) error {
@@ -26,7 +26,7 @@ func runDesktimersGate(appConfig *config.AppConfig) error {
 		return nil
 	}
 
-	desktimers.SetConfiguredBaseURL(appConfig.GetUserConfig().Desktimers.ApiBaseUrl)
+	desktimers.SetConfiguredBaseURL(appConfig.GetUserConfig().Desktimers.Url)
 
 	_, err := desktimers.EnsureAuthenticated(os.Stdout, desktimers.OpenBrowser)
 	return err
@@ -65,18 +65,18 @@ func loadUserConfigForCLI() *config.UserConfig {
 		return nil
 	}
 	userConfig := appConfig.GetUserConfig()
-	desktimers.SetConfiguredBaseURL(userConfig.Desktimers.ApiBaseUrl)
+	desktimers.SetConfiguredBaseURL(userConfig.Desktimers.Url)
 	return userConfig
 }
 
 // runDesktimersLogin implements `deskgit login`: drop any stored token and
-// run the device flow in the terminal. Also used by the TUI's re-auth path
+// run the browser sign-in in the terminal. Also used by the TUI's re-auth path
 // (run as a subprocess while the gui is suspended).
 func runDesktimersLogin(w io.Writer) {
 	loadUserConfigForCLI()
 	_ = desktimers.DeleteToken()
 
-	if _, err := desktimers.RunDeviceFlow(w, desktimers.OpenBrowser); err != nil {
+	if _, err := desktimers.RunSignIn(w, desktimers.OpenBrowser); err != nil {
 		fmt.Fprintf(w, "Login failed: %v\n", err)
 		os.Exit(1)
 	}
@@ -109,12 +109,12 @@ func runDesktimersDoctor(w io.Writer, version string) int {
 		baseURL := desktimers.ResolveBaseURL()
 		source := "default"
 		switch {
-		case os.Getenv("DESKTIMERS_API_URL") != "":
-			source = "env DESKTIMERS_API_URL"
-		case userConfig != nil && userConfig.Desktimers.ApiBaseUrl != "" && userConfig.Desktimers.ApiBaseUrl != desktimers.DefaultAPIBaseURL:
+		case os.Getenv(desktimers.SiteEnvVar) == baseURL:
+			source = "env " + desktimers.SiteEnvVar
+		case userConfig != nil && userConfig.Desktimers.Url == baseURL && baseURL != desktimers.DefaultSiteURL:
 			source = "config"
 		}
-		pass("config: %s — apiBaseUrl %s (%s)", configDir, baseURL, source)
+		pass("config: %s — DeskTick at %s (%s)", configDir, baseURL, source)
 	}
 
 	// Token + live API probe.
@@ -349,7 +349,7 @@ func runDesktimersLogout(w io.Writer) {
 	case desktimers.LogoutRevoked:
 		fmt.Fprintln(w, "Logged out (token revoked).")
 	case desktimers.LogoutLocalOnly:
-		fmt.Fprintf(w, "Logged out locally (could not reach the server to revoke: %v). You can also revoke it in DeskTimers → Settings → Git Clients.\n", outcome.RevokeErr)
+		fmt.Fprintf(w, "Logged out locally (could not reach the server to revoke: %v). You can end it from your sessions list in DeskTick.\n", outcome.RevokeErr)
 	default:
 		fmt.Fprintln(w, "Not logged in.")
 	}

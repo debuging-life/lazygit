@@ -2,9 +2,7 @@ package desktimers
 
 import (
 	"bytes"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +28,8 @@ func TestEnsureAuthenticatedWithValidToken(t *testing.T) {
 	setupConfigDir(t)
 	writeStoredToken(t, &Token{
 		AccessToken: "dtg_abc",
+		Site:        "https://dev.desktick.com",
+		UserID:      "u1",
 		ExpiresAt:   time.Now().Add(time.Hour),
 	})
 
@@ -46,14 +46,24 @@ func TestEnsureAuthenticatedWithValidToken(t *testing.T) {
 	}
 }
 
+// noBrowser is a sign-in nobody answers: the person is offline, or closed
+// the tab.
+func noBrowser(t *testing.T) {
+	t.Helper()
+	previous := signInWaitOverride
+	signInWaitOverride = 50 * time.Millisecond
+	t.Cleanup(func() { signInWaitOverride = previous })
+}
+
 func TestEnsureAuthenticatedOfflineWithExpiredToken(t *testing.T) {
 	setupConfigDir(t)
 	writeStoredToken(t, &Token{
 		AccessToken: "dtg_abc",
+		Site:        "https://dev.desktick.com",
+		UserID:      "u1",
 		ExpiresAt:   time.Now().Add(-time.Hour),
 	})
-	// Unreachable API → device flow fails → offline grace.
-	t.Setenv("DESKTIMERS_API_URL", "http://127.0.0.1:1")
+	noBrowser(t)
 
 	var out bytes.Buffer
 	result, err := EnsureAuthenticated(&out, nil)
@@ -68,55 +78,43 @@ func TestEnsureAuthenticatedOfflineWithExpiredToken(t *testing.T) {
 	}
 }
 
-func TestEnsureAuthenticatedNoTokenUnreachableAPIFails(t *testing.T) {
+func TestEnsureAuthenticatedNoTokenAndNoSignInFails(t *testing.T) {
 	setupConfigDir(t)
-	t.Setenv("DESKTIMERS_API_URL", "http://127.0.0.1:1")
+	noBrowser(t)
 
 	var out bytes.Buffer
 	_, err := EnsureAuthenticated(&out, nil)
 	if err == nil {
-		t.Fatal("expected an error when no token exists and the API is down")
+		t.Fatal("expected an error when there is no token and nobody signs in")
 	}
 }
 
-func TestEnsureAuthenticatedRunsDeviceFlow(t *testing.T) {
-	configDir := setupConfigDir(t)
+func TestEnsureAuthenticatedIgnoresATokenFromTheOldProduct(t *testing.T) {
+	setupConfigDir(t)
+	// What the product before DeskTick wrote: a token, and nothing else.
+	writeStoredToken(t, &Token{AccessToken: "dtg_old", ExpiresAt: time.Now().Add(time.Hour)})
+	noBrowser(t)
 
-	authorized := false
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/api/device/code":
-			json.NewEncoder(w).Encode(map[string]any{
-				"device_code":      "dev123",
-				"user_code":        "ABCD-EFGH",
-				"verification_uri": "http://example.com/device",
-				"expires_in":       900,
-				"interval":         0,
-			})
-		case "/api/device/token":
-			if !authorized {
-				authorized = true
-				w.WriteHeader(http.StatusPreconditionRequired)
-				json.NewEncoder(w).Encode(map[string]string{"error": "authorization_pending"})
-				return
-			}
-			json.NewEncoder(w).Encode(map[string]any{
-				"access_token": "dtg_new",
-				"token_type":   "Bearer",
-				"expires_in":   3600,
-				"plan":         "free",
-			})
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer server.Close()
-	t.Setenv("DESKTIMERS_API_URL", server.URL)
-
-	browserOpened := ""
 	var out bytes.Buffer
-	result, err := EnsureAuthenticated(&out, func(url string) error {
-		browserOpened = url
+	result, err := EnsureAuthenticated(&out, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result == GateAuthenticated {
+		t.Error("the old product's token must not count as signed in")
+	}
+}
+
+func TestEnsureAuthenticatedSignsIn(t *testing.T) {
+	configDir := setupConfigDir(t)
+	server := newSignInServer(t)
+	t.Setenv(SiteEnvVar, server.URL)
+
+	var out bytes.Buffer
+	result, err := EnsureAuthenticated(&out, func(target string) error {
+		server.browser(t, func(callback string, state string) []string {
+			return []string{callback + "?code=the-code&state=" + url.QueryEscape(state)}
+		})(target)
 		return nil
 	})
 	if err != nil {
@@ -125,11 +123,8 @@ func TestEnsureAuthenticatedRunsDeviceFlow(t *testing.T) {
 	if result != GateAuthenticated {
 		t.Errorf("expected GateAuthenticated, got %v", result)
 	}
-	if !strings.Contains(out.String(), "ABCD-EFGH") {
-		t.Errorf("expected the user code to be printed, got: %s", out.String())
-	}
-	if browserOpened == "" {
-		t.Error("expected the browser opener to be invoked")
+	if !strings.Contains(out.String(), server.URL+"/desktop-auth?") {
+		t.Errorf("the address should be printed for a browser that did not open, got: %s", out.String())
 	}
 
 	// Token persisted with 0600.
@@ -141,11 +136,15 @@ func TestEnsureAuthenticatedRunsDeviceFlow(t *testing.T) {
 	if info.Mode().Perm() != 0o600 {
 		t.Errorf("expected 0600 perms, got %v", info.Mode().Perm())
 	}
+	stored, _ := LoadToken()
+	if !stored.Valid() || stored.UserID != "u1" {
+		t.Errorf("stored token = %+v", stored)
+	}
 }
 
 func TestSetConfiguredBaseURL(t *testing.T) {
 	t.Cleanup(func() { SetConfiguredBaseURL("") })
-	os.Unsetenv("DESKTIMERS_API_URL")
+	os.Unsetenv(SiteEnvVar)
 
 	SetConfiguredBaseURL("https://custom.example.com/")
 	if got := ResolveBaseURL(); got != "https://custom.example.com" {
@@ -153,26 +152,26 @@ func TestSetConfiguredBaseURL(t *testing.T) {
 	}
 
 	// Config left at the default (treated as "unset") → built-in default wins.
-	SetConfiguredBaseURL(DefaultAPIBaseURL)
-	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
+	SetConfiguredBaseURL(DefaultSiteURL)
+	if got := ResolveBaseURL(); got != DefaultSiteURL {
 		t.Errorf("default should win when config is unset, got %s", got)
 	}
 
 	// A config copied from the old README sample points at a retired host; it
 	// must fall through to the current default, not pin the dead host.
 	SetConfiguredBaseURL("https://api-leads.loudowls.com")
-	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
+	if got := ResolveBaseURL(); got != DefaultSiteURL {
 		t.Errorf("retired config host should fall through to default, got %s", got)
 	}
 
 	// A retired env var is ignored too.
 	SetConfiguredBaseURL("")
-	t.Setenv("DESKTIMERS_API_URL", "https://api-leads.loudowls.com")
-	if got := ResolveBaseURL(); got != DefaultAPIBaseURL {
+	t.Setenv(SiteEnvVar, "https://api-leads.loudowls.com")
+	if got := ResolveBaseURL(); got != DefaultSiteURL {
 		t.Errorf("retired env host should fall through to default, got %s", got)
 	}
 
-	t.Setenv("DESKTIMERS_API_URL", "http://env.example.com")
+	t.Setenv(SiteEnvVar, "http://env.example.com")
 	SetConfiguredBaseURL("https://custom.example.com")
 	if got := ResolveBaseURL(); got != "http://env.example.com" {
 		t.Errorf("env should win over config, got %s", got)

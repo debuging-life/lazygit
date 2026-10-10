@@ -4,149 +4,166 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"sync/atomic"
+	"net/url"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
-func newTestAuthClient(baseURL string) (*AuthClient, *[]time.Duration) {
-	sleeps := &[]time.Duration{}
-	auth := NewAuthClient(baseURL)
-	auth.DeviceName = "test-machine"
-	auth.sleep = func(ctx context.Context, d time.Duration) error {
-		*sleeps = append(*sleeps, d)
-		return ctx.Err()
-	}
-	return auth, sleeps
+// signInServer is the API's half of the sign-in: it knows which code goes
+// with which challenge, and hands a session to whoever brings the code AND a
+// verifier that hashes to that challenge.
+type signInServer struct {
+	*httptest.Server
+	mu        sync.Mutex
+	challenge string
+	redeemed  int
 }
 
-func TestRequestDeviceCode(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/api/device/code" {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
-		}
-		json.NewEncoder(w).Encode(map[string]any{
-			"device_code":               "dev123",
-			"user_code":                 "ABCD-EFGH",
-			"verification_uri":          "https://app.desktimers.com/device",
-			"verification_uri_complete": "https://app.desktimers.com/device?code=ABCD-EFGH",
-			"expires_in":                900,
-			"interval":                  5,
-		})
-	}))
-	defer server.Close()
-
-	auth, _ := newTestAuthClient(server.URL)
-	code, err := auth.RequestDeviceCode(context.Background())
-	if err != nil {
-		t.Fatalf("RequestDeviceCode: %v", err)
-	}
-	if code.DeviceCode != "dev123" || code.UserCode != "ABCD-EFGH" || code.Interval != 5 || code.ExpiresIn != 900 {
-		t.Fatalf("unexpected device code: %+v", code)
-	}
-}
-
-func TestPollForTokenPendingThenSuccess(t *testing.T) {
-	var calls atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/device/token" {
-			t.Errorf("unexpected path %s", r.URL.Path)
+func newSignInServer(t *testing.T) *signInServer {
+	t.Helper()
+	s := &signInServer{}
+	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/desktop/token" {
+			w.WriteHeader(http.StatusNotFound)
+			return
 		}
 		body := map[string]string{}
-		json.NewDecoder(r.Body).Decode(&body)
-		if body["device_code"] != "dev123" || body["device_name"] != "test-machine" {
-			t.Errorf("unexpected body: %v", body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.redeemed++
+		w.Header().Set("Content-Type", "application/json")
+		if body["code"] != "the-code" || Challenge(body["verifier"]) != s.challenge {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"success":false,"error":"UNAUTHORIZED","message":"That sign-in link has expired or was already used."}`))
+			return
 		}
-		switch calls.Add(1) {
-		case 1, 2:
-			w.WriteHeader(http.StatusPreconditionRequired)
-			json.NewEncoder(w).Encode(map[string]string{"error": "authorization_pending"})
-		default:
-			json.NewEncoder(w).Encode(map[string]any{
-				"access_token": "dtg_secret",
-				"token_type":   "Bearer",
-				"expires_in":   3600,
-				"plan":         "paid",
-			})
-		}
+		_, _ = w.Write([]byte(`{"success":true,"data":{"token":"session-token","user":{"id":"u1","name":"Ada","email":"ada@example.com","image":null}}}`))
 	}))
-	defer server.Close()
+	t.Cleanup(s.Close)
+	return s
+}
 
-	auth, sleeps := newTestAuthClient(server.URL)
-	token, err := auth.PollForToken(context.Background(), "dev123", 5, 900)
+// browser plays the person: reads the address deskgit opened, "signs in",
+// and is sent back to the loopback port with whatever `answer` says.
+func (s *signInServer) browser(t *testing.T, answer func(callback string, state string) []string) func(target string) {
+	return func(target string) {
+		parsed, err := url.Parse(target)
+		if err != nil {
+			t.Errorf("unparseable sign-in address %q", target)
+			return
+		}
+		query := parsed.Query()
+		if parsed.Path != "/desktop-auth" {
+			t.Errorf("sign-in should open /desktop-auth, got %s", parsed.Path)
+		}
+		s.mu.Lock()
+		s.challenge = query.Get("challenge")
+		s.mu.Unlock()
+		callback := "http://127.0.0.1:" + query.Get("port") + "/callback"
+		go func() {
+			for _, address := range answer(callback, query.Get("state")) {
+				resp, err := http.Get(address)
+				if err == nil {
+					_, _ = io.Copy(io.Discard, resp.Body)
+					resp.Body.Close()
+				}
+			}
+		}()
+	}
+}
+
+func TestSignIn(t *testing.T) {
+	server := newSignInServer(t)
+	auth := NewAuthClient(server.URL + "/")
+	opened := ""
+
+	token, err := auth.SignIn(context.Background(), func(target string) {
+		opened = target
+		server.browser(t, func(callback string, state string) []string {
+			return []string{callback + "?code=the-code&state=" + url.QueryEscape(state)}
+		})(target)
+	})
 	if err != nil {
-		t.Fatalf("PollForToken: %v", err)
+		t.Fatal(err)
 	}
-	if token.AccessToken != "dtg_secret" || token.Plan != "paid" || token.TokenType != "Bearer" {
-		t.Fatalf("unexpected token: %+v", token)
+	if token.AccessToken != "session-token" || token.UserID != "u1" || token.UserName != "Ada" || token.Site != server.URL {
+		t.Errorf("token = %+v", token)
 	}
-	if token.ExpiresAt.Before(time.Now().Add(59 * time.Minute)) {
-		t.Errorf("expiry not derived from expires_in: %v", token.ExpiresAt)
+	if !token.Valid() {
+		t.Error("a fresh token should be valid")
 	}
-	if calls.Load() != 3 {
-		t.Errorf("expected 3 polls, got %d", calls.Load())
+
+	// What the browser is given: the challenge, never the verifier.
+	query, _ := url.ParseQuery(strings.SplitN(opened, "?", 2)[1])
+	if len(query.Get("challenge")) != 43 {
+		t.Errorf("the challenge should be a base64url SHA-256 (43 characters), got %q", query.Get("challenge"))
 	}
-	for _, d := range *sleeps {
-		if d != 5*time.Second {
-			t.Errorf("expected 5s sleeps, got %v", *sleeps)
-			break
+	if query.Get("state") == "" || query.Get("port") == "" {
+		t.Errorf("state and port must be in the address: %s", opened)
+	}
+	if strings.Contains(opened, "verifier") {
+		t.Errorf("the verifier must never be in the address: %s", opened)
+	}
+}
+
+func TestSignInIgnoresACallbackItDidNotAskFor(t *testing.T) {
+	server := newSignInServer(t)
+	auth := NewAuthClient(server.URL)
+
+	token, err := auth.SignIn(context.Background(), server.browser(t, func(callback string, state string) []string {
+		return []string{
+			// Another program on the machine, guessing: a code of its own,
+			// and a state that is not ours. Then no state at all. Then the
+			// real one. Were the first two acted on, the sign-in would end
+			// there, refused, before the real one arrived.
+			callback + "?code=somebody-elses-code&state=not-ours",
+			callback + "?code=somebody-elses-code",
+			callback + "?code=the-code&state=" + url.QueryEscape(state),
 		}
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if token.AccessToken != "session-token" {
+		t.Errorf("token = %+v", token)
+	}
+	if server.redeemed != 1 {
+		t.Errorf("only the callback with our state is redeemed, got %d redemptions", server.redeemed)
 	}
 }
 
-func TestPollForTokenSlowDown(t *testing.T) {
-	var calls atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch calls.Add(1) {
-		case 1:
-			w.WriteHeader(http.StatusTooManyRequests)
-			json.NewEncoder(w).Encode(map[string]string{"error": "slow_down"})
-		default:
-			json.NewEncoder(w).Encode(map[string]any{
-				"access_token": "dtg_secret", "token_type": "Bearer", "expires_in": 3600, "plan": "free",
-			})
-		}
-	}))
-	defer server.Close()
+func TestSignInRefusedInTheAPIsWords(t *testing.T) {
+	server := newSignInServer(t)
+	auth := NewAuthClient(server.URL)
 
-	auth, sleeps := newTestAuthClient(server.URL)
-	if _, err := auth.PollForToken(context.Background(), "dev123", 5, 900); err != nil {
-		t.Fatalf("PollForToken: %v", err)
-	}
-	want := []time.Duration{5 * time.Second, 10 * time.Second}
-	if len(*sleeps) != len(want) || (*sleeps)[0] != want[0] || (*sleeps)[1] != want[1] {
-		t.Fatalf("slow_down did not bump the interval: sleeps = %v", *sleeps)
+	_, err := auth.SignIn(context.Background(), server.browser(t, func(callback string, state string) []string {
+		return []string{callback + "?code=a-spent-code&state=" + url.QueryEscape(state)}
+	}))
+	if err == nil || !strings.Contains(err.Error(), "expired or was already used") {
+		t.Fatalf("expected the API's reason, got %v", err)
 	}
 }
 
-func TestPollForTokenExpired(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "expired_token"})
-	}))
-	defer server.Close()
+func TestSignInGivesUp(t *testing.T) {
+	server := newSignInServer(t)
+	auth := NewAuthClient(server.URL)
+	auth.Wait = 50 * time.Millisecond
 
-	auth, _ := newTestAuthClient(server.URL)
-	_, err := auth.PollForToken(context.Background(), "dev123", 5, 900)
-	authErr := &AuthError{}
-	if !errors.As(err, &authErr) || authErr.Code != "expired_token" {
-		t.Fatalf("expected AuthError(expired_token), got %v", err)
+	_, err := auth.SignIn(context.Background(), func(string) {})
+	if !errors.Is(err, ErrSignInTimedOut) {
+		t.Fatalf("expected ErrSignInTimedOut, got %v", err)
 	}
 }
 
-func TestPollForTokenAccessDenied(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "access_denied"})
-	}))
-	defer server.Close()
-
-	auth, _ := newTestAuthClient(server.URL)
-	_, err := auth.PollForToken(context.Background(), "dev123", 5, 900)
-	authErr := &AuthError{}
-	if !errors.As(err, &authErr) || authErr.Code != "access_denied" {
-		t.Fatalf("expected AuthError(access_denied), got %v", err)
+func TestCallbackPageEscapesWhatItIsTold(t *testing.T) {
+	page := callbackPage("Sign-in did not finish", `<script>alert(1)</script>`)
+	if strings.Contains(page, "<script>") {
+		t.Errorf("the API's words must be text, never markup: %s", page)
 	}
 }

@@ -67,7 +67,7 @@ func runPrePush(args []string, stdin io.Reader, stderr io.Writer, repoPath strin
 		return 0
 	}
 
-	fmt.Fprintf(stderr, "%sdeskgit: %d commit(s) being pushed have no DeskTimers task code:%s\n",
+	fmt.Fprintf(stderr, "%sdeskgit: %d commit(s) being pushed have no DeskTick task code:%s\n",
 		ansiYellow, len(unmapped), ansiReset)
 	for i, commit := range unmapped {
 		if i == maxListedCommits {

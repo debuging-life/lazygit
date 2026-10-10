@@ -12,7 +12,7 @@ func revokeServer(t *testing.T, status int) (*httptest.Server, *int) {
 	t.Helper()
 	calls := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete || r.URL.Path != "/api/git-client/token" {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/auth/sign-out" {
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -23,7 +23,7 @@ func revokeServer(t *testing.T, status int) (*httptest.Server, *int) {
 		calls++
 		w.WriteHeader(status)
 		if status == http.StatusOK {
-			w.Write([]byte(`{"success":true,"data":{"message":"Token revoked"}}`))
+			w.Write([]byte(`{"success":true}`))
 		}
 	}))
 	t.Cleanup(server.Close)
@@ -89,9 +89,10 @@ func TestLogout(t *testing.T) {
 		writeStoredToken(t, &Token{
 			AccessToken: "dtg_abc",
 			ExpiresAt:   time.Now().Add(time.Hour),
-			APIBaseURL:  server.URL,
+			Site:        server.URL,
+			UserID:      "u1",
 		})
-		os.Unsetenv("DESKTIMERS_API_URL")
+		os.Unsetenv(SiteEnvVar)
 
 		outcome, err := Logout()
 		if err != nil {
@@ -113,9 +114,10 @@ func TestLogout(t *testing.T) {
 		writeStoredToken(t, &Token{
 			AccessToken: "dtg_abc",
 			ExpiresAt:   time.Now().Add(time.Hour),
-			APIBaseURL:  "http://127.0.0.1:1",
+			Site:        "http://127.0.0.1:1",
+			UserID:      "u1",
 		})
-		os.Unsetenv("DESKTIMERS_API_URL")
+		os.Unsetenv(SiteEnvVar)
 
 		outcome, err := Logout()
 		if err != nil {
@@ -138,9 +140,10 @@ func TestLogout(t *testing.T) {
 		writeStoredToken(t, &Token{
 			AccessToken: "dtg_abc",
 			ExpiresAt:   time.Now().Add(-time.Hour),
-			APIBaseURL:  server.URL,
+			Site:        server.URL,
+			UserID:      "u1",
 		})
-		os.Unsetenv("DESKTIMERS_API_URL")
+		os.Unsetenv(SiteEnvVar)
 
 		outcome, err := Logout()
 		if err != nil {

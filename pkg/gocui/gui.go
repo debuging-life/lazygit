@@ -171,6 +171,13 @@ type Gui struct {
 	// match any known sequence, ESC means KeyEsc.
 	InputEsc bool
 
+	// deskgit: Brackets draws every framed view as a HUD panel: heavy corner
+	// brackets at its top-left and bottom-right in BracketColor, whatever the
+	// frame's own colour is, and its title in capitals. It is drawing only:
+	// no view is a cell bigger or smaller for it.
+	Brackets     bool
+	BracketColor Attribute
+
 	// SupportOverlaps is true when we allow for view edges to overlap with other
 	// view edges
 	SupportOverlaps bool
@@ -1110,6 +1117,40 @@ func (g *Gui) drawFrameCorners(v *View, fgColor, bgColor Attribute) error {
 	return nil
 }
 
+// drawBrackets marks a framed view's top-left and bottom-right corners: a
+// heavy corner and one heavy cell along each of its two edges, over the frame
+// that is already there. A view too small to have two edges to mark gets
+// nothing, and so does one whose corner is off the screen.
+//
+// The scrollbar lives on the right edge; where it reaches the bottom corner
+// it is the scrollbar that is kept, since it is the one that says something.
+func (g *Gui) drawBrackets(v *View, bgColor Attribute) {
+	if v.x1-v.x0 < 3 || v.y1-v.y0 < 2 {
+		return
+	}
+	set := func(x, y int, ch rune) {
+		if x >= 0 && y >= 0 && x < g.maxX && y < g.maxY {
+			_ = g.SetRune(x, y, ch, g.BracketColor, bgColor)
+		}
+	}
+	set(v.x0, v.y0, '┏')
+	// A head starts one cell in from the corner. With one, that cell is the
+	// gap between the bracket and the words; without, it is the bracket's arm.
+	if v.Title != "" || len(v.Tabs) > 0 {
+		set(v.x0+1, v.y0, ' ')
+	} else {
+		set(v.x0+1, v.y0, '━')
+	}
+	set(v.x0, v.y0+1, '┃')
+
+	set(v.x1, v.y1, '┛')
+	set(v.x1-1, v.y1, '━')
+	showScrollbar, _, scrollbarEnd := calcRealScrollbarStartEnd(v)
+	if !showScrollbar || scrollbarEnd < v.y1-1 {
+		set(v.x1, v.y1-1, '┃')
+	}
+}
+
 // drawTitle draws the title of the view.
 func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 	if v.y0 < 0 || v.y0 >= g.maxY {
@@ -1119,18 +1160,31 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 	tabs := v.Tabs
 	prefix := v.TitlePrefix
 	if prefix != "" {
-		if len(v.FrameRunes) > 0 {
+		if g.Brackets {
+			prefix += " "
+		} else if len(v.FrameRunes) > 0 {
 			prefix += string(v.FrameRunes[0])
 		} else {
 			prefix += "─"
 		}
 	}
 	separator := " - "
+	title := v.Title
+	if g.Brackets {
+		// A HUD panel's head is in capitals. Done here, where it is drawn,
+		// so a view's Title stays what the rest of the program set it to.
+		title = strings.ToUpper(title)
+		tabs = make([]string, len(v.Tabs))
+		for i, tab := range v.Tabs {
+			tabs[i] = strings.ToUpper(tab)
+		}
+		separator = " · "
+	}
 	charIndex := 0
 	currentTabStart := -1
 	currentTabEnd := -1
 	if len(tabs) == 0 {
-		tabs = []string{v.Title}
+		tabs = []string{title}
 	} else {
 		for i, tab := range tabs {
 			if i == v.TabIndex {
@@ -1146,6 +1200,10 @@ func (g *Gui) drawTitle(v *View, fgColor, bgColor Attribute) error {
 	}
 
 	str := strings.Join(tabs, separator)
+	if g.Brackets {
+		// The gap between the words and the line that carries on after them.
+		str += " "
+	}
 
 	x := v.x0 + 2
 	for _, ch := range prefix {
@@ -1370,6 +1428,9 @@ func (g *Gui) draw(v *View) error {
 		}
 		if err := g.drawFrameCorners(v, frameColor, bgColor); err != nil {
 			return err
+		}
+		if g.Brackets {
+			g.drawBrackets(v, bgColor)
 		}
 		if v.Title != "" || len(v.Tabs) > 0 {
 			if err := g.drawTitle(v, fgColor, bgColor); err != nil {

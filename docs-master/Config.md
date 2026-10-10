@@ -174,26 +174,26 @@ gui:
   theme:
     # Border color of focused window
     activeBorderColor:
-      - '#3EE9B1'
+      - '#ffd92e'
       - bold
 
     # Border color of non-focused windows
     inactiveBorderColor:
-      - '#625750'
+      - '#6b6b70'
 
     # Border color of focused window when searching in that window
     searchingActiveBorderColor:
-      - '#88E8C8'
+      - '#ff8a3d'
       - bold
 
     # Color of keybindings help text in the bottom line
     optionsTextColor:
-      - '#3EE9B1'
+      - '#8a8a90'
 
     # Background color of selected line.
     # See https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md#highlighting-the-selected-line
     selectedLineBgColor:
-      - '#0D7351'
+      - '#4d4100'
 
     # Background color of selected line when view doesn't have focus.
     inactiveViewSelectedLineBgColor:
@@ -201,23 +201,23 @@ gui:
 
     # Foreground color of copied commit
     cherryPickedCommitFgColor:
-      - '#2A2623'
+      - '#141200'
 
     # Background color of copied commit
     cherryPickedCommitBgColor:
-      - '#B3A475'
+      - '#ffd92e'
 
     # Foreground color of marked base commit (for rebase)
     markedBaseCommitFgColor:
-      - '#2A2623'
+      - '#141200'
 
     # Background color of marked base commit (for rebase)
     markedBaseCommitBgColor:
-      - '#C9C1A6'
+      - '#ff8a3d'
 
     # Color for file with unstaged changes
     unstagedChangesColor:
-      - '#DD4A4A'
+      - '#ef4444'
 
     # Default text color
     defaultFgColor:
@@ -308,7 +308,7 @@ gui:
 
   # Window border style.
   # One of 'rounded' (default) | 'single' | 'double' | 'hidden' | 'bold'
-  border: rounded
+  border: hud
 
   # If true, show a seriously epic explosion animation when nuking the working
   # tree.
@@ -830,12 +830,17 @@ keybinding:
   commitMessage:
     commitMenu: <ctrl+o>
 
-# DeskTimers integration (deskgit)
+# DeskTick integration (deskgit)
 desktimers:
-  # Base URL of the DeskTimers API. Override for staging/self-hosted.
-  apiBaseUrl: https://staging-api.desktimers.com
+  # Address of the DeskTick web app deskgit signs in to and works with.
+  # The API is the same address under /api.
+  url: https://dev.desktick.com
 
-  # What to do when a repo has no DeskTimers git hooks installed.
+  # Where the API of the product before DeskTick was. Still accepted so a
+  # config written for it loads; nothing reads it.
+  apiBaseUrl: ""
+
+  # What to do when a repo has no DeskTick git hooks installed.
   # - 'auto': (default) install silently when the origin remote's owner is
   #   in hookOrgs; otherwise leave the repo completely alone
   # - 'prompt': ask once per repo
@@ -882,6 +887,12 @@ desktimers:
     - chore
     - refactor
     - docs
+
+  # Branch types for which the task picker is skipped — the branch is
+  # created with just the type prefix and no task code. Defaults to
+  # ["release"] since a release branch typically covers multiple tasks.
+  noTaskBranchTypes:
+    - release
 
   # Commit message prefix template ({{code}} = task code); shown readonly
   # and prepended on confirm. Note: the prepare-commit-msg hook always

@@ -292,7 +292,7 @@ func (self *GlobalController) openDesktimersTaskMenu() error {
 }
 
 func (self *GlobalController) openDesktimersMenu() error {
-	return self.c.Helpers().Desktimers.OpenDeskTimersMenu()
+	return self.c.Helpers().Desktimers.OpenDeskTickMenu()
 }
 
 func (self *GlobalController) editConfig() error {

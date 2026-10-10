@@ -8,7 +8,7 @@ import (
 )
 
 const sampleFormula = `class Deskgit < Formula
-  desc "DeskTimers git client"
+  desc "DeskTick git client"
   homepage "https://desktimers.com"
   version "0.3.1"
   url "https://github.com/debuging-life/deskgit/releases/download/v0.3.1/deskgit_0.3.1_darwin_arm64.tar.gz"

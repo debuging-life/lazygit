@@ -10,17 +10,19 @@ import (
 	"time"
 )
 
-// DefaultAPIBaseURL is the DeskTimers staging API.
-const DefaultAPIBaseURL = "https://staging-api.desktimers.com"
+// DefaultSiteURL is the DeskTick this build talks to: the web app's address.
+// The API is the same address under /api (the web app proxies it), which is
+// how the desktop app reaches it too. It is the dev site while the product is
+// only being tested there; a release for everybody changes this one line.
+const DefaultSiteURL = "https://dev.desktick.com"
 
-// retiredHosts are API hosts deskgit used to point at — a baked default or the
-// old README config sample — that are now dead or wrong. A config/env value
-// pointing at one is treated as unset (isRetiredBaseURL), so users who copied
-// the old sample fall through to the current default instead of a host that no
-// longer serves the API. Trim this list once those configs age out.
+// retiredHosts are addresses deskgit used to point at. They belonged to the
+// product before DeskTick and serve nothing deskgit can use, so a config or
+// env value naming one is treated as unset (isRetiredBaseURL) and falls
+// through to the default.
 var retiredHosts = []string{
-	"api-leads.loudowls.com", // original leads API, removed
-	"staging.desktimers.com", // frontend host; 405s on /api (a bad 0.5.1 default)
+	"api-leads.loudowls.com",
+	"desktimers.com",
 }
 
 func isRetiredBaseURL(url string) bool {
@@ -39,14 +41,19 @@ type Token struct {
 	AccessToken string    `json:"accessToken"`
 	TokenType   string    `json:"tokenType"`
 	ExpiresAt   time.Time `json:"expiresAt"`
-	Plan        string    `json:"plan"`
-	APIBaseURL  string    `json:"apiBaseUrl,omitempty"`
+	// Site is the DeskTick the token was issued by. A token file without it
+	// was written for the product before DeskTick: it is not valid here.
+	Site string `json:"site,omitempty"`
+	// Who the token is, as the sign-in said. UserID is what "my tasks" and
+	// "my projects" are asked for by.
+	UserID   string `json:"userId,omitempty"`
+	UserName string `json:"userName,omitempty"`
 }
 
 // Valid reports whether the token can be used: non-empty and not within 60s
 // of its expiry.
 func (t *Token) Valid() bool {
-	if t == nil || t.AccessToken == "" {
+	if t == nil || t.AccessToken == "" || t.Site == "" || t.UserID == "" {
 		return false
 	}
 	if t.ExpiresAt.IsZero() {
@@ -131,20 +138,21 @@ func DeleteToken() error {
 	return nil
 }
 
-// ResolveBaseURL picks the API base URL: DESKTIMERS_API_URL env var first, then
-// the user config's desktimers.apiBaseUrl, otherwise the built-in default.
+// ResolveBaseURL picks the DeskTick site: the DESKTICK_URL env var first,
+// then the user config's desktimers.url, otherwise the built-in default.
 //
-// A stored token deliberately does not pin the URL. It used to, but a token
-// minted against an older default then kept overriding a newer one, so anyone
-// who had ever logged in stayed stuck on the retired host after upgrading and
-// could never be moved onto the current API. A custom deployment is selected
-// with the env var or config instead.
+// A stored token deliberately does not pin the address. It used to, and a
+// token minted against an older default then kept overriding a newer one.
 func ResolveBaseURL() string {
-	if env := strings.TrimSuffix(os.Getenv("DESKTIMERS_API_URL"), "/"); env != "" && !isRetiredBaseURL(env) {
+	if env := strings.TrimSuffix(os.Getenv(SiteEnvVar), "/"); env != "" && !isRetiredBaseURL(env) {
 		return env
 	}
 	if configuredBaseURL != "" {
 		return configuredBaseURL
 	}
-	return DefaultAPIBaseURL
+	return DefaultSiteURL
 }
+
+// SiteEnvVar overrides the site for one run, e.g. a local web app:
+// DESKTICK_URL=http://localhost:5174 deskgit
+const SiteEnvVar = "DESKTICK_URL"

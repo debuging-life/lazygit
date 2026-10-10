@@ -196,7 +196,7 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 		}()
 	}
 
-	// deskgit: make sure this machine is connected to DeskTimers before the
+	// deskgit: make sure this machine is connected to DeskTick before the
 	// TUI takes over the terminal. Skipped for integration tests.
 	if integrationTest == nil {
 		if err := runDesktimersGate(appConfig); err != nil {

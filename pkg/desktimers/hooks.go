@@ -194,7 +194,7 @@ func UninstallHooks(repoPath string) error {
 func hookScript(name string, dtHookPath string, chained bool) string {
 	b := &strings.Builder{}
 	fmt.Fprintf(b, "#!/bin/sh\n%s\n", hookMarker())
-	fmt.Fprintf(b, "# Installed by deskgit (DeskTimers). Safe to delete; deskgit can reinstall it.\n\n")
+	fmt.Fprintf(b, "# Installed by deskgit (DeskTick). Safe to delete; deskgit can reinstall it.\n\n")
 
 	needsStdinCapture := chained && name == "pre-push"
 	if needsStdinCapture {

@@ -41,15 +41,19 @@ type UserConfig struct {
 	// Keybindings.
 	// Each binding can be a single key or a list of keys; see https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybindings.md for the syntax.
 	Keybinding KeybindingConfig `yaml:"keybinding"`
-	// DeskTimers integration (deskgit)
+	// DeskTick integration (deskgit)
 	Desktimers DesktimersConfig `yaml:"desktimers"`
 }
 
 // DesktimersConfig is deskgit's own config section.
 type DesktimersConfig struct {
-	// Base URL of the DeskTimers API. Override for staging/self-hosted.
-	ApiBaseUrl string `yaml:"apiBaseUrl"`
-	// What to do when a repo has no DeskTimers git hooks installed.
+	// Address of the DeskTick web app deskgit signs in to and works with.
+	// The API is the same address under /api.
+	Url string `yaml:"url"`
+	// Where the API of the product before DeskTick was. Still accepted so a
+	// config written for it loads; nothing reads it.
+	ApiBaseUrl string `yaml:"apiBaseUrl" jsonschema:"deprecated"`
+	// What to do when a repo has no DeskTick git hooks installed.
 	// - 'auto': (default) install silently when the origin remote's owner is
 	//   in hookOrgs; otherwise leave the repo completely alone
 	// - 'prompt': ask once per repo
@@ -249,7 +253,7 @@ type GuiConfig struct {
 	ScreenMode string `yaml:"screenMode" jsonschema:"enum=normal,enum=half,enum=full"`
 	// Window border style.
 	// One of 'rounded' (default) | 'single' | 'double' | 'hidden' | 'bold'
-	Border string `yaml:"border" jsonschema:"enum=single,enum=double,enum=rounded,enum=hidden,enum=bold"`
+	Border string `yaml:"border" jsonschema:"enum=hud,enum=single,enum=double,enum=rounded,enum=hidden,enum=bold"`
 	// If true, show a seriously epic explosion animation when nuking the working tree.
 	AnimateExplosion bool `yaml:"animateExplosion"`
 	// Whether to stack UI components on top of each other.
@@ -932,19 +936,25 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			TimeFormat:               "02 Jan 06",
 			ShortTimeFormat:          time.Kitchen,
 			Theme: ThemeConfig{
-				// deskgit: DeskTimers brand palette
-				// Emerald 500 accent, Dark 700 warm-grey borders, Red 500 danger
-				ActiveBorderColor:               []string{"#3EE9B1", "bold"}, // Emerald 500
-				SearchingActiveBorderColor:      []string{"#88E8C8", "bold"}, // Emerald 400
-				InactiveBorderColor:             []string{"#625750"},         // Dark 700
-				OptionsTextColor:                []string{"#3EE9B1"},         // Emerald 500
-				SelectedLineBgColor:             []string{"#0D7351"},         // Emerald 800
+				// deskgit: DeskTick's HUD look. One accent, the yellow of the
+				// web app's plates (--hud-plate); everything else is the
+				// terminal's own. There is no green in the chrome: green is
+				// left to mean "added" in a diff.
+				//
+				// The greys are mid greys on purpose. deskgit cannot ask a
+				// terminal what its background is, and a mid grey reads on a
+				// dark one and a light one both.
+				ActiveBorderColor:               []string{"#ffd92e", "bold"}, // the plate
+				SearchingActiveBorderColor:      []string{"#ff8a3d", "bold"}, // hot: something is being looked for
+				InactiveBorderColor:             []string{"#6b6b70"},         // the line
+				OptionsTextColor:                []string{"#8a8a90"},         // key hints: there, and quiet
+				SelectedLineBgColor:             []string{"#4d4100"},         // the plate, dimmed: what is on the row stays readable
 				InactiveViewSelectedLineBgColor: []string{"bold"},
-				CherryPickedCommitBgColor:       []string{"#B3A475"}, // Cream 500
-				CherryPickedCommitFgColor:       []string{"#2A2623"}, // Dark 900
-				MarkedBaseCommitBgColor:         []string{"#C9C1A6"}, // Cream 400
-				MarkedBaseCommitFgColor:         []string{"#2A2623"}, // Dark 900
-				UnstagedChangesColor:            []string{"#DD4A4A"}, // Red 500
+				CherryPickedCommitBgColor:       []string{"#ffd92e"}, // the plate itself
+				CherryPickedCommitFgColor:       []string{"#141200"}, // and its ink
+				MarkedBaseCommitBgColor:         []string{"#ff8a3d"},
+				MarkedBaseCommitFgColor:         []string{"#141200"},
+				UnstagedChangesColor:            []string{"#ef4444"},
 				DefaultFgColor:                  []string{"default"},
 			},
 			CommitLength:                        CommitLengthConfig{Show: true},
@@ -972,7 +982,7 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			SkipRewordInEditorWarning:           false,
 			SkipSwitchWorktreeOnCheckoutWarning: false,
 			ScreenMode:                          "normal",
-			Border:                              "rounded",
+			Border:                              "hud",
 			AnimateExplosion:                    true,
 			PortraitMode:                        "auto",
 			PortraitModeAutoMaxWidth:            84,
@@ -1045,7 +1055,7 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 		NotARepository:               "prompt",
 		PromptToReturnFromSubprocess: true,
 		Desktimers: DesktimersConfig{
-			ApiBaseUrl:           "https://staging-api.desktimers.com",
+			Url:                  "https://dev.desktick.com",
 			AutoInstallHooks:     "auto",
 			HookOrgs:             []string{"debuging-life", "loudowls"},
 			StrictPush:           true,

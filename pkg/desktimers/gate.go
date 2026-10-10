@@ -33,21 +33,21 @@ func EnsureAuthenticated(w io.Writer, openBrowser func(url string) error) (GateR
 	}
 
 	if stored != nil {
-		fmt.Fprintln(w, "Your DeskTimers session has expired — please re-authenticate.")
+		fmt.Fprintln(w, "Your DeskTick session has ended. Sign in again.")
 	} else {
-		fmt.Fprintln(w, "Welcome to deskgit! Connect it to your DeskTimers account.")
+		fmt.Fprintln(w, "Welcome to deskgit. Sign in to DeskTick to start.")
 	}
 
-	if _, err := RunDeviceFlow(w, openBrowser); err != nil {
+	if _, err := RunSignIn(w, openBrowser); err != nil {
 		if stored != nil {
 			// Offline grace: keep working with the stale token's cached
 			// context; task picking will fail but git operations won't.
-			fmt.Fprintf(w, "Warning: could not reach DeskTimers (%v) — continuing offline.\n", err)
+			fmt.Fprintf(w, "Warning: could not reach DeskTick (%v) — continuing offline.\n", err)
 			return GateOffline, nil
 		}
-		return 0, fmt.Errorf("deskgit requires a DeskTimers login: %w", err)
+		return 0, fmt.Errorf("deskgit needs a DeskTick sign-in: %w", err)
 	}
 
-	fmt.Fprintln(w, "Device connected — happy shipping!")
+	fmt.Fprintln(w, "Signed in.")
 	return GateAuthenticated, nil
 }
