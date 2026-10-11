@@ -106,7 +106,7 @@ func TestPrePushEnvOverridesGitConfigOff(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("DT_STRICT=0 must override git config strict, got exit %d", code)
 	}
-	if !strings.Contains(stderr.String(), "no DeskTimers task code") {
+	if !strings.Contains(stderr.String(), "no DeskTick task code") {
 		t.Errorf("warning should still print in override mode:\n%s", stderr.String())
 	}
 }

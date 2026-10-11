@@ -1,32 +1,42 @@
 package desktimers
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 )
 
 func TestGetWorkRepos(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.Path != "/api/git-client/repos" {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		if r.Header.Get("Authorization") != "Bearer dtg_abc" {
-			t.Errorf("missing bearer, got %q", r.Header.Get("Authorization"))
-		}
-		w.Write([]byte(`{"success":true,"data":[{"fullName":"debuging-life/loudowls","owner":"debuging-life"}]}`))
-	}))
-	defer server.Close()
+	fake := newFakeDeskTick(t)
+	fake.workspaces = []map[string]any{{"id": "ws1", "name": "Acme", "slug": "acme"}}
+	fake.projects["ws1"] = []map[string]any{{"code": "CLK", "name": "Clock"}, {"code": "MOB", "name": "Mobile"}, {"code": "OPS", "name": "Ops"}}
+	fake.repositories["ws1/CLK"] = []string{"acme/clock", "acme/shared"}
+	fake.repositories["ws1/MOB"] = []string{"Acme/Shared", "acme/mobile"}
+	// One project's list cannot be read: it costs that project, not the rest.
+	fake.refuse["/api/workspaces/ws1/projects/OPS/repositories"] = "no"
 
-	repos, err := NewClient(server.URL, "dtg_abc").GetWorkRepos()
+	repos, err := fake.client().GetWorkRepos()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(repos) != 1 || repos[0].FullName != "debuging-life/loudowls" || repos[0].Owner != "debuging-life" {
-		t.Errorf("unexpected repos: %+v", repos)
+	names := []string{}
+	for _, repo := range repos {
+		names = append(names, strings.ToLower(repo.FullName))
+		// A linked repository vouches for itself, not for its owner's others.
+		if repo.Owner != "" {
+			t.Errorf("%s must not carry an owner", repo.FullName)
+		}
+	}
+	sort.Strings(names)
+	if got, want := strings.Join(names, ","), "acme/clock,acme/mobile,acme/shared"; got != want {
+		t.Errorf("repos = %s, want %s", got, want)
+	}
+	if RepoIsWork("acme/other", repos, nil) {
+		t.Error("another repository of the same owner is not a work repo")
+	}
+	if !RepoIsWork("ACME/clock", repos, nil) {
+		t.Error("a linked repository is a work repo, in any letter case")
 	}
 }
 

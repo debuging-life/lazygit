@@ -89,18 +89,21 @@ func TestOrderTasksForPicker(t *testing.T) {
 
 func TestPickerColumnsTrackingMarker(t *testing.T) {
 	tracking := PickerColumns(Task{Code: "LOUD-2", Title: "T", Status: StatusInProgress, Tracking: true})
-	if tracking[3] != "⏱ tracking" {
-		t.Errorf("tracking marker = %q, want \"⏱ tracking\"", tracking[3])
+	if tracking[3] != MarkerTracking {
+		t.Errorf("tracking marker = %q, want %q", tracking[3], MarkerTracking)
 	}
 	inProgress := PickerColumns(Task{Code: "LOUD-4", Title: "T", Status: StatusInProgress})
-	if inProgress[3] != "● in progress" {
+	if inProgress[3] != MarkerInProgress {
 		t.Errorf("in-progress marker = %q", inProgress[3])
+	}
+	if waiting := PickerColumns(Task{Code: "LOUD-5", Title: "T", Status: StatusTodo}); waiting[3] != "" {
+		t.Errorf("a task that is waiting says nothing, got %q", waiting[3])
 	}
 }
 
 func TestPickerColumns(t *testing.T) {
 	inProgress := PickerColumns(Task{Code: "LOUD-124", Title: "Fix images", Project: "Leads", Status: StatusInProgress})
-	want := []string{"LOUD-124", "Fix images", "(Leads)", "● in progress"}
+	want := []string{"LOUD-124", "Fix images", "Leads", MarkerInProgress}
 	if !reflect.DeepEqual(inProgress, want) {
 		t.Errorf("PickerColumns = %v, want %v", inProgress, want)
 	}
@@ -122,7 +125,7 @@ func TestProjectsSpanWorkspaces(t *testing.T) {
 	if ProjectsSpanWorkspaces(single) {
 		t.Error("same workspace everywhere → false")
 	}
-	multi := append(single, Project{Name: "Leads", Workspace: "DeskTimers"})
+	multi := append(single, Project{Name: "Leads", Workspace: "DeskTick"})
 	if !ProjectsSpanWorkspaces(multi) {
 		t.Error("two workspaces → true")
 	}

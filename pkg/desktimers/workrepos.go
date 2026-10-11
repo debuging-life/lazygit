@@ -2,7 +2,6 @@ package desktimers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,44 +9,52 @@ import (
 	"time"
 )
 
-// WorkRepo is a git repo connected to one of the user's DeskTimers
+// WorkRepo is a git repo connected to one of the user's DeskTick
 // workspaces; deskgit auto-installs hooks in these.
 type WorkRepo struct {
 	FullName string `json:"fullName"`
 	Owner    string `json:"owner"`
 }
 
-type workReposResponse struct {
-	Success bool       `json:"success"`
-	Data    []WorkRepo `json:"data"`
-}
-
-// GetWorkRepos fetches all repos connected across the user's workspaces.
+// GetWorkRepos is the repositories linked to the projects the person is on
+// (project settings → Repositories in the web app). Those are the ones a
+// commit can be about a task in, so those are the ones that get the hooks.
+// A project whose list cannot be read is skipped: one refusal does not cost
+// the rest.
 func (c *Client) GetWorkRepos() ([]WorkRepo, error) {
-	req, err := http.NewRequest(http.MethodGet, c.BaseURL+"/api/git-client/repos", nil)
+	places, err := c.places()
 	if err != nil {
-		return nil, fmt.Errorf("building repos request: %w", err)
+		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetching repos: %w", err)
+	perPlace := make([][]WorkRepo, len(places))
+	_ = each(len(places), func(i int) error {
+		got := struct {
+			Linked []struct {
+				FullName string `json:"fullName"`
+			} `json:"linked"`
+		}{}
+		if err := c.call(http.MethodGet, places[i].path()+"/repositories", nil, &got); err != nil {
+			return nil
+		}
+		for _, repo := range got.Linked {
+			// The owner is left empty on purpose: a linked repository
+			// vouches for itself, not for everything its owner has.
+			perPlace[i] = append(perPlace[i], WorkRepo{FullName: repo.FullName})
+		}
+		return nil
+	})
+	repos := []WorkRepo{}
+	seen := map[string]bool{}
+	for _, got := range perPlace {
+		for _, repo := range got {
+			if key := strings.ToLower(repo.FullName); !seen[key] {
+				seen[key] = true
+				repos = append(repos, repo)
+			}
+		}
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, ErrUnauthorized
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetching repos: unexpected status %d", resp.StatusCode)
-	}
-	parsed := workReposResponse{}
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return nil, fmt.Errorf("parsing repos response: %w", err)
-	}
-	return parsed.Data, nil
+	return repos, nil
 }
-
-// ─── Work-repo cache (config dir, 24h TTL) ──────────────────────────────────
 
 const (
 	workRepoCacheFileName = "work-repos.json"

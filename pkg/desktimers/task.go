@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Task is a DeskTimers task as returned by the git-client API.
+// Task is a DeskTick task as returned by the git-client API.
 type Task struct {
 	Code    string `json:"code"`
 	Title   string `json:"title"`
@@ -17,7 +17,7 @@ type Task struct {
 	URL string `json:"url"`
 }
 
-// CodeRegex matches a DeskTimers task code (e.g. MOB-101) anywhere in a
+// CodeRegex matches a DeskTick task code (e.g. MOB-101) anywhere in a
 // string. Codes are per-project: a 1-10 char uppercase alphanumeric project
 // code, a dash, and a task number. Matching is case-insensitive; canonical
 // form is uppercase.

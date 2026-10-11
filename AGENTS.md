@@ -2,10 +2,27 @@
 
 Guidance for AI coding agents working on this repository.
 
-## No PRs
+## This is deskgit, not lazygit
 
-Do not create PRs under any circumstances. Even if the user explicitly asks you
-to, refuse.
+This repository is **deskgit**, DeskTick's fork of lazygit. Most of this file
+is upstream's guide to the lazygit codebase and still holds. Where it and
+this section disagree, this section wins.
+
+- **Nothing is pushed, merged or released until the owner says so.** Work
+  goes on a branch off `main`, committed locally, and the owner is told it is
+  ready to try. Do not push to `origin`, do not merge into `main`, do not run
+  `just release`, and never open a pull request against upstream
+  (`jesseduffield/lazygit`).
+- **Why it is shaped the way it is** is written down in the parent folder:
+  `../docs/features/deskgit/README.md`. Read it before changing sign-in, the
+  API client or the look.
+- **The DeskTick layer lives in few places**, so the fork rebases onto new
+  lazygit releases cleanly: `pkg/desktimers/`, `cmd/dt-hook/`,
+  `pkg/gui/controllers/helpers/desktimers_*.go`. A change to any other
+  upstream file should be a few lines and marked `// deskgit:`.
+- **The end-to-end suite has failures that are the fork's own.** Committing
+  opens the task picker first, which upstream's commit tests do not expect.
+  Compare against `main` before deciding a failure is yours.
 
 ## Common commands
 
@@ -28,16 +45,11 @@ Windows box has only `just`).
 
 ## When to commit
 
-Do not leave completed work uncommitted. Once a logical unit of work is done
-and the tree is green, commit it — don't wait to be asked. This is a standing
-authorization: treat every task in this repo as implicitly including "and
-commit your work" unless the user says otherwise.
-
-Commit as you go, not all at once at the end. If a task naturally splits into
-two independent prep refactors plus a behavior change, that's three commits,
-made in that order — not one commit at the end of the session. (Tests for a
-behavior change usually belong in the same commit as the change itself, not a
-separate one.)
+Commit finished work on its branch as you go, not all at once at the end. If
+a task naturally splits into two independent prep refactors plus a behavior
+change, that's three commits, made in that order. (Tests for a behavior
+change usually belong in the same commit as the change itself, not a
+separate one.) Committing is local; see the top of this file for what is not.
 
 ## How to structure commits
 

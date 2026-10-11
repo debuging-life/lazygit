@@ -3,6 +3,7 @@ package gui
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
@@ -157,6 +158,12 @@ func (gui *Gui) createAllViews() error {
 
 func (gui *Gui) configureViewProperties() {
 	frameRunes := []rune{'─', '│', '┌', '┐', '└', '┘'}
+	// deskgit: "hud" is the single-line frame with a bracket at two corners
+	// and the head in capitals. The brackets are the accent whether or not
+	// the panel has the focus; the focus is the whole frame turning accent.
+	hud := gui.c.UserConfig().Gui.Border == "hud"
+	gui.g.Brackets = hud
+	gui.g.BracketColor = theme.ActiveBorderColor
 	switch gui.c.UserConfig().Gui.Border {
 	case "double":
 		frameRunes = []rune{'═', '║', '╔', '╗', '╚', '╝'}
@@ -214,6 +221,14 @@ func (gui *Gui) configureViewProperties() {
 	keyToTitlePrefix := func(binding config.Keybinding) string {
 		if len(binding) == 0 {
 			return ""
+		}
+		// deskgit: a HUD panel is numbered like a section of a page, "01",
+		// which is still the key that jumps to it.
+		if hud {
+			if len(binding[0]) == 1 && binding[0][0] >= '0' && binding[0][0] <= '9' {
+				return "0" + binding[0]
+			}
+			return strings.ToUpper(binding[0])
 		}
 		return fmt.Sprintf("[%s]", binding[0])
 	}

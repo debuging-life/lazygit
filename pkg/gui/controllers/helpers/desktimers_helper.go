@@ -7,11 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
-	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/samber/lo"
@@ -68,11 +66,6 @@ func (self *DesktimersHelper) setSelectedTask(state *desktimers.State) {
 	defer self.mutex.Unlock()
 	self.cachedState = state
 	self.stateLoaded = true
-}
-
-// StatusLineSegment renders the selected task for the information line.
-func (self *DesktimersHelper) StatusLineSegment(maxWidth int) string {
-	return desktimers.StatusLineSegment(self.SelectedTask(), maxWidth)
 }
 
 // StatusLineHint renders the "no task (alt+t)" nudge: only when the user is
@@ -181,38 +174,6 @@ func (self *DesktimersHelper) promptNewTaskTitle(project desktimers.Project, onC
 	return nil
 }
 
-// timerSpinnerFrame returns a spinning character that cycles each second,
-// giving an animated feel each time the menu is (re-)opened.
-func timerSpinnerFrame() string {
-	frames := []string{"◐", "◓", "◑", "◒"}
-	return frames[time.Now().Unix()%int64(len(frames))]
-}
-
-// styledTaskColumns applies ANSI color to a task's label columns.
-// Tracking tasks are rendered yellow+bold with a spinner prepended to the
-// code column (column 0) — always visible regardless of terminal width.
-// In-progress tasks are rendered in cyan.
-func styledTaskColumns(columns []string, task desktimers.Task) []string {
-	if len(columns) == 0 {
-		return columns
-	}
-	out := make([]string, len(columns))
-	copy(out, columns)
-	switch {
-	case task.Tracking:
-		// Prepend spinner to the code column so it's always visible.
-		out[0] = timerSpinnerFrame() + " " + out[0]
-		for i, c := range out {
-			out[i] = style.FgYellow.SetBold().Sprint(c)
-		}
-	case task.Status == desktimers.StatusInProgress:
-		for i, c := range out {
-			out[i] = style.FgCyan.Sprint(c)
-		}
-	}
-	return out
-}
-
 // buildTaskMenuItems converts an ordered task list into menu items, floating
 // the recently-created task (if any) to the top under its own section header.
 // makeItem receives the task and must return the OnPress/OnOpen/OnInfo callbacks
@@ -232,7 +193,7 @@ func (self *DesktimersHelper) buildTaskMenuItems(
 	for _, t := range ordered {
 		if recentCode != "" && t.Code == recentCode {
 			item := makeItem(t)
-			item.LabelColumns = styledTaskColumns(item.LabelColumns, t)
+			item.LabelColumns = self.styledTaskColumns(item.LabelColumns, t)
 			item.Section = justCreatedSection
 			items = append(items, item)
 			break
@@ -246,7 +207,7 @@ func (self *DesktimersHelper) buildTaskMenuItems(
 			continue
 		}
 		item := makeItem(t)
-		item.LabelColumns = styledTaskColumns(item.LabelColumns, t)
+		item.LabelColumns = self.styledTaskColumns(item.LabelColumns, t)
 		if useSections {
 			item.Section = activeSection
 		}
@@ -275,9 +236,9 @@ func (self *DesktimersHelper) clearSelectedTask() error {
 	return nil
 }
 
-// OpenDeskTimersMenu is the alt+d launcher: one menu dispatching to every
-// DeskTimers action, so nobody has to memorize the individual bindings.
-func (self *DesktimersHelper) OpenDeskTimersMenu() error {
+// OpenDeskTickMenu is the alt+d launcher: one menu dispatching to every
+// DeskTick action, so nobody has to memorize the individual bindings.
+func (self *DesktimersHelper) OpenDeskTickMenu() error {
 	state := self.SelectedTask()
 	var noTaskReason *types.DisabledReason
 	stateURL := ""
@@ -390,7 +351,7 @@ func (self *DesktimersHelper) resetAuthCache() {
 }
 
 // promptReauthThen handles an expired login inside the TUI: confirm, then
-// run `deskgit login` (the terminal device flow) as a subprocess with the
+// run `deskgit login` (the browser sign-in) as a subprocess with the
 // gui suspended, and on success resume the original action.
 func (self *DesktimersHelper) promptReauthThen(retry func() error) error {
 	self.c.Confirm(types.ConfirmOpts{
@@ -428,7 +389,7 @@ func (self *DesktimersHelper) BranchNamePrefix() string {
 
 // OpenTaskMenu fetches the user's tasks and shows the picker menu.
 func (self *DesktimersHelper) OpenTaskMenu() error {
-	desktimers.SetConfiguredBaseURL(self.c.UserConfig().Desktimers.ApiBaseUrl)
+	desktimers.SetConfiguredBaseURL(self.c.UserConfig().Desktimers.Url)
 
 	var tasks []desktimers.Task
 	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersLoadingTasks, func() error {
@@ -514,7 +475,7 @@ func (self *DesktimersHelper) OpenTaskMenu() error {
 	})
 }
 
-// confirmLogout asks for confirmation, then revokes the device token and
+// confirmLogout asks for confirmation, then signs the session out and
 // clears the local login. The TUI keeps running for plain git use.
 func (self *DesktimersHelper) confirmLogout() error {
 	self.c.Confirm(types.ConfirmOpts{
@@ -544,7 +505,7 @@ func (self *DesktimersHelper) confirmLogout() error {
 // commits) and then calls onPick. Escape/cancel closes the menu without
 // calling onPick, aborting the surrounding flow.
 func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) error) error {
-	desktimers.SetConfiguredBaseURL(self.c.UserConfig().Desktimers.ApiBaseUrl)
+	desktimers.SetConfiguredBaseURL(self.c.UserConfig().Desktimers.Url)
 
 	var tasks []desktimers.Task
 	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersLoadingTasks, func() error {
@@ -720,11 +681,6 @@ func (self *DesktimersHelper) PickBranchTypeThen(branchTypes []string, then func
 }
 
 func (self *DesktimersHelper) selectTask(task desktimers.Task) error {
-	previousCode := ""
-	if prev := self.SelectedTask(); prev != nil {
-		previousCode = prev.Code
-	}
-
 	state := desktimers.NewState(task)
 	if err := desktimers.SaveState(".", state); err != nil {
 		return err
@@ -732,29 +688,7 @@ func (self *DesktimersHelper) selectTask(task desktimers.Task) error {
 	self.setSelectedTask(state)
 
 	// Only a CHANGE of task is reported — re-picking the same task isn't.
-	if task.Code != previousCode {
-		self.reportTaskSelectedInBackground(task.Code)
-	}
 	return nil
-}
-
-// reportTaskSelectedInBackground fires the task_selected event to
-// DeskTimers: fire-and-forget, bounded by the client's short report
-// timeout, failures only ever logged — never surfaced, never blocking.
-func (self *DesktimersHelper) reportTaskSelectedInBackground(code string) {
-	log := self.c.Log
-	go func() {
-		client, err := desktimers.NewClientFromToken()
-		if err != nil {
-			log.Debugf("deskgit: skipping task_selected report: %v", err)
-			return
-		}
-		repo := desktimers.RepoSlug(".")
-		branch := desktimers.CurrentBranch(".")
-		if err := client.ReportTaskSelected(code, repo, branch); err != nil {
-			log.Warnf("deskgit: failed to report task selection: %v", err)
-		}
-	}()
 }
 
 // autoInstallHooksForWorkRepo is autoInstallHooks 'auto' mode: repos whose
@@ -898,7 +832,7 @@ func (self *DesktimersHelper) PromptToInstallHooksInBackground() {
 }
 
 // setupRepositoryRemote lets the user add a new remote or update an existing
-// one's URL — from the DeskTimers menu.
+// one's URL — from the DeskTick menu.
 func (self *DesktimersHelper) setupRepositoryRemote() error {
 	remotes, err := self.c.Git().Loaders.RemoteLoader.GetRemotes()
 	if err != nil {

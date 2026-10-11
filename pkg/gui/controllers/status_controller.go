@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jesseduffield/lazygit/pkg/gocui"
@@ -58,7 +57,7 @@ func (self *StatusController) GetKeybindings(opts types.KeybindingsOpts) []*type
 		},
 		{
 			Keys:            opts.GetKeys(opts.Config.Status.DesktimersMenu),
-			Handler:         self.c.Helpers().Desktimers.OpenDeskTimersMenu,
+			Handler:         self.c.Helpers().Desktimers.OpenDeskTickMenu,
 			Description:     self.c.Tr.DesktimersMenu,
 			Tooltip:         self.c.Tr.DesktimersMenuTooltip,
 			OpensMenu:       true,
@@ -142,16 +141,6 @@ func cursorInSubstring(cx int, prefix string, substring string) bool {
 	return cx >= runeCount(prefix) && cx < runeCount(prefix+substring)
 }
 
-func deskgitTitle() string {
-	return `
-      _           _         _ _
-   __| | ___  ___| | ____ _(_) |_
-  / _` + "`" + ` |/ _ \/ __| |/ / _` + "`" + ` | | __|
- | (_| |  __/\__ \   < (_| | | |_
-  \__,_|\___||___/_|\_\__, |_|\__|
-                      |___/       `
-}
-
 func (self *StatusController) editConfig() error {
 	return (&EditConfigAction{c: self.c}).Call()
 }
@@ -198,19 +187,8 @@ func (self *StatusController) switchToOrRotateAllBranchesLogsBackward() {
 }
 
 func (self *StatusController) showDashboard() {
-	dashboardString := strings.Join(
-		[]string{
-			deskgitTitle(),
-			"DeskTimers — task-bound git client\nPick your task; every branch, commit, and push maps back to it in DeskTimers.",
-			"Website: https://www.desktimers.com",
-			"deskgit repo: https://github.com/debuging-life/lazygit",
-			"Install: brew install debuging-life/tap/deskgit — https://github.com/debuging-life/homebrew-tap",
-			"Keybindings: https://github.com/debuging-life/lazygit/blob/main/docs/keybindings/Keybindings_en.md",
-			"Config Options: https://github.com/debuging-life/lazygit/blob/main/docs/Config.md",
-			"Raise an issue: https://github.com/debuging-life/lazygit/issues",
-			"Based on lazygit by Jesse Duffield (MIT): https://github.com/jesseduffield/lazygit",
-			fmt.Sprintf("Copyright %d LoudOwls · lazygit Copyright Jesse Duffield", time.Now().Year()),
-		}, "\n\n") + "\n"
+	// deskgit: the dashboard is DeskTick's (helpers/desktimers_hud.go).
+	dashboardString := self.c.Helpers().Desktimers.Dashboard(self.c.GetConfig().GetVersion(), self.c.Views().Main.InnerWidth())
 
 	self.c.RenderToMainViews(types.RefreshMainOpts{
 		Pair: self.c.MainViewPairs().Normal,

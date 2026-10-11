@@ -710,7 +710,7 @@ func IsSwitchBranchUncommittedChangesError(err error) bool {
 
 func (self *RefsHelper) getSuggestedBranchName() (string, error) {
 	// deskgit passive mode only (requireTaskForBranch: false): a selected
-	// DeskTimers task wins over the branchPrefix template. In mandatory mode
+	// DeskTick task wins over the branchPrefix template. In mandatory mode
 	// the picker supplies the prefix instead (withTaskForBranch).
 	cfg := self.c.UserConfig().Desktimers
 	if !cfg.RequireTaskForBranch {

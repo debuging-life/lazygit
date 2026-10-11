@@ -1,4 +1,4 @@
-// dt-hook is the git-hook companion binary for deskgit (DeskTimers). It is
+// dt-hook is the git-hook companion binary for deskgit (DeskTick). It is
 // invoked by the prepare-commit-msg and pre-push hooks that deskgit installs,
 // and can also install/uninstall those hooks itself.
 //
@@ -30,13 +30,13 @@ func main() {
 			fmt.Fprintf(os.Stderr, "dt-hook: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println("DeskTimers git hooks installed.")
+		fmt.Println("DeskTick git hooks installed.")
 	case "uninstall":
 		if err := desktimers.UninstallHooks("."); err != nil {
 			fmt.Fprintf(os.Stderr, "dt-hook: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println("DeskTimers git hooks removed.")
+		fmt.Println("DeskTick git hooks removed.")
 	case "status":
 		status, err := desktimers.HooksStatus(".")
 		if err != nil {
@@ -65,8 +65,8 @@ func usage(w io.Writer) {
 commands:
   prepare-commit-msg <msgfile> [source] [sha]   (invoked by git)
   pre-push <remote-name> <remote-url>           (invoked by git)
-  install     install DeskTimers hooks into the current repo
-  uninstall   remove DeskTimers hooks from the current repo
+  install     install DeskTick hooks into the current repo
+  uninstall   remove DeskTick hooks from the current repo
   status      report hook install state (installed|outdated|missing)
   version     print version`)
 }

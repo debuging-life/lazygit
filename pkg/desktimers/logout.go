@@ -1,29 +1,21 @@
 package desktimers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 )
 
-// RevokeToken revokes this device's token server-side
-// (DELETE /api/git-client/token). A 401 counts as success — the token is
-// already dead as far as the server is concerned.
+// RevokeToken signs this session out on the server, so the token is dead
+// there and not only forgotten here. A 401 means it was already dead, which
+// is the outcome asked for.
 func (c *Client) RevokeToken() error {
-	req, err := http.NewRequest(http.MethodDelete, c.BaseURL+"/api/git-client/token", nil)
-	if err != nil {
-		return fmt.Errorf("building revoke request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("revoking token: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusUnauthorized {
+	err := c.call(http.MethodPost, "/auth/sign-out", struct{}{}, nil)
+	if err == nil || errors.Is(err, ErrUnauthorized) {
 		return nil
 	}
-	return fmt.Errorf("revoking token: unexpected status %d", resp.StatusCode)
+	return fmt.Errorf("signing out: %w", err)
 }
 
 // LogoutResult describes how Logout resolved.
@@ -66,7 +58,7 @@ func Logout() (LogoutOutcome, error) {
 	// Revoke against the API that ISSUED the token — that's where it's valid —
 	// which may differ from the currently active API (e.g. after the default
 	// moved). Fall back to the active URL for older tokens with no stored host.
-	revokeURL := strings.TrimSuffix(token.APIBaseURL, "/")
+	revokeURL := strings.TrimSuffix(token.Site, "/")
 	if revokeURL == "" {
 		revokeURL = ResolveBaseURL()
 	}

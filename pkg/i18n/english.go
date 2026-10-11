@@ -1210,22 +1210,15 @@ type Actions struct {
 }
 
 const englishIntroPopupMessage = `
-Thanks for using lazygit! Seriously you rock. Three things to share with you:
+deskgit is DeskTick's git client: lazygit, tied to the task you are on.
 
- 1) If you want to learn about lazygit's features, watch this vid:
-      https://youtu.be/CPLdltN7wgE
+  ·  Pick a task and its code goes on every branch and commit you make.
+  ·  The Status panel shows your tracked time: today, this week, your streak.
+  ·  Everything lazygit does, it still does, on the same keys.
 
- 2) Be sure to read the latest release notes at:
-      https://github.com/jesseduffield/lazygit/releases
+The DeskTick menu is on alt+d from anywhere, or d in the Status panel.
 
- 3) If you're using git, that makes you a programmer! With your help we can make
-    lazygit better, so consider becoming a contributor and joining the fun at
-      https://github.com/jesseduffield/lazygit
-    Or even just star the repo to share the love!
-
- 4) If lazygit has made your life easier, you can say thanks by clicking the
-    donate button at the bottom right. Donation does not grant priority support,
-    but it is much appreciated.
+Built on lazygit by Jesse Duffield and contributors (MIT).
 
 Press {{confirmationKey}} to get started.
 `
@@ -1772,11 +1765,11 @@ func EnglishTranslationSet() *TranslationSet {
 		CannotSquashCommitsInCurrentBranch:   "Cannot squash commits in current branch: the HEAD commit is a merge commit or is present on the main branch.",
 		ExecuteShellCommand:                  "Execute shell command",
 		ExecuteShellCommandTooltip:           "Bring up a prompt where you can enter a shell command to execute.",
-		DesktimersTasks:                      "DeskTimers: pick task",
-		DesktimersViewTasks:                  "View DeskTimers tasks",
-		DesktimersTasksTooltip:               "Pick the DeskTimers task you're working on. The task code is prepended to new branch names and commit messages so DeskTimers can map your git activity to the task.",
-		DesktimersLoadingTasks:               "Loading DeskTimers tasks",
-		DesktimersTaskMenuTitle:              "DeskTimers tasks",
+		DesktimersTasks:                      "DeskTick: pick task",
+		DesktimersViewTasks:                  "View DeskTick tasks",
+		DesktimersTasksTooltip:               "Pick the DeskTick task you're working on. The task code is prepended to new branch names and commit messages so DeskTick can map your git activity to the task.",
+		DesktimersLoadingTasks:               "Loading DeskTick tasks",
+		DesktimersTaskMenuTitle:              "DeskTick tasks",
 		DesktimersPickTaskTitle:              "Pick a task for this work",
 		DesktimersBranchTypeTitle:            "Branch type",
 		DesktimersUpdateAvailableTitle:       "Update available",
@@ -1784,9 +1777,9 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersOpenTaskInBrowser:          "Open task in browser",
 		DesktimersOpenInBrowser:              "Open highlighted item in browser",
 		DesktimersNoTaskURL:                  "No browser link for this task",
-		DesktimersMenu:                       "DeskTimers menu",
-		DesktimersMenuTooltip:                "All DeskTimers actions in one place: pick a task, open it in the browser, clear it, check for updates, log out.",
-		DesktimersMenuTitle:                  "DeskTimers",
+		DesktimersMenu:                       "DeskTick menu",
+		DesktimersMenuTooltip:                "All DeskTick actions in one place: pick a task, open it in the browser, clear it, check for updates, log out.",
+		DesktimersMenuTitle:                  "DeskTick",
 		DesktimersViewPickTask:               "View / pick task",
 		DesktimersCheckForUpdatesNow:         "Check for updates now",
 		DesktimersCheckingForUpdates:         "Checking for updates",
@@ -1795,7 +1788,7 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersCreateTask:                 "＋ Create task…",
 		DesktimersPickProjectTitle:           "Project",
 		DesktimersLoadingProjects:            "Loading projects",
-		DesktimersNoProjects:                 "No projects available — create a project in DeskTimers first",
+		DesktimersNoProjects:                 "No projects available — create a project in DeskTick first",
 		DesktimersNewTaskTitlePrompt:         "New task in {{project}}",
 		DesktimersCreatingTask:               "Creating task",
 		DesktimersTaskTitleEmpty:             "Task title cannot be empty",
@@ -1813,12 +1806,12 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
 		DesktimersJustCreated:                "Just created",
-		DesktimersReauthNeeded:               "Your DeskTimers session is no longer valid. Restart deskgit to log in again.",
-		DesktimersLoginExpiredTitle:          "DeskTimers login expired",
-		DesktimersLoginExpiredPrompt:         "Your DeskTimers login expired — log in again now?\n\ndeskgit will drop to the terminal for the device flow and return here.",
-		DesktimersInstallHooksTitle:          "Install DeskTimers git hooks",
-		DesktimersInstallHooksPrompt:         "Install DeskTimers git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
-		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTimers hooks were not installed. Add them to your hook manager manually.",
+		DesktimersReauthNeeded:               "Your DeskTick session is no longer valid. Restart deskgit to log in again.",
+		DesktimersLoginExpiredTitle:          "DeskTick login expired",
+		DesktimersLoginExpiredPrompt:         "Your DeskTick login expired — log in again now?\n\ndeskgit will drop to the terminal, open the sign-in page in your browser, and return here.",
+		DesktimersInstallHooksTitle:          "Install DeskTick git hooks",
+		DesktimersInstallHooksPrompt:         "Install DeskTick git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
+		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTick hooks were not installed. Add them to your hook manager manually.",
 		DesktimersSetupRepo:                  "Setup repository...",
 		DesktimersSetupRepoTitle:             "Setup repository",
 		DesktimersSetupRepoSelectRemote:      "Select remote to update",
@@ -1828,10 +1821,10 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersSetupRepoURLUpdatePrompt:   "New URL for remote '%s':",
 		DesktimersSetupRepoAdded:             "Remote '%s' added.",
 		DesktimersSetupRepoUpdated:           "Remote '%s' URL updated.",
-		DesktimersLogout:                     "Log out of DeskTimers",
-		DesktimersLogoutConfirm:              "Log out of DeskTimers on this machine?\n\nThe device token is revoked and deskgit will ask you to log in again on the next launch.",
+		DesktimersLogout:                     "Log out of DeskTick",
+		DesktimersLogoutConfirm:              "Log out of DeskTick on this machine?\n\nThis session is signed out on the server and deskgit will ask you to log in again on the next launch.",
 		DesktimersLoggedOut:                  "Logged out. Restart deskgit to log in again.",
-		DesktimersLoggedOutOffline:           "Logged out locally — the server couldn't be reached to revoke the token. You can also revoke it in DeskTimers → Settings → Git Clients.\n\nRestart deskgit to log in again.",
+		DesktimersLoggedOutOffline:           "Logged out locally — the server couldn't be reached to sign the session out there. You can end it from your sessions list in DeskTick.\n\nRestart deskgit to log in again.",
 		ShellCommand:                         "Shell command:",
 		CommitChangesWithoutHook:             "Commit changes without pre-commit hook",
 		ResetTo:                              `Reset to`,
