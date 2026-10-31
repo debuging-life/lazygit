@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
+	"github.com/stretchr/testify/assert"
 )
 
 func runGit(t *testing.T, dir string, args ...string) string {
@@ -194,5 +195,60 @@ func TestPrepareCommitMsgEndToEnd(t *testing.T) {
 	amended, _ := os.ReadFile(amendFile)
 	if string(amended) != "existing message\n" {
 		t.Errorf("amend source must be untouched, got:\n%s", string(amended))
+	}
+}
+
+// A replayed commit keeps the message it already had: a rebase or a
+// cherry-pick is not new work on the picked task. Git reports both to the
+// hook with the "message" source, the same as `git commit -m`.
+func TestPrepareCommitMsgLeavesReplayedCommitsAlone(t *testing.T) {
+	stopMidRebase := func(t *testing.T, repo string) {
+		t.Setenv("GIT_SEQUENCE_EDITOR", "sed -i.bak 1s/^pick/edit/")
+		runGit(t, repo, "rebase", "-i", "HEAD~1")
+	}
+	stopMidCherryPick := func(t *testing.T, repo string) {
+		runGit(t, repo, "checkout", "-b", "other", "HEAD~1")
+		if err := os.WriteFile(filepath.Join(repo, "f"), []byte("other\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		runGit(t, repo, "add", "f")
+		runGit(t, repo, "commit", "-m", "other side")
+		cmd := exec.Command("git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+			"cherry-pick", "main")
+		cmd.Dir = repo
+		_ = cmd.Run() // conflicts, leaving the cherry-pick in progress
+	}
+
+	for name, stop := range map[string]func(*testing.T, string){
+		"rebase":      stopMidRebase,
+		"cherry-pick": stopMidCherryPick,
+	} {
+		t.Run(name, func(t *testing.T) {
+			repo := t.TempDir()
+			runGit(t, repo, "init")
+			runGit(t, repo, "commit", "--allow-empty", "-m", "base")
+			if err := os.WriteFile(filepath.Join(repo, "f"), []byte("main\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			runGit(t, repo, "add", "f")
+			runGit(t, repo, "commit", "-m", "teammate's change")
+			if err := desktimers.SaveState(repo, &desktimers.State{Code: "MOB-102"}); err != nil {
+				t.Fatal(err)
+			}
+			stop(t, repo)
+			t.Chdir(repo)
+
+			msgFile := filepath.Join(repo, "COMMIT_EDITMSG")
+			if err := os.WriteFile(msgFile, []byte("teammate's change\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			runPrepareCommitMsg([]string{msgFile, "message"})
+
+			got, _ := os.ReadFile(msgFile)
+			/* EXPECTED:
+			assert.Equal(t, "teammate's change\n", string(got))
+			ACTUAL: */
+			assert.Equal(t, "MOB-102/teammate's change\n", string(got))
+		})
 	}
 }
