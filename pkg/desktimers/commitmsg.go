@@ -45,7 +45,7 @@ func PrefixCommitMessage(content string, code string, source string) (string, bo
 	if code == "" || commitSourcesToSkip[source] {
 		return content, false
 	}
-	if messageHasCode(content) {
+	if messageHasCode(content) || isAutosquashMessage(content) {
 		return content, false
 	}
 	return ApplyPrefixTemplate(DefaultCommitPrefixTemplate, DefaultCommitPrefixTemplate, code) + content, true
@@ -86,6 +86,18 @@ func AppendTaskTrailer(content string, url string, source string) (string, bool)
 	rewritten = append(rewritten, "", "Task: "+url)
 	rewritten = append(rewritten, lines[lastContent+1:]...)
 	return strings.Join(rewritten, "\n"), true
+}
+
+// isAutosquashMessage reports whether a message is one rebase --autosquash
+// will fold into an earlier commit, which it finds by what follows the
+// marker.
+func isAutosquashMessage(content string) bool {
+	for _, marker := range []string{"fixup! ", "squash! ", "amend! "} {
+		if strings.HasPrefix(content, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 // messageHasCode reports whether the non-comment portion of a commit message

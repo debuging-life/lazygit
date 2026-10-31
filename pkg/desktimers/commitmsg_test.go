@@ -181,9 +181,6 @@ func TestAppendTaskTrailer(t *testing.T) {
 func TestPrefixCommitMessageLeavesFixupsAlone(t *testing.T) {
 	for _, content := range []string{"fixup! add b\n", "squash! add b\n", "amend! add b\n\nadd b, better\n"} {
 		got, _ := PrefixCommitMessage(content, "MOB-101", "message")
-		/* EXPECTED:
 		assert.Equal(t, content, got)
-		ACTUAL: */
-		assert.Equal(t, "MOB-101/"+content, got)
 	}
 }
