@@ -191,3 +191,17 @@ func TestPrefixCommitMessageTagsALowercaseLookalike(t *testing.T) {
 	assert.True(t, changed)
 	assert.Equal(t, "MOB-101/fix utf-8 decoding\n", got)
 }
+
+// `git commit -v` puts the diff below a scissors line; git drops it, and
+// what it says is no part of the message.
+func TestPrefixCommitMessageIgnoresTheVerboseDiff(t *testing.T) {
+	content := "fix decoding\n" +
+		"# ------------------------ >8 ------------------------\n" +
+		"diff --git a/f b/f\n" +
+		"+charset = UTF-8\n"
+	got, _ := PrefixCommitMessage(content, "MOB-101", "")
+	/* EXPECTED:
+	assert.Equal(t, "MOB-101/"+content, got)
+	ACTUAL: */
+	assert.Equal(t, content, got)
+}
