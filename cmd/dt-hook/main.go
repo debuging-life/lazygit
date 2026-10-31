@@ -91,6 +91,9 @@ func runPrepareCommitMsg(args []string) {
 	if len(args) > 1 {
 		source = args[1]
 	}
+	if desktimers.ReplayInProgress(".") {
+		return
+	}
 	state, err := desktimers.LoadState(".")
 	if err != nil || state == nil || state.Code == "" {
 		return

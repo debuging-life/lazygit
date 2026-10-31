@@ -245,10 +245,7 @@ func TestPrepareCommitMsgLeavesReplayedCommitsAlone(t *testing.T) {
 			runPrepareCommitMsg([]string{msgFile, "message"})
 
 			got, _ := os.ReadFile(msgFile)
-			/* EXPECTED:
 			assert.Equal(t, "teammate's change\n", string(got))
-			ACTUAL: */
-			assert.Equal(t, "MOB-102/teammate's change\n", string(got))
 		})
 	}
 }

@@ -1,6 +1,10 @@
 package desktimers
 
-import "strings"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+)
 
 // commitSourcesToSkip are prepare-commit-msg sources that must never be
 // rewritten: merges, squashes, and -c/-C/--amend reuse an existing message.
@@ -8,6 +12,27 @@ var commitSourcesToSkip = map[string]bool{
 	"merge":  true,
 	"squash": true,
 	"commit": true,
+}
+
+// replayMarkers are what git keeps in the git dir while it replays commits
+// (a rebase, a cherry-pick, a run of them). A replayed commit already has
+// its message; it is not new work on the task picked here.
+var replayMarkers = []string{"rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD", "sequencer"}
+
+// ReplayInProgress reports whether git is replaying commits in the repo at
+// repoPath, which the hook cannot tell from its arguments: git passes the
+// "message" source for a replayed commit, as for `git commit -m`.
+func ReplayInProgress(repoPath string) bool {
+	dir, err := gitDir(repoPath)
+	if err != nil {
+		return false
+	}
+	for _, marker := range replayMarkers {
+		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // PrefixCommitMessage prepends "<code>/" to a commit message file's content
