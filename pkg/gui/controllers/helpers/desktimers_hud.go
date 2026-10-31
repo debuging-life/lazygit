@@ -80,7 +80,8 @@ func (self *DesktimersHelper) Stats() *desktimers.Stats {
 }
 
 // StartStatsInBackground asks for the person's time now and then once a
-// minute, for as long as the program runs. Failures are quiet: the readouts
+// minute, for as long as the program runs, and sends the commits the hooks
+// could not. Failures are quiet: the readouts
 // say they have no answer, and nothing interrupts a commit over it.
 func (self *DesktimersHelper) StartStatsInBackground() {
 	hudStats.helper.Store(self)
@@ -95,10 +96,26 @@ func (self *DesktimersHelper) StartStatsInBackground() {
 		for {
 			if helper := hudStats.helper.Load(); helper != nil {
 				helper.refreshStats()
+				helper.sendQueuedCommits()
 			}
 			time.Sleep(statsEvery)
 		}
 	})
+}
+
+// sendQueuedCommits sends what this repository's hooks queued and could not
+// send: made offline, or while signed out. Quiet like the readouts.
+func (self *DesktimersHelper) sendQueuedCommits() {
+	if !self.isAuthenticated() {
+		return
+	}
+	client, err := desktimers.NewClientFromToken()
+	if err == nil {
+		err = desktimers.SendQueuedCommits(".", client)
+	}
+	if err != nil {
+		self.c.Log.Debugf("deskgit: commits not sent to DeskTick yet: %v", err)
+	}
 }
 
 func (self *DesktimersHelper) refreshStats() {
