@@ -200,8 +200,5 @@ func TestPrefixCommitMessageIgnoresTheVerboseDiff(t *testing.T) {
 		"diff --git a/f b/f\n" +
 		"+charset = UTF-8\n"
 	got, _ := PrefixCommitMessage(content, "MOB-101", "")
-	/* EXPECTED:
 	assert.Equal(t, "MOB-101/"+content, got)
-	ACTUAL: */
-	assert.Equal(t, content, got)
 }

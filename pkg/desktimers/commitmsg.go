@@ -101,10 +101,14 @@ func isAutosquashMessage(content string) bool {
 }
 
 // messageHasCode reports whether the non-comment portion of a commit message
-// already contains a task code.
+// already contains a task code. A verbose commit's diff, below the scissors
+// line, is not part of the message.
 func messageHasCode(content string) bool {
 	for _, line := range strings.Split(content, "\n") {
 		if strings.HasPrefix(line, "#") {
+			if strings.Contains(line, ">8") {
+				break
+			}
 			continue
 		}
 		if MessageNamesCode(line) {
