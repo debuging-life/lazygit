@@ -8,7 +8,7 @@ deskgit is a customized fork of the excellent [lazygit](https://github.com/jesse
 
 ```
 deskgit (TUI)          →  pick a task; branches and commits are prefilled with its code
-dt-hook (git hooks)    →  prepare-commit-msg prefixes commits, pre-push stops untagged ones
+dt-hook (git hooks)    →  prepare-commit-msg prefixes commits, post-commit tells DeskTick, pre-push stops untagged ones
 DeskTick               →  the same tasks, boards and timer the web and desktop apps use
 ```
 
@@ -98,9 +98,10 @@ A terminal cannot be asked what colour its background is, so the greys are mid g
 
 ## Git hooks (`dt-hook`)
 
-deskgit installs two hooks per repo. By default (`autoInstallHooks: auto`) this happens **silently for work repos only**: when the repository is linked to a project you are on (project settings → Repositories in DeskTick), or its origin remote's owner is in `desktimers.hookOrgs` (default `debuging-life`, `loudowls`), hooks are installed/refreshed and strict-push config synced on repo open; any other repo — or a repo with no origin remote — is left completely untouched. Set `autoInstallHooks: prompt` to be asked per repo instead (`always`/`never` also available).
+deskgit installs three hooks per repo. By default (`autoInstallHooks: auto`) this happens **silently for work repos only**: when the repository is linked to a project you are on (project settings → Repositories in DeskTick), or its origin remote's owner is in `desktimers.hookOrgs` (default `debuging-life`, `loudowls`), hooks are installed/refreshed and strict-push config synced on repo open; any other repo — or a repo with no origin remote — is left completely untouched. Set `autoInstallHooks: prompt` to be asked per repo instead (`always`/`never` also available).
 
-- **prepare-commit-msg** — prepends the selected task's code to the message and appends a `Task: <link>` trailer (when the task has a webapp link) so the task is one click away from every commit. Skips merges, squashes, and amends; never duplicates either; exits silently on any problem (it will never break a commit).
+- **prepare-commit-msg** — prepends the selected task's code to the message and appends a `Task: <link>` trailer (when the task has a webapp link) so the task is one click away from every commit. Skips merges, squashes, amends, `fixup!`/`squash!`/`amend!` messages, and commits git is replaying (rebase, cherry-pick); never duplicates either; exits silently on any problem (it will never break a commit).
+- **post-commit** — tells DeskTick of the commit, so it shows on its task's card at once (`POST /api/github/commits`): the repository, sha, branch, message, author, time, your picked task's code, and each changed file's path and line counts — **never the diff**. It returns at once and sends in the background; a commit made offline or signed out waits in `<git-dir>/desktimers-commits/` and is sent on the next push or by deskgit within a minute. DeskTick shows it as "not pushed yet" until GitHub's push webhook confirms it. Commits git is replaying are left to that push.
 - **pre-push** — flags pushed commits that carry no task code in the message **and** no code in the branch name. deskgit syncs `git config desktimers.strictpush` into each repo it opens from your `desktimers.strictPush` setting (default **true** = block). Precedence: `DT_STRICT` env (`1`/`true` strict, `0`/`false` off) > repo git config > warn-only default. `DT_STRICT=0 git push` pushes anyway this once.
 
 Existing hooks are preserved: they're renamed to `<hook>.local` and chained before ours. Repos using `core.hooksPath` (e.g. Husky) are detected and left alone with a notice. Manual control:
@@ -111,7 +112,7 @@ dt-hook status
 dt-hook uninstall   # restores any chained .local hooks
 ```
 
-The hooks read the selected task from `<git-dir>/desktimers-task` (per worktree) and send nothing anywhere.
+The hooks read the selected task from `<git-dir>/desktimers-task` (per worktree). Only post-commit sends anything, and only to your DeskTick, as you.
 
 ## Configuration
 
