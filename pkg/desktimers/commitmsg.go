@@ -107,7 +107,7 @@ func messageHasCode(content string) bool {
 		if strings.HasPrefix(line, "#") {
 			continue
 		}
-		if CodeRegex.MatchString(line) {
+		if MessageNamesCode(line) {
 			return true
 		}
 	}

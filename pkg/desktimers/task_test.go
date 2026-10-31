@@ -1,6 +1,10 @@
 package desktimers
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestExtractCode(t *testing.T) {
 	tests := []struct {
@@ -32,4 +36,10 @@ func TestBranchPrefix(t *testing.T) {
 	if got := BranchPrefix("MOB-101"); got != "MOB-101/" {
 		t.Errorf("BranchPrefix(MOB-101) = %q, want %q", got, "MOB-101/")
 	}
+}
+
+func TestMessageNamesCode(t *testing.T) {
+	assert.True(t, MessageNamesCode("MOB-101/fix login"))
+	assert.False(t, MessageNamesCode("fix utf-8 decoding on node-18, mt-4"))
+	assert.False(t, MessageNamesCode("mob-101 fix things"))
 }

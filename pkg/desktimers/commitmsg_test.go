@@ -184,3 +184,10 @@ func TestPrefixCommitMessageLeavesFixupsAlone(t *testing.T) {
 		assert.Equal(t, content, got)
 	}
 }
+
+// A lowercase word-number pair is ordinary text, not a task already named.
+func TestPrefixCommitMessageTagsALowercaseLookalike(t *testing.T) {
+	got, changed := PrefixCommitMessage("fix utf-8 decoding\n", "MOB-101", "message")
+	assert.True(t, changed)
+	assert.Equal(t, "MOB-101/fix utf-8 decoding\n", got)
+}

@@ -76,6 +76,23 @@ func TestPrePushBranchNameCoversCommits(t *testing.T) {
 	}
 }
 
+// The API reads codes in any case, so a lowercase one covers a push too.
+func TestPrePushTakesALowercaseCode(t *testing.T) {
+	repo := t.TempDir()
+	runGit(t, repo, "init")
+	runGit(t, repo, "remote", "add", "origin", t.TempDir())
+	runGit(t, repo, "commit", "--allow-empty", "-m", "clk-12 fix tick")
+	head := runGit(t, repo, "rev-parse", "HEAD")
+	t.Setenv("DT_STRICT", "1")
+
+	for _, branch := range []string{"feature/clk-12-timer", "feature"} {
+		stdin := strings.NewReader("refs/heads/" + branch + " " + head + " refs/heads/" + branch + " " + zeroSha + "\n")
+		stderr := &bytes.Buffer{}
+		code := runPrePush([]string{"origin", "ignored-url"}, stdin, stderr, repo)
+		assert.Equal(t, 0, code, "%s: %s", branch, stderr.String())
+	}
+}
+
 func TestPrePushStrictModeBlocks(t *testing.T) {
 	repo, head := setupRepo(t)
 	t.Setenv("DT_STRICT", "1")

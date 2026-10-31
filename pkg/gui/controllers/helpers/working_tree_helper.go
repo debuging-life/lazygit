@@ -227,8 +227,8 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 	// the retained/derived message already carries a task code.
 	cfg := self.c.UserConfig().Desktimers
 	if !cfg.RequireTaskForCommit ||
-		desktimers.ExtractCode(preservedMessage) != "" ||
-		desktimers.ExtractCode(initialMessage) != "" {
+		desktimers.MessageNamesCode(preservedMessage) ||
+		desktimers.MessageNamesCode(initialMessage) {
 		return self.HandleCommitPressWithMessage(initialMessage, false)
 	}
 
