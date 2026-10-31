@@ -1810,7 +1810,7 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersLoginExpiredTitle:          "DeskTick login expired",
 		DesktimersLoginExpiredPrompt:         "Your DeskTick login expired — log in again now?\n\ndeskgit will drop to the terminal, open the sign-in page in your browser, and return here.",
 		DesktimersInstallHooksTitle:          "Install DeskTick git hooks",
-		DesktimersInstallHooksPrompt:         "Install DeskTick git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages and warn when pushing untagged commits. Existing hooks are preserved and chained.",
+		DesktimersInstallHooksPrompt:         "Install DeskTick git hooks in this repo?\n\nThe hooks prepend your selected task code to commit messages, warn when pushing untagged commits, and tell DeskTick of each commit for its task cards: the message, author, time, and the paths and line counts of the files changed, never the code itself. Existing hooks are preserved and chained.",
 		DesktimersCustomHooksPathNotice:      "This repo uses a custom core.hooksPath — DeskTick hooks were not installed. Add them to your hook manager manually.",
 		DesktimersSetupRepo:                  "Setup repository...",
 		DesktimersSetupRepoTitle:             "Setup repository",

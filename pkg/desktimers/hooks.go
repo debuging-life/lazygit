@@ -9,7 +9,7 @@ import (
 )
 
 // ManagedHooks are the git hooks deskgit installs.
-var ManagedHooks = []string{"prepare-commit-msg", "pre-push"}
+var ManagedHooks = []string{"prepare-commit-msg", "post-commit", "pre-push"}
 
 const hookMarkerPrefix = "# deskgit-hook"
 
@@ -37,7 +37,7 @@ type ErrCustomHooksPath struct {
 
 func (e *ErrCustomHooksPath) Error() string {
 	return fmt.Sprintf(
-		"repository uses a custom core.hooksPath (%s); add `dt-hook prepare-commit-msg` and `dt-hook pre-push` to those hooks manually",
+		"repository uses a custom core.hooksPath (%s); add `dt-hook prepare-commit-msg`, `dt-hook post-commit` and `dt-hook pre-push` to those hooks manually",
 		e.Path)
 }
 

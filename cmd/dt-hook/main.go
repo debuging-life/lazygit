@@ -1,6 +1,6 @@
 // dt-hook is the git-hook companion binary for deskgit (DeskTick). It is
-// invoked by the prepare-commit-msg and pre-push hooks that deskgit installs,
-// and can also install/uninstall those hooks itself.
+// invoked by the prepare-commit-msg, post-commit and pre-push hooks that
+// deskgit installs, and can also install/uninstall those hooks itself.
 //
 // Design rule: hook subcommands must NEVER break git. Any internal failure
 // exits 0 silently; only strict mode (DT_STRICT=1 or desktimers.strictpush)
@@ -23,8 +23,14 @@ func main() {
 	switch os.Args[1] {
 	case "prepare-commit-msg":
 		runPrepareCommitMsg(os.Args[2:])
+	case "post-commit":
+		runPostCommit(".")
 	case "pre-push":
-		os.Exit(runPrePush(os.Args[2:], os.Stdin, os.Stderr, "."))
+		code := runPrePush(os.Args[2:], os.Stdin, os.Stderr, ".")
+		sendCommitsInBackground()
+		os.Exit(code)
+	case "send-commits":
+		runSendCommits(".")
 	case "install":
 		if err := runInstall(); err != nil {
 			fmt.Fprintf(os.Stderr, "dt-hook: %v\n", err)
@@ -64,7 +70,9 @@ func usage(w io.Writer) {
 
 commands:
   prepare-commit-msg <msgfile> [source] [sha]   (invoked by git)
+  post-commit                                   (invoked by git)
   pre-push <remote-name> <remote-url>           (invoked by git)
+  send-commits  send this repo's commits waiting for DeskTick
   install     install DeskTick hooks into the current repo
   uninstall   remove DeskTick hooks from the current repo
   status      report hook install state (installed|outdated|missing)

@@ -266,3 +266,61 @@ func TestPrepareCommitMsgLeavesReplayedCommitsAlone(t *testing.T) {
 		})
 	}
 }
+
+func TestPostCommitQueuesTheCommit(t *testing.T) {
+	sent := 0
+	sendCommitsInBackground = func() { sent++ }
+	t.Cleanup(func() { sendCommitsInBackground = func() {} })
+
+	repo := t.TempDir()
+	runGit(t, repo, "init")
+	runGit(t, repo, "remote", "add", "origin", "https://github.com/acme/clock.git")
+	if err := desktimers.SaveState(repo, &desktimers.State{Code: "MOB-102"}); err != nil {
+		t.Fatal(err)
+	}
+	// Committed where prepare-commit-msg did not tag it.
+	runGit(t, repo, "commit", "--allow-empty", "-m", "start")
+
+	runPostCommit(repo)
+
+	queued := desktimers.QueuedCommits(repo)
+	if assert.Len(t, queued, 1) {
+		assert.Equal(t, runGit(t, repo, "rev-parse", "HEAD"), queued[0].Sha)
+		assert.Equal(t, "acme/clock", queued[0].Repo)
+		assert.Equal(t, "MOB-102", queued[0].PickedCode)
+	}
+	assert.Equal(t, 1, sent)
+}
+
+func TestPostCommitSendsNoPickedCodeWhenTheMessageNamesATask(t *testing.T) {
+	sendCommitsInBackground = func() {}
+	repo := t.TempDir()
+	runGit(t, repo, "init")
+	runGit(t, repo, "remote", "add", "origin", "https://github.com/acme/clock.git")
+	if err := desktimers.SaveState(repo, &desktimers.State{Code: "LOUD-1"}); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repo, "commit", "--allow-empty", "-m", "LOUD-7/fix header")
+
+	runPostCommit(repo)
+
+	queued := desktimers.QueuedCommits(repo)
+	if assert.Len(t, queued, 1) {
+		assert.Empty(t, queued[0].PickedCode)
+	}
+}
+
+func TestPostCommitLeavesReplayedCommitsToThePush(t *testing.T) {
+	sendCommitsInBackground = func() {}
+	repo := t.TempDir()
+	runGit(t, repo, "init")
+	runGit(t, repo, "remote", "add", "origin", "https://github.com/acme/clock.git")
+	runGit(t, repo, "commit", "--allow-empty", "-m", "one")
+	runGit(t, repo, "commit", "--allow-empty", "-m", "two")
+	t.Setenv("GIT_SEQUENCE_EDITOR", "sed -i.bak 1s/^pick/edit/")
+	runGit(t, repo, "rebase", "-i", "--keep-empty", "HEAD~1")
+
+	runPostCommit(repo)
+
+	assert.Empty(t, desktimers.QueuedCommits(repo))
+}
