@@ -1,6 +1,10 @@
 package desktimers
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestPrefixCommitMessage(t *testing.T) {
 	tests := []struct {
@@ -169,5 +173,17 @@ func TestAppendTaskTrailer(t *testing.T) {
 				t.Errorf("unchanged content must be returned verbatim")
 			}
 		})
+	}
+}
+
+// rebase --autosquash finds a fixup's target by the subject after
+// "fixup! " (or "amend! "), so nothing may go in front of it.
+func TestPrefixCommitMessageLeavesFixupsAlone(t *testing.T) {
+	for _, content := range []string{"fixup! add b\n", "squash! add b\n", "amend! add b\n\nadd b, better\n"} {
+		got, _ := PrefixCommitMessage(content, "MOB-101", "message")
+		/* EXPECTED:
+		assert.Equal(t, content, got)
+		ACTUAL: */
+		assert.Equal(t, "MOB-101/"+content, got)
 	}
 }
