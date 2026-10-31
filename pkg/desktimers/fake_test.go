@@ -33,6 +33,10 @@ type fakeDeskTick struct {
 	// was posted to each path.
 	requests []string
 	bodies   map[string]map[string]any
+	// commitBatches is every list of commits posted, and commitAnswer the
+	// status a list is answered with (200 when nil).
+	commitBatches [][]any
+	commitAnswer  func(commits []any) int
 }
 
 func newFakeDeskTick(t *testing.T) *fakeDeskTick {
@@ -110,6 +114,22 @@ func (f *fakeDeskTick) serve(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.URL.Path == "/api/workspaces":
 		reply(200, f.workspaces)
+	case r.URL.Path == "/api/github/commits":
+		commits, _ := f.bodies[r.URL.Path]["commits"].([]any)
+		f.commitBatches = append(f.commitBatches, commits)
+		status := 200
+		if f.commitAnswer != nil {
+			status = f.commitAnswer(commits)
+		}
+		if status != 200 {
+			say(status, "Refused.")
+			return
+		}
+		results := []map[string]any{}
+		for _, commit := range commits {
+			results = append(results, map[string]any{"sha": commit.(map[string]any)["sha"], "taskCodes": []string{}})
+		}
+		reply(200, map[string]any{"results": results})
 	case r.URL.Path == "/api/auth/sign-out":
 		reply(200, map[string]any{"success": true})
 	case len(parts) == 3 && parts[2] == "projects":

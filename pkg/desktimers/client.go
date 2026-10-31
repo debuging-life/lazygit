@@ -31,6 +31,7 @@ var ErrUnauthorized = errors.New("desktick: not signed in (the session ended or 
 //	GET  /api/workspaces/:ws/projects/:code/repositories  the repositories linked to it
 //	GET  /api/workspaces/:ws/time/timer/current           what my timer is on
 //	GET  /api/workspaces/:ws/time/summary                 my seconds, a day at a time
+//	POST /api/github/commits                              commits as they are made (commits.go)
 //
 // A project is addressed by its CODE ("CLK") and a task by its code
 // ("CLK-12"). A project code is unique in a workspace and not across them,
