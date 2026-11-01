@@ -34,7 +34,7 @@ func NewHostingServiceMgr(log logrus.FieldLogger, tr *i18n.TranslationSet, remot
 		log:                  log,
 		tr:                   tr,
 		remoteURL:            remoteURL,
-		configServiceDomains: configServiceDomains,
+		configServiceDomains: withSSHAlias(remoteURL, configServiceDomains), // deskgit: SSH host aliases
 	}
 }
 

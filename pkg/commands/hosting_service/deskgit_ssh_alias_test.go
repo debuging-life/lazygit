@@ -39,12 +39,8 @@ func TestGetServiceInfoThroughAnSSHAlias(t *testing.T) {
 	if err != nil {
 		problem = err.Error()
 	}
-	/* EXPECTED:
 	assert.Equal(t, ServiceInfo{
 		Provider: "github", WebDomain: "github.com", Owner: "acme", Repository: "clock", RepoName: "acme/clock",
 	}, info)
 	assert.Empty(t, problem)
-	ACTUAL: */
-	assert.Equal(t, ServiceInfo{}, info)
-	assert.Equal(t, "Unsupported git service", problem)
 }
