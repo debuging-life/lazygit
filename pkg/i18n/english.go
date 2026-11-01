@@ -295,9 +295,9 @@ type TranslationSet struct {
 	PRNoGHToken                           string
 	PRCreated                             string
 	PRCreatedMenuTitle                    string
-	PRCreatedOpenInBrowser               string
-	PRCreatedCopyLink                    string
-	PRCreatedMergeInApp                  string
+	PRCreatedOpenInBrowser                string
+	PRCreatedCopyLink                     string
+	PRCreatedMergeInApp                   string
 	PRMergeStrategy                       string
 	PRMergeStrategyMerge                  string
 	PRMergeStrategySquash                 string
@@ -313,7 +313,7 @@ type TranslationSet struct {
 	PRMoveToColumnKeep                    string
 	PRLoadingColumns                      string
 	PRCreatingPR                          string
-	PRMergingPR                          string
+	PRMergingPR                           string
 	PROpenPullRequests                    string
 	NoBranchOnRemote                      string
 	Fetch                                 string
@@ -573,18 +573,18 @@ type TranslationSet struct {
 	DesktimersInstallHooksPrompt          string
 	DesktimersCustomHooksPathNotice       string
 	DesktimersSetupRepo                   string
-	DesktimersSetupRepoTitle             string
-	DesktimersSetupRepoSelectRemote      string
-	DesktimersSetupRepoAddNew            string
-	DesktimersSetupRepoNamePrompt        string
-	DesktimersSetupRepoURLPrompt         string
-	DesktimersSetupRepoURLUpdatePrompt   string
-	DesktimersSetupRepoAdded             string
-	DesktimersSetupRepoUpdated           string
-	DesktimersLogout                     string
-	DesktimersLogoutConfirm              string
-	DesktimersLoggedOut                  string
-	DesktimersLoggedOutOffline           string
+	DesktimersSetupRepoTitle              string
+	DesktimersSetupRepoSelectRemote       string
+	DesktimersSetupRepoAddNew             string
+	DesktimersSetupRepoNamePrompt         string
+	DesktimersSetupRepoURLPrompt          string
+	DesktimersSetupRepoURLUpdatePrompt    string
+	DesktimersSetupRepoAdded              string
+	DesktimersSetupRepoUpdated            string
+	DesktimersLogout                      string
+	DesktimersLogoutConfirm               string
+	DesktimersLoggedOut                   string
+	DesktimersLoggedOutOffline            string
 	ShellCommand                          string
 	CommitChangesWithoutHook              string
 	ResetTo                               string
