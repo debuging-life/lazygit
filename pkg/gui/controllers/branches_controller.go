@@ -85,13 +85,6 @@ func (self *BranchesController) GetKeybindings(opts types.KeybindingsOpts) []*ty
 			Description:       self.c.Tr.CreatePullRequest,
 		},
 		{
-			Keys:              opts.GetKeys(opts.Config.Branches.ViewPullRequestOptions),
-			Handler:           self.withItem(self.handleCreatePullRequestMenu),
-			GetDisabledReason: self.require(self.singleItemSelected()),
-			Description:       self.c.Tr.CreatePullRequestOptions,
-			OpensMenu:         true,
-		},
-		{
 			Keys:              opts.GetKeys(opts.Config.Branches.OpenPullRequestInBrowser),
 			Handler:           self.withItem(self.openPRInBrowser),
 			GetDisabledReason: self.require(self.singleItemSelected(self.branchHasPR)),
@@ -534,32 +527,6 @@ func (self *BranchesController) getGitHubAuth() (hosting_service.ServiceInfo, st
 	return svcInfo, token, true
 }
 
-// handleCreatePRViaAPI shows the base-branch picker, pre-fills title/body from
-// the last commit, then creates the PR via the GitHub API.
-func (self *BranchesController) handleCreatePRViaAPI(branch *models.Branch) error {
-	svcInfo, token, ok := self.getGitHubAuth()
-	if !ok {
-		return self.handleCreatePullRequest(branch)
-	}
-	self.c.Prompt(types.PromptOpts{
-		Title:               self.c.Tr.PRBaseBranch,
-		FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
-		HandleConfirm: func(baseBranch string) error {
-			return self.createPRViaAPIWithBase(branch, baseBranch, svcInfo, token)
-		},
-	})
-	return nil
-}
-
-// handleCreatePRViaAPIToDefault creates a PR targeting the repo's default branch.
-func (self *BranchesController) handleCreatePRViaAPIToDefault(branch *models.Branch) error {
-	svcInfo, token, ok := self.getGitHubAuth()
-	if !ok {
-		return self.handleCreatePullRequest(branch)
-	}
-	return self.createPRViaAPIWithBase(branch, "", svcInfo, token)
-}
-
 // createPRViaAPIWithBase prompts for title/body (pre-filled from last commit),
 // then calls the GitHub REST API to create the PR with a progress spinner.
 func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, baseBranch string, svcInfo hosting_service.ServiceInfo, token string) error {
@@ -765,12 +732,6 @@ func (self *BranchesController) showMergeStrategyPicker(
 		),
 		Items: menuItems,
 	})
-}
-
-func (self *BranchesController) handleCreatePullRequestMenu(selectedBranch *models.Branch) error {
-	checkedOutBranch := self.c.Helpers().Refs.GetCheckedOutRef()
-
-	return self.createPullRequestMenu(selectedBranch, checkedOutBranch)
 }
 
 func (self *BranchesController) getPullRequestURL() (string, error) {
@@ -1086,111 +1047,6 @@ func (self *BranchesController) rename(branch *models.Branch) error {
 
 func (self *BranchesController) newBranch(selectedBranch *models.Branch) error {
 	return self.c.Helpers().Refs.NewBranch(selectedBranch.FullRefName(), selectedBranch.RefName(), "")
-}
-
-func (self *BranchesController) createPullRequestMenu(selectedBranch *models.Branch, checkedOutBranch *models.Branch) error {
-	menuItems := make([]*types.MenuItem, 0, 6)
-
-	// Resolve GitHub auth once — used to decide in-app vs browser for every item.
-	svcInfo, token, isGitHub := self.getGitHubAuth()
-
-	fromToLabelColumns := func(from string, to string) []string {
-		return []string{fmt.Sprintf("%s → %s", from, to)}
-	}
-
-	menuItemsForBranch := func(branch *models.Branch) []*types.MenuItem {
-		toDefault := &types.MenuItem{
-			LabelColumns: fromToLabelColumns(branch.Name, self.c.Tr.DefaultBranch),
-			OnPress: func() error {
-				if isGitHub {
-					return self.createPRViaAPIWithBase(branch, "", svcInfo, token)
-				}
-				return self.handleCreatePullRequest(branch)
-			},
-		}
-		toSelect := &types.MenuItem{
-			LabelColumns: fromToLabelColumns(branch.Name, self.c.Tr.SelectBranch),
-			OnPress: func() error {
-				if isGitHub {
-					return self.handleCreatePRViaAPI(branch)
-				}
-				if !branch.IsTrackingRemote() {
-					return errors.New(self.c.Tr.PullRequestNoUpstream)
-				}
-				if len(self.c.Model().Remotes) == 1 {
-					toRemote := self.c.Model().Remotes[0].Name
-					return self.promptForTargetBranchNameAndCreatePullRequest(branch, toRemote)
-				}
-				self.c.Prompt(types.PromptOpts{
-					Title:               self.c.Tr.SelectTargetRemote,
-					FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteSuggestionsFunc(),
-					HandleConfirm: func(toRemote string) error {
-						return self.promptForTargetBranchNameAndCreatePullRequest(branch, toRemote)
-					},
-				})
-				return nil
-			},
-		}
-		return []*types.MenuItem{toDefault, toSelect}
-	}
-
-	if selectedBranch != checkedOutBranch {
-		menuItems = append(menuItems,
-			&types.MenuItem{
-				LabelColumns: fromToLabelColumns(checkedOutBranch.Name, selectedBranch.Name),
-				OnPress: func() error {
-					if !checkedOutBranch.IsTrackingRemote() || !selectedBranch.IsTrackingRemote() {
-						return errors.New(self.c.Tr.PullRequestNoUpstream)
-					}
-					return self.createPullRequest(checkedOutBranch.UpstreamBranch, selectedBranch.UpstreamBranch)
-				},
-			},
-		)
-		menuItems = append(menuItems, menuItemsForBranch(checkedOutBranch)...)
-	}
-
-	menuItems = append(menuItems, menuItemsForBranch(selectedBranch)...)
-
-	// Open PR section — only shown when the PR is still OPEN.
-	if pr, ok := self.c.Model().PullRequestsMap[selectedBranch.Name]; ok && pr != nil && pr.State == "OPEN" && isGitHub {
-		prSection := &types.MenuSection{Title: self.c.Tr.PROpenPullRequests, Column: 0}
-		capturedPR := pr
-		capturedSvc := svcInfo
-		capturedToken := token
-		prBase := capturedPR.BaseRefName
-		if prBase == "" {
-			prBase = self.c.Tr.DefaultBranch
-		}
-		menuItems = append(menuItems, &types.MenuItem{
-			Section:      prSection,
-			LabelColumns: []string{fmt.Sprintf("#%d: %s → %s", capturedPR.Number, capturedPR.HeadRefName, prBase)},
-			OnPress: func() error {
-				return self.handleMergePRViaAPI(capturedPR, capturedSvc, capturedToken)
-			},
-		})
-	}
-
-	return self.c.Menu(types.CreateMenuOptions{Title: fmt.Sprint(self.c.Tr.CreatePullRequestOptions), Items: menuItems})
-}
-
-func (self *BranchesController) promptForTargetBranchNameAndCreatePullRequest(fromBranch *models.Branch, toRemote string) error {
-	remoteDoesNotExist := lo.NoneBy(self.c.Model().Remotes, func(remote *models.Remote) bool {
-		return remote.Name == toRemote
-	})
-	if remoteDoesNotExist {
-		return fmt.Errorf(self.c.Tr.NoValidRemoteName, toRemote)
-	}
-
-	self.c.Prompt(types.PromptOpts{
-		Title:               fmt.Sprintf("%s → %s/", fromBranch.UpstreamBranch, toRemote),
-		FindSuggestionsFunc: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc(toRemote),
-		HandleConfirm: func(toBranch string) error {
-			self.c.Log.Debugf("PR will target branch '%s' on remote '%s'", toBranch, toRemote)
-			return self.createPullRequest(fromBranch.UpstreamBranch, toBranch)
-		},
-	})
-
-	return nil
 }
 
 // showUnsupportedServiceHelp shows a confirmation dialog explaining how to fix
