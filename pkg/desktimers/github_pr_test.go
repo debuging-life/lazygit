@@ -30,6 +30,7 @@ type fakeGitHub struct {
 }
 
 func newFakeGitHub(t *testing.T) *fakeGitHub {
+	t.Helper()
 	fake := &fakeGitHub{t: t, bodies: map[string]map[string]any{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +47,7 @@ func newFakeGitHub(t *testing.T) *fakeGitHub {
 		fake.requests = append(fake.requests, key)
 		fake.bodies[key] = body
 		fake.mutex.Unlock()
-		fake.answer(w, r, key, body)
+		fake.answer(w, key, body)
 	})
 	fake.server = httptest.NewServer(mux)
 	t.Cleanup(fake.server.Close)
@@ -60,7 +61,7 @@ func (f *fakeGitHub) repo() GitHubRepo {
 	}
 }
 
-func (f *fakeGitHub) answer(w http.ResponseWriter, r *http.Request, key string, body map[string]any) {
+func (f *fakeGitHub) answer(w http.ResponseWriter, key string, body map[string]any) {
 	write := func(status int, v any) {
 		w.WriteHeader(status)
 		_ = json.NewEncoder(w).Encode(v)
