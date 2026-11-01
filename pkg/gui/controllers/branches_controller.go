@@ -495,7 +495,14 @@ func (self *BranchesController) promptToCheckoutWorktree(worktree *models.Worktr
 
 func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.Branch) error {
 	// deskgit: on GitHub, the pull request form; a browser elsewhere, or
-	// without a gh sign-in.
+	// without a gh sign-in. With several gh accounts, which one the
+	// repository is asked as is chosen first.
+	if svcInfo, err := self.c.Helpers().Host.GetServiceInfo(); err == nil && svcInfo.Provider == "github" &&
+		desktimers.NeedsGitHubAccountChoice(".", svcInfo.WebDomain) {
+		return self.c.Helpers().Desktimers.ChooseGitHubAccount(svcInfo.WebDomain, self.c.Tr.GitHubAccountWhich, func() error {
+			return self.handleCreatePullRequest(selectedBranch)
+		})
+	}
 	if svcInfo, token, ok := self.getGitHubAuth(); ok {
 		return self.createPRViaAPIWithBase(selectedBranch, "", svcInfo, token)
 	}
@@ -581,6 +588,7 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 			}
 			return self.showPullRequestCreatedMenu(pr, svcInfo, token, note)
 		},
+		Reopen: func() error { return self.handleCreatePullRequest(branch) },
 	})
 }
 
