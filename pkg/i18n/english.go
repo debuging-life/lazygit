@@ -314,6 +314,31 @@ type TranslationSet struct {
 	PRLoadingColumns                      string
 	PRCreatingPR                          string
 	PRMergingPR                           string
+	PRFormLoading                         string
+	PRFormTitle                           string
+	PRFormSectionDetails                  string
+	PRFormSectionCreate                   string
+	PRFieldTitle                          string
+	PRFieldDescription                    string
+	PRFieldBase                           string
+	PRFieldReviewers                      string
+	PRFieldAssignees                      string
+	PRFieldLabels                         string
+	PRFieldProjects                       string
+	PRFormNone                            string
+	PRFormDescriptionLines                string
+	PRFormFromTemplate                    string
+	PRFormYou                             string
+	PRFormCreate                          string
+	PRFormCreateDraft                     string
+	PRFormPickerTitle                     string
+	PRFormNoChoices                       string
+	PRFormProjectsNeedScopeShort          string
+	PRFormProjectsNeedScope               string
+	PRFormUnavailable                     string
+	PRFormDone                            string
+	PRFormTitleRequired                   string
+	PRFormCreatedWithWarnings             string
 	PROpenPullRequests                    string
 	NoBranchOnRemote                      string
 	Fetch                                 string
@@ -1540,6 +1565,35 @@ func EnglishTranslationSet() *TranslationSet {
 		PRLoadingColumns:                     `Loading columns...`,
 		PRCreatingPR:                         `Creating pull request...`,
 		PRMergingPR:                          `Merging pull request...`,
+		PRFormLoading:                        `Asking GitHub...`,
+		PRFormTitle:                          `Pull request: {{head}} → {{base}}`,
+		PRFormSectionDetails:                 `Details`,
+		PRFormSectionCreate:                  `Create`,
+		PRFieldTitle:                         `Title`,
+		PRFieldDescription:                   `Description`,
+		PRFieldBase:                          `Base`,
+		PRFieldReviewers:                     `Reviewers`,
+		PRFieldAssignees:                     `Assignees`,
+		PRFieldLabels:                        `Labels`,
+		PRFieldProjects:                      `Projects`,
+		PRFormNone:                           `none`,
+		PRFormDescriptionLines:               `{{first}} ({{lines}} lines)`,
+		PRFormFromTemplate:                   `from the template`,
+		PRFormYou:                            `you`,
+		PRFormCreate:                         `Create pull request`,
+		PRFormCreateDraft:                    `Create as draft`,
+		PRFormPickerTitle:                    `{{field}}: enter ticks, esc when done`,
+		PRFormNoChoices:                      `GitHub has nothing to offer here for this repository`,
+		PRFormProjectsNeedScopeShort:         `needs gh permission (see why)`,
+		PRFormProjectsNeedScope: `Adding a pull request to a GitHub Project needs the project permission on your gh sign-in, which it does not have yet. Run this once, then open this form again:
+
+  gh auth refresh -s project`,
+		PRFormUnavailable:   `unavailable`,
+		PRFormDone:          `Done`,
+		PRFormTitleRequired: `A pull request needs a title`,
+		PRFormCreatedWithWarnings: `The pull request was made, but GitHub refused some of the rest:
+
+{{warnings}}`,
 		PROpenPullRequests:                   `Pull requests`,
 		CopyPullRequestURL:                   `Copy pull request URL to clipboard`,
 		OpenPullRequestInBrowser:             `Open pull request in browser`,
