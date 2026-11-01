@@ -287,7 +287,7 @@ func (gui *Gui) onInitialViewsCreation() error {
 	gui.helpers.Update.CheckForUpdateInBackground()
 
 	// deskgit: offer to install the DeskTick git hooks for this repo, and
-	// check the Homebrew tap for a newer deskgit release.
+	// check for a newer deskgit release.
 	gui.helpers.Desktimers.PromptToInstallHooksInBackground()
 	gui.helpers.Desktimers.CheckForUpdateInBackground(gui.Config.GetVersion())
 	gui.helpers.Desktimers.RefreshWorkReposInBackground()

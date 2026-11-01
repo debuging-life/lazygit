@@ -292,7 +292,7 @@ func (self *DesktimersHelper) OpenDeskTickMenu() error {
 	})
 }
 
-// checkForUpdatesNow runs the tap version check bypassing the 24h cache and
+// checkForUpdatesNow runs the version check bypassing the 24h cache and
 // reports the outcome in a popup.
 func (self *DesktimersHelper) checkForUpdatesNow() error {
 	var latest string
@@ -579,8 +579,8 @@ func (self *DesktimersHelper) PickTaskForAction(onPick func(desktimers.Task) err
 	})
 }
 
-// CheckForUpdateInBackground checks the Homebrew tap for a newer deskgit
-// release (cache-limited to once per 24h) and shows a one-time notice.
+// CheckForUpdateInBackground checks R2 for a newer deskgit release
+// (cache-limited to once per 24h) and shows a one-time notice.
 // Dev builds (non-semver versions) never nag.
 func (self *DesktimersHelper) CheckForUpdateInBackground(currentVersion string) {
 	if !self.c.UserConfig().Desktimers.CheckForUpdates {

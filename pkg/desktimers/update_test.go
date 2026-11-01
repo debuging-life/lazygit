@@ -3,28 +3,11 @@ package desktimers
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
-
-const sampleFormula = `class Deskgit < Formula
-  desc "DeskTick git client"
-  homepage "https://desktimers.com"
-  version "0.3.1"
-  url "https://github.com/debuging-life/deskgit/releases/download/v0.3.1/deskgit_0.3.1_darwin_arm64.tar.gz"
-end`
-
-func TestParseFormulaVersion(t *testing.T) {
-	if got := ParseFormulaVersion(sampleFormula); got != "0.3.1" {
-		t.Errorf("ParseFormulaVersion = %q, want 0.3.1", got)
-	}
-	if got := ParseFormulaVersion("class X < Formula\nend"); got != "" {
-		t.Errorf("formula without version should yield \"\", got %q", got)
-	}
-}
 
 func TestIsNewerVersion(t *testing.T) {
 	tests := []struct {
@@ -70,16 +53,10 @@ func TestCheckForUpdate(t *testing.T) {
 	fetches := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fetches++
-		if r.URL.Path == "/latest.json" {
-			w.Write([]byte(`{"version":"0.3.1","assets":{}}`))
-			return
-		}
-		w.Write([]byte(sampleFormula))
+		w.Write([]byte(`{"version":"0.3.1","assets":{}}`))
 	}))
 	defer server.Close()
 	t.Setenv("DESKGIT_RELEASES_URL", server.URL)
-	formulaURLOverride = server.URL + "/formula"
-	t.Cleanup(func() { formulaURLOverride = "" })
 
 	latest, newer, err := CheckForUpdate("0.3.0")
 	if err != nil {
@@ -130,12 +107,10 @@ func TestLatestReleasedVersionIsReadFromR2(t *testing.T) {
 			w.Write([]byte(`{"version":"0.8.1","assets":{}}`))
 			return
 		}
-		w.Write([]byte(strings.Replace(sampleFormula, "0.3.1", "0.5.8", 1)))
+		w.Write([]byte(`class Deskgit < Formula\n  version "0.5.8"\nend`))
 	}))
 	defer server.Close()
 	t.Setenv("DESKGIT_RELEASES_URL", server.URL)
-	formulaURLOverride = server.URL + "/formula"
-	t.Cleanup(func() { formulaURLOverride = "" })
 
 	latest, err := LatestReleasedVersion(true)
 	if !assert.NoError(t, err) {

@@ -899,8 +899,8 @@ desktimers:
   # uses the default '{{code}}/'.
   commitPrefixTemplate: '{{code}}/'
 
-  # If true (default), deskgit checks the Homebrew tap for a newer release
-  # (at most once per 24h) and shows a notice when one is available.
+  # If true (default), deskgit checks for a newer release (at most once per 24h)
+  # and shows a notice when one is available.
   checkForUpdates: true
 ```
 <!-- END CONFIG YAML -->

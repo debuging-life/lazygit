@@ -126,7 +126,7 @@ desktimers:
     - debuging-life
     - loudowls
   strictPush: true                         # block pushes with untagged commits
-  checkForUpdates: true                    # brew-tap update notice, max once/24h;
+  checkForUpdates: true                    # update notice, max once/24h;
                                            # Homebrew installs get an "Update now" button
   requireTaskForCommit: true               # commit opens the task picker first
   requireTaskForBranch: true               # new branch: type menu + task picker

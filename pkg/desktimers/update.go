@@ -5,33 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
-
-// FormulaURL is the Homebrew tap formula the update check reads the latest
-// released version from.
-const FormulaURL = "https://raw.githubusercontent.com/debuging-life/homebrew-tap/main/Formula/deskgit.rb"
 
 const (
 	updateCheckInterval = 24 * time.Hour
 	updateCheckTimeout  = 3 * time.Second
 	updateCacheFileName = "update-check.json"
 )
-
-var formulaVersionRegex = regexp.MustCompile(`(?m)^\s*version\s+"([^"]+)"`)
-
-// ParseFormulaVersion extracts the `version "X.Y.Z"` value from a Homebrew
-// formula, or "" when absent.
-func ParseFormulaVersion(formula string) string {
-	match := formulaVersionRegex.FindStringSubmatch(formula)
-	if match == nil {
-		return ""
-	}
-	return match[1]
-}
 
 // parseSemver parses "X.Y.Z" (optionally v-prefixed); ok is false for
 // anything else (dev builds like "HEAD-abc123", "unversioned", ...).
@@ -123,16 +106,6 @@ func cachedLatestVersion(cache *updateCheckCache, now time.Time) (string, bool) 
 		return "", false
 	}
 	return cache.LatestVersion, true
-}
-
-// formulaURLOverride lets tests point the fetch at a local server.
-var formulaURLOverride string
-
-func formulaURL() string {
-	if formulaURLOverride != "" {
-		return formulaURLOverride
-	}
-	return FormulaURL
 }
 
 // LatestReleasedVersion returns the latest released deskgit version from the

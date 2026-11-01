@@ -93,8 +93,7 @@ type DesktimersConfig struct {
 	// and prepended on confirm. Note: the prepare-commit-msg hook always
 	// uses the default '{{code}}/'.
 	CommitPrefixTemplate string `yaml:"commitPrefixTemplate"`
-	// If true (default), deskgit checks the Homebrew tap for a newer release
-	// (at most once per 24h) and shows a notice when one is available.
+	// If true (default), deskgit checks for a newer release (at most once per 24h) and shows a notice when one is available.
 	CheckForUpdates bool `yaml:"checkForUpdates"`
 }
 
