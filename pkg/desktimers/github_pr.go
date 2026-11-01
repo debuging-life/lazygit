@@ -32,6 +32,26 @@ const githubListPages = 5
 // in without the project scope unless asked for it.
 var ErrProjectsNeedScope = errors.New("GitHub Projects need the project scope: run `gh auth refresh -s project`")
 
+// ErrRepoNotFound is GitHub's 404 for a repository: it does not exist, or
+// the account asking cannot see it. GitHub does not say which.
+var ErrRepoNotFound = errors.New("repository not found")
+
+// RepoNotFoundError says which repository GitHub could not find, and for
+// which account (Login is "" when GitHub would not say who was asking).
+type RepoNotFoundError struct {
+	Repo  string
+	Login string
+}
+
+func (e *RepoNotFoundError) Error() string {
+	if e.Login == "" {
+		return "GitHub can't find " + e.Repo + " with this sign-in"
+	}
+	return "GitHub can't find " + e.Repo + " as " + e.Login
+}
+
+func (e *RepoNotFoundError) Is(target error) bool { return target == ErrRepoNotFound }
+
 // GitHubRepo is one repository on one GitHub host, asked as one person.
 type GitHubRepo struct {
 	// Host is the web host: github.com, or a GitHub Enterprise Server's.
@@ -260,6 +280,10 @@ func (r GitHubRepo) LoadPullRequestChoices() (*PullRequestChoices, error) {
 	wg.Wait()
 
 	if repoErr != nil {
+		var refused *GitHubError
+		if errors.As(repoErr, &refused) && refused.Status == http.StatusNotFound {
+			return nil, &RepoNotFoundError{Repo: r.Owner + "/" + r.Name, Login: choices.Viewer}
+		}
 		return nil, repoErr
 	}
 	if usersErr != nil {

@@ -260,8 +260,16 @@ func TestLoadPullRequestChoicesForARepositoryTheAccountCannotSee(t *testing.T) {
 
 	_, err := github.repo().LoadPullRequestChoices()
 
-	/* EXPECTED:
 	assert.EqualError(t, err, "GitHub can't find acme/clock as ada")
-	ACTUAL: */
-	assert.EqualError(t, err, "Not Found")
+}
+
+func TestRepoNotFoundIsKnownByKind(t *testing.T) {
+	github := newFakeGitHub(t)
+	github.noRepo = true
+	github.noViewer = true
+
+	_, err := github.repo().LoadPullRequestChoices()
+
+	assert.ErrorIs(t, err, ErrRepoNotFound)
+	assert.EqualError(t, err, "GitHub can't find acme/clock with this sign-in")
 }
