@@ -26,6 +26,7 @@ type fakeGitHub struct {
 
 	noProjectScope bool
 	refuseReviewer bool
+	noViewer       bool
 }
 
 func newFakeGitHub(t *testing.T) *fakeGitHub {
@@ -68,6 +69,10 @@ func (f *fakeGitHub) answer(w http.ResponseWriter, r *http.Request, key string, 
 	case key == "GET /repos/acme/clock":
 		write(200, map[string]any{"default_branch": "main"})
 	case key == "GET /user":
+		if f.noViewer {
+			write(401, map[string]any{"message": "Requires authentication"})
+			return
+		}
 		write(200, map[string]any{"login": "ada"})
 	case key == "GET /repos/acme/clock/assignees?per_page=100":
 		w.Header().Set("Link", fmt.Sprintf(`<%s/repos/acme/clock/assignees?per_page=100&page=2>; rel="next"`, f.server.URL))
@@ -223,6 +228,9 @@ func TestGitHubErrorShowsWhatWasRefused(t *testing.T) {
 	err = githubError(422, []byte(`{"message":"Validation Failed","errors":[{"resource":"PullRequest","field":"base","code":"invalid"}]}`))
 	assert.EqualError(t, err, "Validation Failed: base invalid")
 
+	err = githubError(422, []byte(`{"message":"Validation Failed","errors":[{"message":"No commits between main and face"},{"field":"base","code":"invalid"}]}`))
+	assert.EqualError(t, err, "No commits between main and face")
+
 	err = githubError(502, []byte(`<html>`))
 	assert.EqualError(t, err, "GitHub answered 502")
 }
@@ -230,4 +238,13 @@ func TestGitHubErrorShowsWhatWasRefused(t *testing.T) {
 func TestReviewerCandidatesLeaveOutTheAuthor(t *testing.T) {
 	choices := &PullRequestChoices{Viewer: "Ada", Users: []GitHubUser{{"ada"}, {"bea"}}}
 	assert.Equal(t, []GitHubUser{{"bea"}}, choices.ReviewerCandidates())
+}
+
+func TestLoadPullRequestChoicesNeedsToKnowWhoIsAsking(t *testing.T) {
+	github := newFakeGitHub(t)
+	github.noViewer = true
+
+	_, err := github.repo().LoadPullRequestChoices()
+
+	assert.Error(t, err)
 }

@@ -178,16 +178,16 @@ func githubError(status int, data []byte) error {
 	}
 	_ = json.Unmarshal(data, &parsed)
 	message := parsed.Message
+	// The first detail that says something is the one shown.
 	for _, e := range parsed.Errors {
-		switch {
-		case e.Message != "":
+		if e.Message != "" {
 			message = e.Message
-		case e.Field != "" && e.Code != "":
-			message = fmt.Sprintf("%s: %s %s", parsed.Message, e.Field, e.Code)
-		default:
-			continue
+			break
 		}
-		break
+		if e.Field != "" && e.Code != "" {
+			message = fmt.Sprintf("%s: %s %s", parsed.Message, e.Field, e.Code)
+			break
+		}
 	}
 	return &GitHubError{Status: status, Message: message}
 }
@@ -224,7 +224,7 @@ func (r GitHubRepo) repoPath() string {
 func (r GitHubRepo) LoadPullRequestChoices() (*PullRequestChoices, error) {
 	choices := &PullRequestChoices{}
 	var wg sync.WaitGroup
-	var repoErr, usersErr error
+	var repoErr, usersErr, viewerErr error
 
 	wg.Add(6)
 	go func() {
@@ -238,9 +238,8 @@ func (r GitHubRepo) LoadPullRequestChoices() (*PullRequestChoices, error) {
 	go func() {
 		defer wg.Done()
 		var viewer GitHubUser
-		if _, err := r.do(http.MethodGet, r.restBase()+"/user", nil, &viewer); err == nil {
-			choices.Viewer = viewer.Login
-		}
+		_, viewerErr = r.do(http.MethodGet, r.restBase()+"/user", nil, &viewer)
+		choices.Viewer = viewer.Login
 	}()
 	go func() {
 		defer wg.Done()
@@ -265,6 +264,12 @@ func (r GitHubRepo) LoadPullRequestChoices() (*PullRequestChoices, error) {
 	}
 	if usersErr != nil {
 		return nil, usersErr
+	}
+	// Who is asking decides who may review: without it the author would
+	// be offered, and GitHub refuses every reviewer of a request naming
+	// them.
+	if viewerErr != nil {
+		return nil, viewerErr
 	}
 	sort.Slice(choices.Users, func(i, j int) bool {
 		return strings.ToLower(choices.Users[i].Login) < strings.ToLower(choices.Users[j].Login)
