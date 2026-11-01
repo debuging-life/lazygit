@@ -494,6 +494,11 @@ func (self *BranchesController) promptToCheckoutWorktree(worktree *models.Worktr
 }
 
 func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.Branch) error {
+	// deskgit: on GitHub, the pull request form; a browser elsewhere, or
+	// without a gh sign-in.
+	if svcInfo, token, ok := self.getGitHubAuth(); ok {
+		return self.createPRViaAPIWithBase(selectedBranch, "", svcInfo, token)
+	}
 	if !selectedBranch.IsTrackingRemote() {
 		return errors.New(self.c.Tr.PullRequestNoUpstream)
 	}
@@ -554,77 +559,65 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 		return errors.New(self.c.Tr.PRSameBranch)
 	}
 
-	// Pre-fill from the last commit message.
-	defaultTitle := ""
-	defaultBody := ""
-	if msg, err := self.c.Git().Commit.GetCommitMessage(branch.CommitHash); err == nil && msg != "" {
-		parts := strings.SplitN(msg, "\n", 2)
-		defaultTitle = parts[0]
-		if len(parts) > 1 {
-			defaultBody = strings.TrimLeft(parts[1], "\n")
-		}
+	// deskgit: the pull request form (title, description, base, reviewers,
+	// assignees, labels, projects), in the DeskTick helpers.
+	if !branch.IsTrackingRemote() {
+		return errors.New(self.c.Tr.PullRequestNoUpstream)
 	}
-
-	self.c.Prompt(types.PromptOpts{
-		Title:          self.c.Tr.PRTitle,
-		InitialContent: defaultTitle,
-		HandleConfirm: func(title string) error {
-			self.c.Prompt(types.PromptOpts{
-				Title:          self.c.Tr.PRBody,
-				InitialContent: defaultBody,
-				HandleConfirm: func(body string) error {
-					self.c.LogAction(self.c.Tr.Actions.CreatePullRequestViaAPI)
-					return self.c.WithWaitingStatus(self.c.Tr.PRCreatingPR, func(_ gocui.Task) error {
-						pr, err := self.c.Git().GitHub.CreatePullRequest(
-							svcInfo.Owner, svcInfo.Repository,
-							title, body, headBranch, baseBranch,
-							svcInfo.WebDomain, token,
-						)
-						if err != nil {
-							return err
-						}
-						self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-						capturedPR := pr
-						capturedSvc := svcInfo
-						capturedTok := token
-						menuTitle := utils.ResolvePlaceholderString(
-							self.c.Tr.PRCreatedMenuTitle,
-							map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-						)
-						return self.c.Menu(types.CreateMenuOptions{
-							Title: menuTitle,
-							Items: []*types.MenuItem{
-								{
-									LabelColumns: []string{self.c.Tr.PRCreatedOpenInBrowser},
-									OnPress: func() error {
-										return self.c.OS().OpenLink(capturedPR.Url)
-									},
-								},
-								{
-									LabelColumns: []string{self.c.Tr.PRCreatedCopyLink},
-									OnPress: func() error {
-										if err := self.c.OS().CopyToClipboard(capturedPR.Url); err != nil {
-											return err
-										}
-										self.c.Toast(self.c.Tr.PullRequestURLCopiedToClipboard)
-										return nil
-									},
-								},
-								{
-									LabelColumns: []string{self.c.Tr.PRCreatedMergeInApp},
-									OnPress: func() error {
-										return self.handleMergePRViaAPI(capturedPR, capturedSvc, capturedTok)
-									},
-								},
-							},
-						})
-					})
-				},
-			})
-			return nil
+	return self.c.Helpers().Desktimers.OpenPullRequestForm(helpers.PullRequestFormOpts{
+		Repo: desktimers.GitHubRepo{
+			Host: svcInfo.WebDomain, Owner: svcInfo.Owner, Name: svcInfo.Repository, Token: token,
+		},
+		Branch: branch.Name,
+		Head:   headBranch,
+		Base:   normalised,
+		EditFile: func(path string) error {
+			return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1)
+		},
+		BaseSuggestions: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
+		OnCreated: func(number int, url string, base string, note string) error {
+			pr := &models.GithubPullRequest{
+				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: base,
+			}
+			return self.showPullRequestCreatedMenu(pr, svcInfo, token, note)
 		},
 	})
-	return nil
+}
+
+// deskgit: what can be done with a pull request just made; note is what
+// GitHub refused of the rest of the form, shown above the choices.
+func (self *BranchesController) showPullRequestCreatedMenu(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string, note string) error {
+	return self.c.Menu(types.CreateMenuOptions{
+		Title: utils.ResolvePlaceholderString(
+			self.c.Tr.PRCreatedMenuTitle,
+			map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
+		),
+		Prompt: note,
+		Items: []*types.MenuItem{
+			{
+				LabelColumns: []string{self.c.Tr.PRCreatedOpenInBrowser},
+				OnPress: func() error {
+					return self.c.OS().OpenLink(pr.Url)
+				},
+			},
+			{
+				LabelColumns: []string{self.c.Tr.PRCreatedCopyLink},
+				OnPress: func() error {
+					if err := self.c.OS().CopyToClipboard(pr.Url); err != nil {
+						return err
+					}
+					self.c.Toast(self.c.Tr.PullRequestURLCopiedToClipboard)
+					return nil
+				},
+			},
+			{
+				LabelColumns: []string{self.c.Tr.PRCreatedMergeInApp},
+				OnPress: func() error {
+					return self.handleMergePRViaAPI(pr, svcInfo, token)
+				},
+			},
+		},
+	})
 }
 
 func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string) error {
