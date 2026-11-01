@@ -3,8 +3,6 @@ package desktimers
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -138,36 +136,27 @@ func formulaURL() string {
 }
 
 // LatestReleasedVersion returns the latest released deskgit version from the
-// Homebrew tap, hitting the network at most once per 24h (cached in the
-// config dir). force bypasses the cache.
+// R2 release manifest, the one `deskgit update` installs from, hitting the
+// network at most once per 24h (cached in the config dir). force bypasses
+// the cache, and waits as long as an update would for the manifest.
 func LatestReleasedVersion(force bool) (string, error) {
-	if !force {
-		if latest, ok := cachedLatestVersion(loadUpdateCache(), time.Now()); ok {
-			return latest, nil
-		}
+	timeout := updateCheckTimeout
+	if force {
+		timeout = manifestTimeout
+	} else if latest, ok := cachedLatestVersion(loadUpdateCache(), time.Now()); ok {
+		return latest, nil
 	}
 
-	httpClient := &http.Client{Timeout: updateCheckTimeout}
-	resp, err := httpClient.Get(formulaURL())
+	manifest, err := fetchManifest(timeout)
 	if err != nil {
-		return "", fmt.Errorf("fetching formula: %w", err)
+		return "", err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("fetching formula: unexpected status %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return "", fmt.Errorf("reading formula: %w", err)
+	if manifest.Version == "" {
+		return "", fmt.Errorf("no version found in manifest")
 	}
 
-	latest := ParseFormulaVersion(string(body))
-	if latest == "" {
-		return "", fmt.Errorf("no version found in formula")
-	}
-
-	saveUpdateCache(&updateCheckCache{LatestVersion: latest, CheckedAt: time.Now()})
-	return latest, nil
+	saveUpdateCache(&updateCheckCache{LatestVersion: manifest.Version, CheckedAt: time.Now()})
+	return manifest.Version, nil
 }
 
 // CheckForUpdate reports whether a newer release than currentVersion exists.

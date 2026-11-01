@@ -141,8 +141,5 @@ func TestLatestReleasedVersionIsReadFromR2(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	/* EXPECTED:
 	assert.Equal(t, "0.8.1", latest)
-	ACTUAL: */
-	assert.Equal(t, "0.5.8", latest)
 }

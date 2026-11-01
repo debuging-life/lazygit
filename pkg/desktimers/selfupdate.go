@@ -82,7 +82,11 @@ func ManifestURL() string {
 
 // FetchManifest downloads and parses the release manifest.
 func FetchManifest() (*ReleaseManifest, error) {
-	client := &http.Client{Timeout: manifestTimeout}
+	return fetchManifest(manifestTimeout)
+}
+
+func fetchManifest(timeout time.Duration) (*ReleaseManifest, error) {
+	client := &http.Client{Timeout: timeout}
 	resp, err := client.Get(ManifestURL())
 	if err != nil {
 		return nil, fmt.Errorf("fetching manifest: %w", err)
