@@ -47,15 +47,14 @@ type branchCommit struct {
 }
 
 // commitsAhead are the commits on branch that baseRef lacks, oldest first,
-// or just branch's own commit when baseRef cannot be compared with.
+// or nil when baseRef cannot be compared with (not fetched, or a remote
+// not called origin): the branch's last commit alone would pass for the
+// whole of a branch of several.
 func commitsAhead(repoPath string, branch string, baseRef string) []branchCommit {
 	format := "--format=%s%x1f%b%x1e"
 	out, err := gitOutput(repoPath, "log", "--reverse", "--no-show-signature", format, baseRef+".."+branch)
 	if err != nil {
-		out, err = gitOutput(repoPath, "log", "-1", "--no-show-signature", format, branch)
-		if err != nil {
-			return nil
-		}
+		return nil
 	}
 	commits := []branchCommit{}
 	for _, record := range strings.Split(out, "\x1e") {

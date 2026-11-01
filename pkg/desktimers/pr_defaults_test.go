@@ -71,6 +71,7 @@ func TestDefaultPullRequestTextWhenTheBaseIsUnknown(t *testing.T) {
 
 	text := DefaultPullRequestText(repo, "CLK-12/face", "origin/nowhere", nil, "")
 
-	// The branch's own commit is all there is to go on.
-	assert.Equal(t, "CLK-12/draw", text.Title)
+	// What the branch carries is not known, so no one commit stands for it.
+	assert.Equal(t, "CLK-12/face", text.Title)
+	assert.Empty(t, text.Body)
 }
