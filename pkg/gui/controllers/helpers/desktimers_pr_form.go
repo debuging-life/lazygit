@@ -33,9 +33,9 @@ type PullRequestFormOpts struct {
 	EditFile func(path string) error
 	// BaseSuggestions suggests branches for the base.
 	BaseSuggestions func(string) []*types.Suggestion
-	// OnCreated shows what can be done with the pull request made; note is
-	// what GitHub refused of the rest, or "".
-	OnCreated func(number int, url string, note string) error
+	// OnCreated shows what can be done with the pull request made, into
+	// base; note is what GitHub refused of the rest, or "".
+	OnCreated func(number int, url string, base string, note string) error
 }
 
 // pullRequestForm is the form as filled in so far.
@@ -68,6 +68,19 @@ const teamPrefix = "team:"
 func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) error {
 	picked := self.SelectedTask()
 	return self.c.WithWaitingStatus(self.c.Tr.PRFormLoading, func(gocui.Task) error {
+		// The task's link is DeskTick's to give, and does not wait on GitHub.
+		taskURL := make(chan string, 1)
+		go func() {
+			code := desktimers.ExtractCode(opts.Branch)
+			if code == "" && picked != nil {
+				code = picked.Code
+			}
+			if code == "" {
+				taskURL <- ""
+				return
+			}
+			taskURL <- desktimers.TaskURLForCode(".", code)
+		}()
 		choices, err := opts.Repo.LoadPullRequestChoices()
 		if err != nil {
 			return err
@@ -76,15 +89,7 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 		if base == "" {
 			base = choices.DefaultBranch
 		}
-		code := desktimers.ExtractCode(opts.Branch)
-		if code == "" && picked != nil {
-			code = picked.Code
-		}
-		taskURL := ""
-		if code != "" {
-			taskURL = desktimers.TaskURLForCode(".", code)
-		}
-		text := desktimers.DefaultPullRequestText(".", opts.Branch, "origin/"+base, picked, taskURL)
+		text := desktimers.DefaultPullRequestText(".", opts.Branch, "origin/"+base, picked, <-taskURL)
 
 		form := &pullRequestForm{
 			opts:    opts,
@@ -187,6 +192,17 @@ func (self *DesktimersHelper) showPullRequestForm(form *pullRequestForm, selecte
 		Items:              items,
 		InitialSelectedIdx: selected,
 		MinWidth:           100,
+		// Esc out of a form somebody has filled in asks first: the
+		// description may be minutes of writing.
+		OnCancel: func() error {
+			self.c.Confirm(types.ConfirmOpts{
+				Title:         tr.PRFormDiscardTitle,
+				Prompt:        tr.PRFormDiscardPrompt,
+				HandleConfirm: func() error { return nil },
+				HandleClose:   back(selected),
+			})
+			return nil
+		},
 	})
 }
 
@@ -216,6 +232,14 @@ func (self *DesktimersHelper) describeBody(form *pullRequestForm) string {
 // editPullRequestBody opens the description in the person's editor, as
 // git does a commit message.
 func (self *DesktimersHelper) editPullRequestBody(form *pullRequestForm) error {
+	// Whatever goes wrong, the form comes back as it was.
+	if err := self.editBodyInEditor(form); err != nil {
+		self.c.ErrorToast(err.Error())
+	}
+	return self.showPullRequestForm(form, prRowDescription)
+}
+
+func (self *DesktimersHelper) editBodyInEditor(form *pullRequestForm) error {
 	dir, err := os.MkdirTemp("", "deskgit-pr-")
 	if err != nil {
 		return err
@@ -236,7 +260,7 @@ func (self *DesktimersHelper) editPullRequestBody(form *pullRequestForm) error {
 		form.draft.Body = body
 		form.fromTemplate = false
 	}
-	return self.showPullRequestForm(form, prRowDescription)
+	return nil
 }
 
 // pickOption is one row of a picker: what it shows, what it sends, and
@@ -370,6 +394,10 @@ func (self *DesktimersHelper) createPullRequest(form *pullRequestForm, asDraft b
 		self.c.ErrorToast(self.c.Tr.PRFormTitleRequired)
 		return self.showPullRequestForm(form, prRowTitle)
 	}
+	if form.draft.Base == form.draft.Head {
+		self.c.ErrorToast(self.c.Tr.PRSameBranch)
+		return self.showPullRequestForm(form, prRowBase)
+	}
 	draft := form.draft
 	draft.Draft = asDraft
 	self.c.LogAction(self.c.Tr.Actions.CreatePullRequestViaAPI)
@@ -391,7 +419,7 @@ func (self *DesktimersHelper) createPullRequest(form *pullRequestForm, asDraft b
 		}
 		self.c.OnUIThread(func() error {
 			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
-			return form.opts.OnCreated(created.Number, created.URL, note)
+			return form.opts.OnCreated(created.Number, created.URL, draft.Base, note)
 		})
 		return nil
 	})

@@ -575,9 +575,9 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 			return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1)
 		},
 		BaseSuggestions: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
-		OnCreated: func(number int, url string, note string) error {
+		OnCreated: func(number int, url string, base string, note string) error {
 			pr := &models.GithubPullRequest{
-				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: normalised,
+				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: base,
 			}
 			return self.showPullRequestCreatedMenu(pr, svcInfo, token, note)
 		},

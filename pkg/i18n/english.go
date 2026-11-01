@@ -337,6 +337,8 @@ type TranslationSet struct {
 	PRFormProjectsNeedScope               string
 	PRFormUnavailable                     string
 	PRFormDone                            string
+	PRFormDiscardTitle                    string
+	PRFormDiscardPrompt                   string
 	PRFormTitleRequired                   string
 	PRFormCreatedWithWarnings             string
 	PROpenPullRequests                    string
@@ -1590,6 +1592,8 @@ func EnglishTranslationSet() *TranslationSet {
   gh auth refresh -s project`,
 		PRFormUnavailable:   `unavailable`,
 		PRFormDone:          `Done`,
+		PRFormDiscardTitle:  `Discard this pull request?`,
+		PRFormDiscardPrompt: `What is filled in will be lost. Enter discards it; Esc goes back to the form.`,
 		PRFormTitleRequired: `A pull request needs a title`,
 		PRFormCreatedWithWarnings: `The pull request was made, but GitHub refused some of the rest:
 
