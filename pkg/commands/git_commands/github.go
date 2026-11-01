@@ -13,6 +13,7 @@ import (
 	"github.com/cli/go-gh/v2/pkg/auth"
 	"github.com/jesseduffield/lazygit/pkg/commands/hosting_service"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
+	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 )
@@ -141,7 +142,9 @@ func fetchPullRequestsQuery(branches []string, owner string, repo string) (strin
 }
 
 func (self *GitHubCommands) GetAuthToken(host string) string {
-	token, _ := auth.TokenForHost(host)
+	// deskgit: the gh account chosen for this repository, not only the
+	// active one.
+	token, _ := desktimers.GitHubToken(self.repoPaths.RepoPath(), host)
 	return token
 }
 
