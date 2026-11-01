@@ -3,8 +3,11 @@ package desktimers
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const sampleFormula = `class Deskgit < Formula
@@ -67,10 +70,15 @@ func TestCheckForUpdate(t *testing.T) {
 	fetches := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fetches++
+		if r.URL.Path == "/latest.json" {
+			w.Write([]byte(`{"version":"0.3.1","assets":{}}`))
+			return
+		}
 		w.Write([]byte(sampleFormula))
 	}))
 	defer server.Close()
-	formulaURLOverride = server.URL
+	t.Setenv("DESKGIT_RELEASES_URL", server.URL)
+	formulaURLOverride = server.URL + "/formula"
 	t.Cleanup(func() { formulaURLOverride = "" })
 
 	latest, newer, err := CheckForUpdate("0.3.0")
@@ -111,4 +119,30 @@ func TestCheckForUpdate(t *testing.T) {
 	if newer {
 		t.Error("same version should not report an update")
 	}
+}
+
+// Releases go to R2; the Homebrew formula stays pinned at its baseline, so
+// the version it names is not the latest one.
+func TestLatestReleasedVersionIsReadFromR2(t *testing.T) {
+	setupConfigDir(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/latest.json" {
+			w.Write([]byte(`{"version":"0.8.1","assets":{}}`))
+			return
+		}
+		w.Write([]byte(strings.Replace(sampleFormula, "0.3.1", "0.5.8", 1)))
+	}))
+	defer server.Close()
+	t.Setenv("DESKGIT_RELEASES_URL", server.URL)
+	formulaURLOverride = server.URL + "/formula"
+	t.Cleanup(func() { formulaURLOverride = "" })
+
+	latest, err := LatestReleasedVersion(true)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	/* EXPECTED:
+	assert.Equal(t, "0.8.1", latest)
+	ACTUAL: */
+	assert.Equal(t, "0.5.8", latest)
 }
