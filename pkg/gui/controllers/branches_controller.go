@@ -586,20 +586,21 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 			pr := &models.GithubPullRequest{
 				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: base,
 			}
-			return self.showPullRequestCreatedMenu(pr, svcInfo, token, note)
+			title := utils.ResolvePlaceholderString(
+				self.c.Tr.PRCreatedMenuTitle,
+				map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
+			)
+			return self.showPullRequestMenu(pr, svcInfo, token, title, note)
 		},
 		Reopen: func() error { return self.handleCreatePullRequest(branch) },
 	})
 }
 
-// deskgit: what can be done with a pull request just made; note is what
-// GitHub refused of the rest of the form, shown above the choices.
-func (self *BranchesController) showPullRequestCreatedMenu(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string, note string) error {
+// deskgit: what can be done with a pull request; note is shown above the
+// choices (what GitHub refused of the rest of the form, for one just made).
+func (self *BranchesController) showPullRequestMenu(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string, title string, note string) error {
 	return self.c.Menu(types.CreateMenuOptions{
-		Title: utils.ResolvePlaceholderString(
-			self.c.Tr.PRCreatedMenuTitle,
-			map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-		),
+		Title:  title,
 		Prompt: note,
 		Items: []*types.MenuItem{
 			{
