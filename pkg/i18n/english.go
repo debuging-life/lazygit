@@ -295,6 +295,7 @@ type TranslationSet struct {
 	PRNoGHToken                           string
 	PRCreated                             string
 	PRCreatedMenuTitle                    string
+	PRExistingMenuTitle                   string
 	PRCreatedOpenInBrowser                string
 	PRCreatedCopyLink                     string
 	PRCreatedMergeInApp                   string
@@ -1557,6 +1558,7 @@ func EnglishTranslationSet() *TranslationSet {
 		PRNoGHToken:                          `No GitHub token — run: gh auth login`,
 		PRCreated:                            `Pull request #{{number}} created`,
 		PRCreatedMenuTitle:                   `PR #{{number}} created`,
+		PRExistingMenuTitle:                  `PR #{{number}}: {{head}} → {{base}}`,
 		PRCreatedOpenInBrowser:               `Open PR in browser`,
 		PRCreatedCopyLink:                    `Copy PR link`,
 		PRCreatedMergeInApp:                  `Merge in-app`,
