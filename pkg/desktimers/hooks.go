@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -220,7 +221,9 @@ func hookScript(name string, dtHookPath string, chained bool) string {
 		b.WriteString("fi\n\n")
 	}
 
-	fmt.Fprintf(b, "DT_HOOK=%q\n", dtHookPath)
+	// Git for Windows runs hooks in its own sh, which takes C:/x but
+	// not C:\x.
+	fmt.Fprintf(b, "DT_HOOK=%q\n", strings.ReplaceAll(dtHookPath, `\`, "/"))
 	b.WriteString("if [ ! -x \"$DT_HOOK\" ]; then\n")
 	b.WriteString("  DT_HOOK=$(command -v dt-hook 2>/dev/null) || exit 0\n")
 	b.WriteString("fi\n")
@@ -238,11 +241,19 @@ func hookScript(name string, dtHookPath string, chained bool) string {
 	return b.String()
 }
 
+// DtHookName is the hook binary's file name: dt-hook.exe on Windows.
+func DtHookName() string {
+	if runtime.GOOS == "windows" {
+		return "dt-hook.exe"
+	}
+	return "dt-hook"
+}
+
 // FindDtHookBinary looks for dt-hook next to the running executable, then on
 // the PATH.
 func FindDtHookBinary() (string, bool) {
 	if exe, err := os.Executable(); err == nil {
-		candidate := filepath.Join(filepath.Dir(exe), "dt-hook")
+		candidate := filepath.Join(filepath.Dir(exe), DtHookName())
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
 			return candidate, true
 		}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -235,7 +236,7 @@ func runDesktimersUpdate(w io.Writer, currentVersion string) int {
 		fmt.Fprintf(w, "Cannot determine executable path: %v\n", err)
 		return 1
 	}
-	hookPath := execPath[:len(execPath)-len("deskgit")] + "dt-hook"
+	hookPath := filepath.Join(filepath.Dir(execPath), desktimers.DtHookName())
 
 	// Download and verify the main binary.
 	fmt.Fprintf(w, "Downloading deskgit %s for %s…\n", manifest.Version, key)

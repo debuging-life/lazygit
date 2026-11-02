@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInstallHooksFresh(t *testing.T) {
@@ -164,4 +166,10 @@ func TestUninstallLeavesForeignHooksAlone(t *testing.T) {
 	if err != nil || string(content) != original {
 		t.Fatalf("foreign hook was touched: (%q, %v)", content, err)
 	}
+}
+
+func TestHookScriptGivesGitForWindowsForwardSlashes(t *testing.T) {
+	script := hookScript("post-commit", `C:\Users\ada\AppData\Local\Programs\deskgit\dt-hook.exe`, false)
+
+	assert.Contains(t, script, `DT_HOOK="C:/Users/ada/AppData/Local/Programs/deskgit/dt-hook.exe"`)
 }
