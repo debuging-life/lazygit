@@ -492,7 +492,12 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 	// repository is asked as is chosen first.
 	if svcInfo, err := self.c.Helpers().Host.GetServiceInfo(); err == nil && svcInfo.Provider == "github" &&
 		desktimers.NeedsGitHubAccountChoice(".", svcInfo.WebDomain) {
-		return self.c.Helpers().Desktimers.ChooseGitHubAccount(svcInfo.WebDomain, self.c.Tr.GitHubAccountWhich, func() error {
+		pick := helpers.AccountPick{
+			Host: svcInfo.WebDomain,
+			Line: utils.ResolvePlaceholderString(self.c.Tr.GitHubAccountWhich, map[string]string{"repo": svcInfo.RepoName}),
+			Note: self.c.Tr.GitHubAccountWhichNote,
+		}
+		return self.c.Helpers().Desktimers.ChooseGitHubAccount(pick, func() error {
 			return self.handleCreatePullRequest(selectedBranch)
 		})
 	}

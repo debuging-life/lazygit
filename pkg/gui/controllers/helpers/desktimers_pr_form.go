@@ -10,6 +10,7 @@ import (
 
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
+	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
@@ -94,7 +95,10 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 			// try, offer it.
 			if len(accounts.Logins) > 1 && opts.Reopen != nil {
 				self.c.OnUIThread(func() error {
-					return self.ChooseGitHubAccount(opts.Repo.Host, err.Error()+". "+self.c.Tr.GitHubAccountPickAnother, opts.Reopen)
+					return self.ChooseGitHubAccount(AccountPick{
+						Host: opts.Repo.Host, Occasion: self.c.Tr.GitHubAccountNotFound,
+						Line: err.Error() + ".", Note: self.c.Tr.GitHubAccountPickAnother,
+					}, opts.Reopen)
 				})
 				return nil
 			}
@@ -482,7 +486,13 @@ func (self *DesktimersHelper) accountRow(form *pullRequestForm, section *types.M
 		Section:      section,
 		Keys:         menuKey('g'),
 		OnPress: func() error {
-			return self.ChooseGitHubAccount(form.opts.Repo.Host, self.c.Tr.GitHubAccountChangeStartsAgain, form.opts.Reopen)
+			return self.ChooseGitHubAccount(AccountPick{
+				Host: form.opts.Repo.Host, Occasion: self.c.Tr.GitHubAccountSwitchOccasion,
+				Line: utils.ResolvePlaceholderString(self.c.Tr.GitHubAccountSwitch, map[string]string{
+					"repo": form.opts.Repo.Owner + "/" + form.opts.Repo.Name,
+				}),
+				Note: self.c.Tr.GitHubAccountChangeStartsAgain,
+			}, form.opts.Reopen)
 		},
 	}
 	if len(form.accounts.Logins) < 2 || form.opts.Reopen == nil {
@@ -491,36 +501,70 @@ func (self *DesktimersHelper) accountRow(form *pullRequestForm, section *types.M
 	return item
 }
 
+// AccountPick is why the account picker is shown: the occasion, named in
+// the frame's title, a line saying what is asked, and a note under it.
+// The prompt is plain text: its wrapping counts colour codes as cells.
+type AccountPick struct {
+	Host     string
+	Occasion string
+	Line     string
+	Note     string
+}
+
 // ChooseGitHubAccount asks which gh account the repository is asked as,
-// keeps the answer in the repository's git config, then goes on.
-func (self *DesktimersHelper) ChooseGitHubAccount(host string, prompt string, then func() error) error {
-	accounts := desktimers.ListGitHubAccounts(host)
+// keeps the answer in the repository's git config, then goes on. Each
+// account is on a number key; the one the repository uses and the one
+// active in gh are tagged.
+func (self *DesktimersHelper) ChooseGitHubAccount(pick AccountPick, then func() error) error {
+	tr := self.c.Tr
+	accounts := desktimers.ListGitHubAccounts(pick.Host)
 	chosen := desktimers.RememberedGitHubAccount(".")
+	// No plate here: the chosen row is often the selected one, and the
+	// selection's ground would sit under the plate's ink.
+	accent, dim, bold := self.hudAccent().SetBold(), self.hudDim(), style.New().SetBold()
+
 	items := make([]*types.MenuItem, 0, len(accounts.Logins))
 	selected := 0
 	for i, login := range accounts.Logins {
-		note := ""
-		switch {
-		case strings.EqualFold(login, chosen):
-			note = self.c.Tr.GitHubAccountChosen
+		tags := []string{}
+		if strings.EqualFold(login, chosen) {
+			tags = append(tags, accent.Sprint("◆ "+tr.GitHubAccountChosen))
 			selected = i
-		case login == accounts.Active:
-			note = self.c.Tr.GitHubAccountActive
 		}
-		items = append(items, &types.MenuItem{
-			LabelColumns: []string{login, note},
+		if login == accounts.Active {
+			tags = append(tags, "● "+tr.GitHubAccountActive)
+		}
+		if len(tags) == 0 {
+			tags = append(tags, dim.Sprint(tr.GitHubAccountSignedIn))
+		}
+		item := &types.MenuItem{
+			LabelColumns: []string{bold.Sprint(login), strings.Join(tags, "  ")},
 			OnPress: func() error {
 				if err := desktimers.RememberGitHubAccount(".", login); err != nil {
 					return err
 				}
 				return then()
 			},
-		})
+		}
+		if i < 9 {
+			item.Keys = menuKey(rune('1' + i))
+		}
+		items = append(items, item)
+	}
+
+	prompt := pick.Line
+	if pick.Note != "" {
+		prompt += "\n\n" + pick.Note
+	}
+	title := tr.GitHubAccountTitle
+	if pick.Occasion != "" {
+		title += " · " + pick.Occasion
 	}
 	return self.c.Menu(types.CreateMenuOptions{
-		Title:              self.c.Tr.GitHubAccountTitle,
+		Title:              title,
 		Prompt:             prompt,
 		Items:              items,
 		InitialSelectedIdx: selected,
+		HideCancel:         true,
 	})
 }

@@ -351,6 +351,11 @@ type TranslationSet struct {
 	GitHubAccountChangeStartsAgain        string
 	GitHubAccountOnlyOne                  string
 	GitHubAccountWhich                    string
+	GitHubAccountWhichNote                string
+	GitHubAccountSwitch                   string
+	GitHubAccountSwitchOccasion           string
+	GitHubAccountNotFound                 string
+	GitHubAccountSignedIn                 string
 	PROpenPullRequests                    string
 	NoBranchOnRemote                      string
 	Fetch                                 string
@@ -1610,13 +1615,18 @@ func EnglishTranslationSet() *TranslationSet {
 
 {{warnings}}`,
 		PRFieldAccount:                       `GitHub account`,
-		GitHubAccountTitle:                   `GitHub account for this repository`,
-		GitHubAccountChosen:                  `chosen here`,
-		GitHubAccountActive:                  `active in gh`,
-		GitHubAccountPickAnother:             `Pick the account that can see it; this repository will remember it.`,
+		GitHubAccountTitle:                   `GitHub account`,
+		GitHubAccountChosen:                  `THIS REPO`,
+		GitHubAccountActive:                  `ACTIVE IN GH`,
+		GitHubAccountPickAnother:             `Pick the account that can see it. This repository will remember it.`,
 		GitHubAccountSignInHint:              `Sign in to the account that can see it with gh auth login.`,
-		GitHubAccountChangeStartsAgain:       `This repository will remember the account. The form starts again, with what that account can pick.`,
-		GitHubAccountWhich:                   `gh is signed in to more than one GitHub account. Which one is this repository's? It will be remembered here; change it later from the pull request form.`,
+		GitHubAccountChangeStartsAgain:       `This repository will remember it. The form starts again with what that account can pick.`,
+		GitHubAccountWhich:                   `Which account is {{repo}} asked as?`,
+		GitHubAccountWhichNote:               `gh is signed in to more than one GitHub account. This repository remembers the one you pick; change it with g in the pull request form.`,
+		GitHubAccountSwitch:                  `Ask GitHub about {{repo}} as which account?`,
+		GitHubAccountSwitchOccasion:          `switch`,
+		GitHubAccountNotFound:                `not found`,
+		GitHubAccountSignedIn:                `signed in`,
 		GitHubAccountOnlyOne:                 `gh is signed in to one GitHub account here. Add another with gh auth login.`,
 		PROpenPullRequests:                   `Pull requests`,
 		CopyPullRequestURL:                   `Copy pull request URL to clipboard`,
