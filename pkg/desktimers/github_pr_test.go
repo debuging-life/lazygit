@@ -27,6 +27,7 @@ type fakeGitHub struct {
 	noProjectScope bool
 	refuseReviewer bool
 	noViewer       bool
+	noRepo         bool
 }
 
 func newFakeGitHub(t *testing.T) *fakeGitHub {
@@ -67,6 +68,9 @@ func (f *fakeGitHub) answer(w http.ResponseWriter, key string, body map[string]a
 		_ = json.NewEncoder(w).Encode(v)
 	}
 	switch {
+	// What a token that cannot see the repository is told.
+	case f.noRepo && strings.HasPrefix(key, "GET /repos/acme/clock"):
+		write(404, map[string]any{"message": "Not Found"})
 	case key == "GET /repos/acme/clock":
 		write(200, map[string]any{"default_branch": "main"})
 	case key == "GET /user":
@@ -248,4 +252,24 @@ func TestLoadPullRequestChoicesNeedsToKnowWhoIsAsking(t *testing.T) {
 	_, err := github.repo().LoadPullRequestChoices()
 
 	assert.Error(t, err)
+}
+
+func TestLoadPullRequestChoicesForARepositoryTheAccountCannotSee(t *testing.T) {
+	github := newFakeGitHub(t)
+	github.noRepo = true
+
+	_, err := github.repo().LoadPullRequestChoices()
+
+	assert.EqualError(t, err, "GitHub can't find acme/clock as ada")
+}
+
+func TestRepoNotFoundIsKnownByKind(t *testing.T) {
+	github := newFakeGitHub(t)
+	github.noRepo = true
+	github.noViewer = true
+
+	_, err := github.repo().LoadPullRequestChoices()
+
+	assert.ErrorIs(t, err, ErrRepoNotFound)
+	assert.EqualError(t, err, "GitHub can't find acme/clock with this sign-in")
 }

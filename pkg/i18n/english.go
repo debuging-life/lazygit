@@ -295,6 +295,7 @@ type TranslationSet struct {
 	PRNoGHToken                           string
 	PRCreated                             string
 	PRCreatedMenuTitle                    string
+	PRExistingMenuTitle                   string
 	PRCreatedOpenInBrowser                string
 	PRCreatedCopyLink                     string
 	PRCreatedMergeInApp                   string
@@ -341,6 +342,15 @@ type TranslationSet struct {
 	PRFormDiscardPrompt                   string
 	PRFormTitleRequired                   string
 	PRFormCreatedWithWarnings             string
+	PRFieldAccount                        string
+	GitHubAccountTitle                    string
+	GitHubAccountChosen                   string
+	GitHubAccountActive                   string
+	GitHubAccountPickAnother              string
+	GitHubAccountSignInHint               string
+	GitHubAccountChangeStartsAgain        string
+	GitHubAccountOnlyOne                  string
+	GitHubAccountWhich                    string
 	PROpenPullRequests                    string
 	NoBranchOnRemote                      string
 	Fetch                                 string
@@ -1548,6 +1558,7 @@ func EnglishTranslationSet() *TranslationSet {
 		PRNoGHToken:                          `No GitHub token — run: gh auth login`,
 		PRCreated:                            `Pull request #{{number}} created`,
 		PRCreatedMenuTitle:                   `PR #{{number}} created`,
+		PRExistingMenuTitle:                  `PR #{{number}}: {{head}} → {{base}}`,
 		PRCreatedOpenInBrowser:               `Open PR in browser`,
 		PRCreatedCopyLink:                    `Copy PR link`,
 		PRCreatedMergeInApp:                  `Merge in-app`,
@@ -1598,6 +1609,15 @@ func EnglishTranslationSet() *TranslationSet {
 		PRFormCreatedWithWarnings: `The pull request was made, but GitHub refused some of the rest:
 
 {{warnings}}`,
+		PRFieldAccount:                       `GitHub account`,
+		GitHubAccountTitle:                   `GitHub account for this repository`,
+		GitHubAccountChosen:                  `chosen here`,
+		GitHubAccountActive:                  `active in gh`,
+		GitHubAccountPickAnother:             `Pick the account that can see it; this repository will remember it.`,
+		GitHubAccountSignInHint:              `Sign in to the account that can see it with gh auth login.`,
+		GitHubAccountChangeStartsAgain:       `This repository will remember the account. The form starts again, with what that account can pick.`,
+		GitHubAccountWhich:                   `gh is signed in to more than one GitHub account. Which one is this repository's? It will be remembered here; change it later from the pull request form.`,
+		GitHubAccountOnlyOne:                 `gh is signed in to one GitHub account here. Add another with gh auth login.`,
 		PROpenPullRequests:                   `Pull requests`,
 		CopyPullRequestURL:                   `Copy pull request URL to clipboard`,
 		OpenPullRequestInBrowser:             `Open pull request in browser`,

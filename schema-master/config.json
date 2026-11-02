@@ -1058,20 +1058,6 @@
           ],
           "default": "o"
         },
-        "viewPullRequestOptions": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            }
-          ],
-          "default": "O"
-        },
         "openPullRequestInBrowser": {
           "oneOf": [
             {

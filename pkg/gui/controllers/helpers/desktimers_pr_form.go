@@ -36,6 +36,9 @@ type PullRequestFormOpts struct {
 	// OnCreated shows what can be done with the pull request made, into
 	// base; note is what GitHub refused of the rest, or "".
 	OnCreated func(number int, url string, base string, note string) error
+	// Reopen starts again from the branches panel, asked as another gh
+	// account.
+	Reopen func() error
 }
 
 // pullRequestForm is the form as filled in so far.
@@ -43,6 +46,8 @@ type pullRequestForm struct {
 	opts    PullRequestFormOpts
 	choices *desktimers.PullRequestChoices
 	draft   desktimers.PullRequestDraft
+	// accounts are the gh accounts the form could be asked as.
+	accounts desktimers.GitHubAccounts
 	// fromTemplate says the description is still the repository's template.
 	fromTemplate bool
 }
@@ -56,6 +61,7 @@ const (
 	prRowAssignees
 	prRowLabels
 	prRowProjects
+	prRowAccount
 	prRowCreate
 	prRowCreateDraft
 )
@@ -81,7 +87,19 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 			}
 			taskURL <- desktimers.TaskURLForCode(".", code)
 		}()
+		accounts := desktimers.ListGitHubAccounts(opts.Repo.Host)
 		choices, err := opts.Repo.LoadPullRequestChoices()
+		if errors.Is(err, desktimers.ErrRepoNotFound) {
+			// Usually the account, not the repository: with another one to
+			// try, offer it.
+			if len(accounts.Logins) > 1 && opts.Reopen != nil {
+				self.c.OnUIThread(func() error {
+					return self.ChooseGitHubAccount(opts.Repo.Host, err.Error()+". "+self.c.Tr.GitHubAccountPickAnother, opts.Reopen)
+				})
+				return nil
+			}
+			return errors.New(err.Error() + ". " + self.c.Tr.GitHubAccountSignInHint)
+		}
 		if err != nil {
 			return err
 		}
@@ -101,6 +119,7 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 				Base:  base,
 			},
 			fromTemplate: text.FromTemplate,
+			accounts:     accounts,
 		}
 		self.c.OnUIThread(func() error { return self.showPullRequestForm(form, prRowTitle) })
 		return nil
@@ -170,6 +189,7 @@ func (self *DesktimersHelper) showPullRequestForm(form *pullRequestForm, selecte
 			return self.pickForPullRequest(form, prRowLabels)
 		}),
 		projects,
+		self.accountRow(form, details),
 		{
 			LabelColumns: []string{tr.PRFormCreate, ""},
 			OnPress:      func() error { return self.createPullRequest(form, false) },
@@ -451,4 +471,56 @@ func prefixed(prefix string, values []string) []string {
 		out[i] = prefix + value
 	}
 	return out
+}
+
+// accountRow shows the gh account the form is asked as, and changes it
+// when gh has others; changing it starts the form again, since what can be
+// picked is that account's.
+func (self *DesktimersHelper) accountRow(form *pullRequestForm, section *types.MenuSection) *types.MenuItem {
+	item := &types.MenuItem{
+		LabelColumns: []string{self.c.Tr.PRFieldAccount, form.choices.Viewer},
+		Section:      section,
+		Keys:         menuKey('g'),
+		OnPress: func() error {
+			return self.ChooseGitHubAccount(form.opts.Repo.Host, self.c.Tr.GitHubAccountChangeStartsAgain, form.opts.Reopen)
+		},
+	}
+	if len(form.accounts.Logins) < 2 || form.opts.Reopen == nil {
+		item.DisabledReason = &types.DisabledReason{Text: self.c.Tr.GitHubAccountOnlyOne}
+	}
+	return item
+}
+
+// ChooseGitHubAccount asks which gh account the repository is asked as,
+// keeps the answer in the repository's git config, then goes on.
+func (self *DesktimersHelper) ChooseGitHubAccount(host string, prompt string, then func() error) error {
+	accounts := desktimers.ListGitHubAccounts(host)
+	chosen := desktimers.RememberedGitHubAccount(".")
+	items := make([]*types.MenuItem, 0, len(accounts.Logins))
+	selected := 0
+	for i, login := range accounts.Logins {
+		note := ""
+		switch {
+		case strings.EqualFold(login, chosen):
+			note = self.c.Tr.GitHubAccountChosen
+			selected = i
+		case login == accounts.Active:
+			note = self.c.Tr.GitHubAccountActive
+		}
+		items = append(items, &types.MenuItem{
+			LabelColumns: []string{login, note},
+			OnPress: func() error {
+				if err := desktimers.RememberGitHubAccount(".", login); err != nil {
+					return err
+				}
+				return then()
+			},
+		})
+	}
+	return self.c.Menu(types.CreateMenuOptions{
+		Title:              self.c.Tr.GitHubAccountTitle,
+		Prompt:             prompt,
+		Items:              items,
+		InitialSelectedIdx: selected,
+	})
 }

@@ -168,7 +168,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` N `` | Przenieś commity do nowej gałęzi | Create a new branch and move the unpushed commits of the current branch to it. Useful if you meant to start new work and forgot to create a new branch first.<br><br>Note that this disregards the selection, the new branch is always created either from the main branch or stacked on top of the current branch (you get to choose which). |
 | `` w `` | Nowe drzewo pracy |  |
 | `` o `` | Utwórz żądanie ściągnięcia |  |
-| `` O `` | Zobacz opcje tworzenia pull requesta |  |
 | `` G `` | Otwórz żądanie ściągnięcia w przeglądarce |  |
 | `` <ctrl+y> `` | Kopiuj adres URL żądania ściągnięcia do schowka |  |
 | `` c `` | Przełącz według nazwy | Przełącz według nazwy. W polu wprowadzania możesz wpisać '-' aby przełączyć się na ostatnią gałąź. |

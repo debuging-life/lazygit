@@ -645,7 +645,6 @@ type KeybindingFilesConfig struct {
 
 type KeybindingBranchesConfig struct {
 	CreatePullRequest        Keybinding `yaml:"createPullRequest"`
-	ViewPullRequestOptions   Keybinding `yaml:"viewPullRequestOptions"`
 	OpenPullRequestInBrowser Keybinding `yaml:"openPullRequestInBrowser"`
 	CopyPullRequestURL       Keybinding `yaml:"copyPullRequestURL"`
 	CheckoutBranchByName     Keybinding `yaml:"checkoutBranchByName"`
@@ -1186,7 +1185,6 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			Branches: KeybindingBranchesConfig{
 				CopyPullRequestURL:       Keybinding{"<ctrl+y>"},
 				CreatePullRequest:        Keybinding{"o"},
-				ViewPullRequestOptions:   Keybinding{"O"},
 				OpenPullRequestInBrowser: Keybinding{"G"},
 				CheckoutBranchByName:     Keybinding{"c"},
 				ForceCheckoutBranch:      Keybinding{"F"},

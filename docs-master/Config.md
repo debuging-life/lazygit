@@ -762,7 +762,6 @@ keybinding:
     expandAll: =
   branches:
     createPullRequest: o
-    viewPullRequestOptions: O
     openPullRequestInBrowser: G
     copyPullRequestURL: <ctrl+y>
     checkoutBranchByName: c

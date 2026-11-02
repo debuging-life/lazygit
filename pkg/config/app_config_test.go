@@ -1024,7 +1024,6 @@ keybinding:
     expandAll: =
   branches:
     createPullRequest: o
-    viewPullRequestOptions: O
     copyPullRequestURL: <c-y>
     checkoutBranchByName: c
     forceCheckoutBranch: F
