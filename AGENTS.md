@@ -20,20 +20,21 @@ this section disagree, this section wins.
   lazygit releases cleanly: `pkg/desktimers/`, `cmd/dt-hook/`,
   `pkg/gui/controllers/helpers/desktimers_*.go`. A change to any other
   upstream file should be a few lines and marked `// deskgit:`.
-- **The end-to-end suite has failures that are the fork's own.** Committing
-  opens the task picker first, which upstream's commit tests do not expect.
-  Compare against `main` before deciding a failure is yours.
+- **The end-to-end suite and the linter are clean, and stay clean.**
+  Upstream's tests run with deskgit's pickers, hooks and update check off
+  (`upstreamTestDefaults` in `pkg/app/desktimers.go`); a test of deskgit's
+  own behaviour turns on what it needs in its `SetupConfig`. A failure or a
+  lint complaint is a real one: fix it, do not compare it away.
 - **Every check runs locally; no GitHub Actions minutes are spent.** The
   owner, 2026-11-02: "all the checks, tests, code review using claude code
   review should be locally only". Before a pull request is merged: the unit
   tests (`go test ./... -short`), the end-to-end suite
-  (`go test ./pkg/integration/clients/`, compared by name with `main`'s
-  failures), the linter (`scripts/golangci-lint-shim.sh run ./...`, the
-  version CI pins; only errors in the files changed count) and the
-  `/code-review` skill on the branch. Do not wait on, re-run or read CI on
-  `debuging-life/lazygit`. When the owner says to merge (see the first
-  rule), a pull request is still raised and merged, with
-  `--match-head-commit`, as the record of what went in.
+  (`go test ./pkg/integration/clients/`) and the linter
+  (`scripts/golangci-lint-shim.sh run ./...`, the version CI pins), all
+  passing, and the `/code-review` skill on the branch. Do not wait on,
+  re-run or read CI on `debuging-life/lazygit`. When the owner says to
+  merge (see the first rule), a pull request is still raised and merged,
+  with `--match-head-commit`, as the record of what went in.
 - **Releases go out over the air to R2, from this machine**:
   `scripts/release-deskgit.sh <version>` with `.env.r2` loaded, after a
   `changelogs/<version>.md` is on `main`. Not `just release`, not a tag push.
