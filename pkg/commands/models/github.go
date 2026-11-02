@@ -8,6 +8,10 @@ type GithubPullRequest struct {
 	State               string                `json:"state"` // "MERGED", "OPEN", "CLOSED", "DRAFT"
 	Url                 string                `json:"url"`
 	HeadRepositoryOwner GithubRepositoryOwner `json:"headRepositoryOwner"`
+	// deskgit: where it stands with its reviewers (desktimers.Review*,
+	// "" for no verdict), and whether it conflicts with its base.
+	Review      string
+	Conflicting bool
 }
 
 func (pr *GithubPullRequest) UserName() string {
