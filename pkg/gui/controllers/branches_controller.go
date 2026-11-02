@@ -502,9 +502,10 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 		})
 	}
 	if svcInfo, token, ok := self.getGitHubAuth(); ok {
-		// A branch's open pull request is shown, to open or merge, rather
-		// than a second one made: GitHub refuses that.
-		if pr := self.c.Model().PullRequestsMap[selectedBranch.Name]; pr != nil && pr.State == "OPEN" {
+		// A branch's open pull request, a draft included, is shown, to
+		// open or merge, rather than a second one made: GitHub refuses
+		// that.
+		if pr := self.c.Model().PullRequestsMap[selectedBranch.Name]; pr != nil && (pr.State == "OPEN" || pr.State == "DRAFT") {
 			title := utils.ResolvePlaceholderString(self.c.Tr.PRExistingMenuTitle, map[string]string{
 				"number": fmt.Sprintf("%d", pr.Number), "head": pr.HeadRefName, "base": pr.BaseRefName,
 			})
