@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -23,7 +24,8 @@ func TestInstallHooksFresh(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s hook missing: %v", name, err)
 		}
-		if info.Mode().Perm()&0o111 == 0 {
+		// Windows has no executable bit: Git for Windows runs any hook.
+		if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
 			t.Errorf("%s hook is not executable", name)
 		}
 		content, _ := os.ReadFile(path)

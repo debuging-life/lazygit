@@ -3,6 +3,7 @@ package desktimers
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -33,7 +34,8 @@ func TestTokenRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("token file missing: %v", err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
+	// Windows has no such bits; the file is in the person's own profile.
+	if perm := info.Mode().Perm(); runtime.GOOS != "windows" && perm != 0o600 {
 		t.Errorf("token file perms = %o, want 600", perm)
 	}
 
