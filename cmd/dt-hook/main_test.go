@@ -220,10 +220,12 @@ func TestPrepareCommitMsgEndToEnd(t *testing.T) {
 // hook with the "message" source, the same as `git commit -m`.
 func TestPrepareCommitMsgLeavesReplayedCommitsAlone(t *testing.T) {
 	stopMidRebase := func(t *testing.T, repo string) {
+		t.Helper()
 		t.Setenv("GIT_SEQUENCE_EDITOR", "sed -i.bak 1s/^pick/edit/")
 		runGit(t, repo, "rebase", "-i", "HEAD~1")
 	}
 	stopMidCherryPick := func(t *testing.T, repo string) {
+		t.Helper()
 		runGit(t, repo, "checkout", "-b", "other", "HEAD~1")
 		if err := os.WriteFile(filepath.Join(repo, "f"), []byte("other\n"), 0o644); err != nil {
 			t.Fatal(err)

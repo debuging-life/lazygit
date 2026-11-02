@@ -206,7 +206,7 @@ func each(count int, work func(i int) error) error {
 	var wg sync.WaitGroup
 	var once sync.Once
 	var first error
-	for i := 0; i < count; i++ {
+	for i := range count {
 		wg.Add(1)
 		gate <- struct{}{}
 		go func(i int) {
@@ -346,7 +346,7 @@ func statusOf(columns []boardColumn, index int) string {
 	if columns[index].IsDone {
 		return "done"
 	}
-	for i := 0; i < index; i++ {
+	for i := range index {
 		if !columns[i].IsDone {
 			return StatusInProgress
 		}

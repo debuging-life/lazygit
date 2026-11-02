@@ -53,7 +53,7 @@ func TestCheckForUpdate(t *testing.T) {
 	fetches := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fetches++
-		w.Write([]byte(`{"version":"0.3.1","assets":{}}`))
+		_, _ = w.Write([]byte(`{"version":"0.3.1","assets":{}}`))
 	}))
 	defer server.Close()
 	t.Setenv("DESKGIT_RELEASES_URL", server.URL)
@@ -104,10 +104,10 @@ func TestLatestReleasedVersionIsReadFromR2(t *testing.T) {
 	setupConfigDir(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/latest.json" {
-			w.Write([]byte(`{"version":"0.8.1","assets":{}}`))
+			_, _ = w.Write([]byte(`{"version":"0.8.1","assets":{}}`))
 			return
 		}
-		w.Write([]byte(`class Deskgit < Formula\n  version "0.5.8"\nend`))
+		_, _ = w.Write([]byte(`class Deskgit < Formula\n  version "0.5.8"\nend`))
 	}))
 	defer server.Close()
 	t.Setenv("DESKGIT_RELEASES_URL", server.URL)

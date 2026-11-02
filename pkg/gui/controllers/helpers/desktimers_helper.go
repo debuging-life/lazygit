@@ -307,12 +307,11 @@ func (self *DesktimersHelper) checkForUpdatesNow() error {
 
 	if desktimers.IsNewerVersion(latest, self.version) {
 		return self.showUpdateAvailable(latest)
-	} else {
-		self.c.Alert(self.c.Tr.DesktimersCheckForUpdatesNow, utils.ResolvePlaceholderString(
-			self.c.Tr.DesktimersUpToDate,
-			map[string]string{"version": latest},
-		))
 	}
+	self.c.Alert(self.c.Tr.DesktimersCheckForUpdatesNow, utils.ResolvePlaceholderString(
+		self.c.Tr.DesktimersUpToDate,
+		map[string]string{"version": latest},
+	))
 	return nil
 }
 
@@ -846,7 +845,6 @@ func (self *DesktimersHelper) setupRepositoryRemote() error {
 	// Build menu: one item per existing remote + "Add new remote"
 	items := make([]*types.MenuItem, 0, len(remotes)+1)
 	for _, r := range remotes {
-		r := r
 		displayURL := ""
 		if len(r.Urls) > 0 {
 			displayURL = r.Urls[0]

@@ -655,7 +655,6 @@ func (self *BranchesController) showColumnPickerMenu(
 ) error {
 	items := make([]*types.MenuItem, 0, len(columns)+1)
 	for _, col := range columns {
-		col := col // capture loop variable
 		items = append(items, &types.MenuItem{
 			LabelColumns: []string{col.Name},
 			OnPress: func() error {

@@ -52,6 +52,7 @@ func newSignInServer(t *testing.T) *signInServer {
 // browser plays the person: reads the address deskgit opened, "signs in",
 // and is sent back to the loopback port with whatever `answer` says.
 func (s *signInServer) browser(t *testing.T, answer func(callback string, state string) []string) func(target string) {
+	t.Helper()
 	return func(target string) {
 		parsed, err := url.Parse(target)
 		if err != nil {

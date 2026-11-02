@@ -1,6 +1,7 @@
 package desktimers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -237,7 +238,7 @@ func TestSendQueuedCommits(t *testing.T) {
 			api := newFakeDeskTick(t)
 			api.commitAnswer = test.answer
 			client := api.client()
-			if test.wantErr == ErrUnauthorized {
+			if errors.Is(test.wantErr, ErrUnauthorized) {
 				client.AccessToken = "ended"
 			}
 			repo := newCommitRepo(t)
