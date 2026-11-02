@@ -651,85 +651,17 @@ func (self *BranchesController) editPullRequest(pr *models.GithubPullRequest, sv
 }
 
 func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string) error {
-	// Resolve task code before doing anything else so we can ask "which column?"
-	// BEFORE the merge — that way the suppress flag is set before the webhook fires.
-	taskCode := desktimers.ExtractCode(pr.HeadRefName)
-	if taskCode == "" {
-		taskCode = desktimers.ExtractCode(pr.Title)
-	}
-	if taskCode == "" {
-		if sel := self.c.Helpers().Desktimers.SelectedTask(); sel != nil {
-			taskCode = sel.Code
-		}
-	}
-
-	if taskCode == "" {
-		// No linked task — skip the column picker, go straight to strategy.
-		return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-	}
-
-	capturedCode := taskCode
-	// Fetch project columns with a spinner, then show the column picker.
-	return self.c.WithWaitingStatus(self.c.Tr.PRLoadingColumns, func(_ gocui.Task) error {
-		client, err := desktimers.NewClientFromToken()
-		if err != nil {
-			return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-		}
-		columns, err := client.GetTaskColumns(capturedCode)
-		if err != nil || len(columns) == 0 {
-			return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-		}
-		return self.showColumnPickerMenu(pr, svcInfo, token, client, capturedCode, columns)
-	})
-}
-
-// showColumnPickerMenu lets the user pick which column to move the task to
-// after the merge. The choice is recorded BEFORE the merge so the suppress
-// flag can prevent the webhook from also moving the task.
-func (self *BranchesController) showColumnPickerMenu(
-	pr *models.GithubPullRequest,
-	svcInfo hosting_service.ServiceInfo,
-	token string,
-	client *desktimers.Client,
-	taskCode string,
-	columns []desktimers.Column,
-) error {
-	items := make([]*types.MenuItem, 0, len(columns)+1)
-	for _, col := range columns {
-		items = append(items, &types.MenuItem{
-			LabelColumns: []string{col.Name},
-			OnPress: func() error {
-				// Suppress webhook auto-done, then merge with a post-merge column move.
-				_ = client.SuppressAutoDone(taskCode)
-				return self.showMergeStrategyPicker(pr, svcInfo, token, client, taskCode+":"+col.Slug)
-			},
-		})
-	}
-	items = append(items, &types.MenuItem{
-		LabelColumns: []string{self.c.Tr.PRMoveToColumnKeep},
-		OnPress: func() error {
-			_ = client.SuppressAutoDone(taskCode)
-			return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-		},
-	})
-	return self.c.Menu(types.CreateMenuOptions{
-		Title: utils.ResolvePlaceholderString(
-			self.c.Tr.PRMoveToColumnPrompt,
-			map[string]string{"code": taskCode},
-		),
-		Items: items,
-	})
+	// deskgit: the task is not moved from here. DeskTick moves it to Done
+	// itself when GitHub says the pull request merged, whoever merged it
+	// and however.
+	return self.showMergeStrategyPicker(pr, svcInfo, token)
 }
 
 // showMergeStrategyPicker shows merge/squash/rebase options.
-// postMergeTarget is "CODE:columnSlug" when we should call MoveTaskToColumn
-// after a successful merge; empty string means no column move.
 func (self *BranchesController) showMergeStrategyPicker(
 	pr *models.GithubPullRequest,
 	svcInfo hosting_service.ServiceInfo,
 	token string,
-	client *desktimers.Client,
-	postMergeTarget string,
 ) error {
 	strategies := []struct {
 		label    string
@@ -759,14 +691,6 @@ func (self *BranchesController) showMergeStrategyPicker(
 					self.c.Toast(self.c.Tr.PRMerged)
 					// deskgit: then what is left of the branch.
 					self.c.OnUIThread(func() error { return self.c.Helpers().Desktimers.TidyAfterMerge(pr) })
-					// If the user chose a specific column, move the task there now.
-					if postMergeTarget != "" && client != nil {
-						parts := strings.SplitN(postMergeTarget, ":", 2)
-						if len(parts) == 2 {
-							code, slug := parts[0], parts[1]
-							go func() { _ = client.MoveTaskToColumn(code, slug) }()
-						}
-					}
 					return nil
 				})
 			},

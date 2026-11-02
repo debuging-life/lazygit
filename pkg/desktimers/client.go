@@ -541,12 +541,3 @@ func (c *Client) MoveTaskToColumn(code string, columnSlug string) error {
 	}
 	return nil
 }
-
-// SuppressAutoDone is kept for its callers and does nothing. The server
-// before DeskTick moved a task to Done by itself when its pull request was
-// merged, and this told it not to, once. DeskTick moves nothing by itself:
-// a task goes where the person puts it.
-func (c *Client) SuppressAutoDone(code string) error {
-	_ = code
-	return nil
-}
