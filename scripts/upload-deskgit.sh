@@ -49,6 +49,8 @@ PLATFORMS=(
   "darwin/amd64"
   "linux/arm64"
   "linux/amd64"
+  "windows/amd64"
+  "windows/arm64"
 )
 
 OUT="$(mktemp -d)"
@@ -152,6 +154,13 @@ echo ""
 echo "Manifest:"
 cat "$MANIFEST_FILE"
 echo ""
+
+# The Windows installer is fetched by its address (irm …/install.ps1 | iex),
+# so it lives beside latest.json and is replaced with every release.
+echo "Uploading install.ps1..."
+s3 cp scripts/install-deskgit.ps1 "s3://$BUCKET/install.ps1" \
+  --content-type "text/plain; charset=utf-8" \
+  --cache-control "no-cache, no-store"
 
 echo "Uploading latest.json..."
 s3 cp "$MANIFEST_FILE" "s3://$BUCKET/latest.json" \
