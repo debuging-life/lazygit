@@ -28,6 +28,7 @@ type fakeGitHub struct {
 	refuseReviewer bool
 	noViewer       bool
 	noRepo         bool
+	refuseTitle    bool
 }
 
 func newFakeGitHub(t *testing.T) *fakeGitHub {
@@ -96,6 +97,17 @@ func (f *fakeGitHub) answer(w http.ResponseWriter, key string, body map[string]a
 			}}})
 			return
 		}
+		switch {
+		case strings.Contains(query, "projectItems"):
+			write(200, map[string]any{"data": map[string]any{"node": map[string]any{"projectItems": map[string]any{
+				"nodes": []map[string]any{{"id": "ITEM_P1", "project": map[string]any{"id": "P1"}}},
+			}}}})
+			return
+		case strings.Contains(query, "markPullRequestReadyForReview"), strings.Contains(query, "convertPullRequestToDraft"),
+			strings.Contains(query, "deleteProjectV2Item"):
+			write(200, map[string]any{"data": map[string]any{}})
+			return
+		}
 		if strings.Contains(query, "addProjectV2ItemById") {
 			write(200, map[string]any{"data": map[string]any{"addProjectV2ItemById": map[string]any{"item": map[string]any{"id": "I1"}}}})
 			return
@@ -118,6 +130,24 @@ func (f *fakeGitHub) answer(w http.ResponseWriter, key string, body map[string]a
 			return
 		}
 		write(201, map[string]any{})
+	case key == "GET /repos/acme/clock/pulls/7":
+		write(200, map[string]any{
+			"title": "CLK-12/Show the clock", "body": "Task: x", "draft": true, "node_id": "PR_7",
+			"html_url": "https://github.com/acme/clock/pull/7",
+			"head":     map[string]any{"ref": "feature/CLK-12-clock"}, "base": map[string]any{"ref": "main"},
+			"requested_reviewers": []map[string]any{{"login": "zed"}},
+			"requested_teams":     []map[string]any{{"slug": "core"}},
+			"assignees":           []map[string]any{{"login": "ada"}},
+			"labels":              []map[string]any{{"name": "bug"}},
+		})
+	case key == "PATCH /repos/acme/clock/pulls/7":
+		if f.refuseTitle {
+			write(422, map[string]any{"message": "Validation Failed"})
+			return
+		}
+		write(200, map[string]any{})
+	case key == "DELETE /repos/acme/clock/pulls/7/requested_reviewers":
+		write(200, map[string]any{})
 	case key == "PATCH /repos/acme/clock/issues/7":
 		write(200, map[string]any{})
 	default:
