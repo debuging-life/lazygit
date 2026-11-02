@@ -23,6 +23,19 @@ this section disagree, this section wins.
 - **The end-to-end suite has failures that are the fork's own.** Committing
   opens the task picker first, which upstream's commit tests do not expect.
   Compare against `main` before deciding a failure is yours.
+- **Every check runs locally; no GitHub Actions minutes are spent.** The
+  owner, 2026-11-02: "all the checks, tests, code review using claude code
+  review should be locally only". Before a pull request is merged: the unit
+  tests (`go test ./... -short`), the end-to-end suite
+  (`go test ./pkg/integration/clients/`, compared by name with `main`'s
+  failures), the linter (`scripts/golangci-lint-shim.sh run ./...`, the
+  version CI pins; only errors in the files changed count) and the
+  `/code-review` skill on the branch. Do not wait on, re-run or read CI on
+  `debuging-life/lazygit`. A pull request is still raised and merged with
+  `--match-head-commit`, as the record of what went in.
+- **Releases go out over the air to R2, from this machine**:
+  `scripts/release-deskgit.sh <version>` with `.env.r2` loaded, after a
+  `changelogs/<version>.md` is on `main`. Not `just release`, not a tag push.
 
 ## Common commands
 
