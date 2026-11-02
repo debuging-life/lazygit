@@ -89,16 +89,22 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 		}()
 		accounts := desktimers.ListGitHubAccounts(opts.Repo.Host)
 		choices, err := opts.Repo.LoadPullRequestChoices()
-		if errors.Is(err, desktimers.ErrRepoNotFound) {
+		var notFound *desktimers.RepoNotFoundError
+		if errors.As(err, &notFound) {
+			line := self.notFoundLine(notFound)
 			// Usually the account, not the repository: with another one to
 			// try, offer it.
 			if len(accounts.Logins) > 1 && opts.Reopen != nil {
 				self.c.OnUIThread(func() error {
-					return self.ChooseGitHubAccount(opts.Repo.Host, err.Error()+". "+self.c.Tr.GitHubAccountPickAnother, opts.Reopen)
+					return self.ChooseGitHubAccount(AccountPick{
+						Host: opts.Repo.Host, Occasion: self.c.Tr.GitHubAccountNotFound,
+						Line: line, Note: self.c.Tr.GitHubAccountPickAnother,
+						Failed: notFound.Login,
+					}, opts.Reopen)
 				})
 				return nil
 			}
-			return errors.New(err.Error() + ". " + self.c.Tr.GitHubAccountSignInHint)
+			return errors.New(line + " " + self.c.Tr.GitHubAccountSignInHint)
 		}
 		if err != nil {
 			return err
@@ -482,7 +488,15 @@ func (self *DesktimersHelper) accountRow(form *pullRequestForm, section *types.M
 		Section:      section,
 		Keys:         menuKey('g'),
 		OnPress: func() error {
-			return self.ChooseGitHubAccount(form.opts.Repo.Host, self.c.Tr.GitHubAccountChangeStartsAgain, form.opts.Reopen)
+			return self.ChooseGitHubAccount(AccountPick{
+				Host: form.opts.Repo.Host, Occasion: self.c.Tr.GitHubAccountSwitchOccasion,
+				Line: utils.ResolvePlaceholderString(self.c.Tr.GitHubAccountSwitch, map[string]string{
+					"repo": form.opts.Repo.Owner + "/" + form.opts.Repo.Name,
+				}),
+				Note: self.c.Tr.GitHubAccountChangeStartsAgain,
+				// Esc goes back to the form as it was, not out of it.
+				OnCancel: func() error { return self.showPullRequestForm(form, prRowAccount) },
+			}, form.opts.Reopen)
 		},
 	}
 	if len(form.accounts.Logins) < 2 || form.opts.Reopen == nil {
@@ -491,36 +505,96 @@ func (self *DesktimersHelper) accountRow(form *pullRequestForm, section *types.M
 	return item
 }
 
+// AccountPick is why the account picker is shown: the occasion, named in
+// the frame's title, a line saying what is asked, and a note under it.
+// The prompt is plain text: its wrapping counts colour codes as cells.
+type AccountPick struct {
+	Host     string
+	Occasion string
+	Line     string
+	Note     string
+	// Failed is the account GitHub just could not find the repository as:
+	// marked so, and not where the selection starts.
+	Failed string
+	// OnCancel is where Esc and Cancel go; nil closes the picker.
+	OnCancel func() error
+}
+
+// notFoundLine says which repository GitHub could not find, and as whom.
+func (self *DesktimersHelper) notFoundLine(err *desktimers.RepoNotFoundError) string {
+	template := self.c.Tr.GitHubAccountNotFoundAs
+	if err.Login == "" {
+		template = self.c.Tr.GitHubAccountNotFoundSignedIn
+	}
+	return utils.ResolvePlaceholderString(template, map[string]string{"repo": err.Repo, "login": err.Login})
+}
+
 // ChooseGitHubAccount asks which gh account the repository is asked as,
-// keeps the answer in the repository's git config, then goes on.
-func (self *DesktimersHelper) ChooseGitHubAccount(host string, prompt string, then func() error) error {
-	accounts := desktimers.ListGitHubAccounts(host)
+// keeps the answer in the repository's git config, then goes on. Each
+// account is on a number key; the one the repository uses and the one
+// active in gh are tagged.
+func (self *DesktimersHelper) ChooseGitHubAccount(pick AccountPick, then func() error) error {
+	tr := self.c.Tr
+	accounts := desktimers.ListGitHubAccounts(pick.Host)
 	chosen := desktimers.RememberedGitHubAccount(".")
+	// No plate here: the chosen row is often the selected one, and the
+	// selection's ground would sit under the plate's ink.
+	accent, dim := self.hudAccent().SetBold(), self.hudDim()
+	if len(accounts.Logins) == 0 {
+		return errors.New(tr.GitHubAccountNone)
+	}
+
 	items := make([]*types.MenuItem, 0, len(accounts.Logins))
-	selected := 0
+	selected := -1
 	for i, login := range accounts.Logins {
-		note := ""
+		tags := []string{}
+		failed := pick.Failed != "" && strings.EqualFold(login, pick.Failed)
 		switch {
+		case failed:
+			tags = append(tags, dim.Sprint("✕ "+tr.GitHubAccountCannotSee))
 		case strings.EqualFold(login, chosen):
-			note = self.c.Tr.GitHubAccountChosen
+			tags = append(tags, accent.Sprint("◆ "+tr.GitHubAccountChosen))
 			selected = i
-		case login == accounts.Active:
-			note = self.c.Tr.GitHubAccountActive
 		}
-		items = append(items, &types.MenuItem{
-			LabelColumns: []string{login, note},
+		if login == accounts.Active {
+			tags = append(tags, "● "+tr.GitHubAccountActive)
+		}
+		if len(tags) == 0 {
+			tags = append(tags, dim.Sprint(tr.GitHubAccountSignedIn))
+		}
+		if selected < 0 && !failed {
+			selected = i
+		}
+		// The login is plain: a menu is filtered on its text, colour codes
+		// and all.
+		item := &types.MenuItem{
+			LabelColumns: []string{login, strings.Join(tags, "  ")},
 			OnPress: func() error {
 				if err := desktimers.RememberGitHubAccount(".", login); err != nil {
 					return err
 				}
 				return then()
 			},
-		})
+		}
+		if i < 9 {
+			item.Keys = menuKey(rune('1' + i))
+		}
+		items = append(items, item)
+	}
+
+	prompt := pick.Line
+	if pick.Note != "" {
+		prompt += "\n\n" + pick.Note
+	}
+	title := tr.GitHubAccountTitle
+	if pick.Occasion != "" {
+		title += " · " + pick.Occasion
 	}
 	return self.c.Menu(types.CreateMenuOptions{
-		Title:              self.c.Tr.GitHubAccountTitle,
+		Title:              title,
 		Prompt:             prompt,
 		Items:              items,
-		InitialSelectedIdx: selected,
+		InitialSelectedIdx: max(selected, 0),
+		OnCancel:           pick.OnCancel,
 	})
 }
