@@ -356,6 +356,10 @@ type TranslationSet struct {
 	GitHubAccountSwitchOccasion           string
 	GitHubAccountNotFound                 string
 	GitHubAccountSignedIn                 string
+	GitHubAccountCannotSee                string
+	GitHubAccountNotFoundAs               string
+	GitHubAccountNotFoundSignedIn         string
+	GitHubAccountNone                     string
 	PROpenPullRequests                    string
 	NoBranchOnRemote                      string
 	Fetch                                 string
@@ -1627,6 +1631,10 @@ func EnglishTranslationSet() *TranslationSet {
 		GitHubAccountSwitchOccasion:          `switch`,
 		GitHubAccountNotFound:                `not found`,
 		GitHubAccountSignedIn:                `signed in`,
+		GitHubAccountCannotSee:               `CAN'T SEE IT`,
+		GitHubAccountNotFoundAs:              `GitHub can't find {{repo}} as {{login}}.`,
+		GitHubAccountNotFoundSignedIn:        `GitHub can't find {{repo}} with this sign-in.`,
+		GitHubAccountNone:                    `gh is not signed in to GitHub here. Sign in with gh auth login.`,
 		GitHubAccountOnlyOne:                 `gh is signed in to one GitHub account here. Add another with gh auth login.`,
 		PROpenPullRequests:                   `Pull requests`,
 		CopyPullRequestURL:                   `Copy pull request URL to clipboard`,
