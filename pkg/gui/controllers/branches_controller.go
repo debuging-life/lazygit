@@ -563,15 +563,15 @@ func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, ba
 			return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1)
 		},
 		BaseSuggestions: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
-		OnCreated: func(number int, url string, base string, note string) error {
+		OnCreated: func(number int, url string, base string, title string, note string) error {
 			pr := &models.GithubPullRequest{
-				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: base,
+				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: base, Title: title,
 			}
-			title := utils.ResolvePlaceholderString(
+			menuTitle := utils.ResolvePlaceholderString(
 				self.c.Tr.PRCreatedMenuTitle,
 				map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
 			)
-			return self.showPullRequestMenu(pr, svcInfo, token, title, note)
+			return self.showPullRequestMenu(pr, svcInfo, token, menuTitle, note)
 		},
 		Reopen: func() error { return self.handleCreatePullRequest(branch) },
 	})
@@ -689,7 +689,12 @@ func (self *BranchesController) showMergeStrategyPicker(
 					}
 					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
 					self.c.Toast(self.c.Tr.PRMerged)
-					// deskgit: then what is left of the branch.
+					// deskgit: on the task's card at once, then what is
+					// left of the branch.
+					self.c.Helpers().Desktimers.TellDeskTickOfPullRequest(desktimers.PullRequestNotice{
+						Number: pr.Number, Title: pr.Title, URL: pr.Url, State: desktimers.PullMerged,
+						Head: pr.HeadRefName, Base: pr.BaseRefName,
+					})
 					self.c.OnUIThread(func() error { return self.c.Helpers().Desktimers.TidyAfterMerge(pr) })
 					return nil
 				})

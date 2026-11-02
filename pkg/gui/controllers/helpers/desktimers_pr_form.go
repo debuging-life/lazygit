@@ -34,9 +34,10 @@ type PullRequestFormOpts struct {
 	EditFile func(path string) error
 	// BaseSuggestions suggests branches for the base.
 	BaseSuggestions func(string) []*types.Suggestion
-	// OnCreated shows what can be done with the pull request made, into
-	// base; note is what GitHub refused of the rest, or "".
-	OnCreated func(number int, url string, base string, note string) error
+	// OnCreated shows what can be done with the pull request made: its
+	// number, address, base and title; note is what GitHub refused of the
+	// rest, or "".
+	OnCreated func(number int, url string, base string, title string, note string) error
 	// Reopen starts again from the branches panel, asked as another gh
 	// account.
 	Reopen func() error
@@ -501,9 +502,13 @@ func (self *DesktimersHelper) createPullRequest(form *pullRequestForm, asDraft b
 				"warnings": strings.Join(created.Warnings, "\n"),
 			})
 		}
+		self.TellDeskTickOfPullRequest(desktimers.PullRequestNotice{
+			Number: created.Number, Title: draft.Title, URL: created.URL, State: desktimers.PullOpen,
+			Draft: draft.Draft, Head: draft.Head, Base: draft.Base,
+		})
 		self.c.OnUIThread(func() error {
 			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
-			return form.opts.OnCreated(created.Number, created.URL, draft.Base, note)
+			return form.opts.OnCreated(created.Number, created.URL, draft.Base, draft.Title, note)
 		})
 		return nil
 	})
@@ -537,6 +542,10 @@ func (self *DesktimersHelper) savePullRequest(form *pullRequestForm, asDraft boo
 				"warnings": strings.Join(warnings, "\n"),
 			})
 		}
+		self.TellDeskTickOfPullRequest(desktimers.PullRequestNotice{
+			Number: form.existing.Number, Title: draft.Title, URL: form.existing.URL, State: desktimers.PullOpen,
+			Draft: draft.Draft, Head: draft.Head, Base: draft.Base,
+		})
 		self.c.OnUIThread(func() error {
 			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
 			return form.opts.OnSaved(form.existing.Number, note)

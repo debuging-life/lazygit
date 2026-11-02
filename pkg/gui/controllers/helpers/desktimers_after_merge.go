@@ -123,3 +123,37 @@ func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, merged mergedBr
 		return nil
 	})
 }
+
+// TellDeskTickOfPullRequest puts a pull request deskgit just made, saved or
+// merged on its task's card at once, in the background: GitHub's webhook
+// says the same a little later, so a failure here is only logged.
+func (self *DesktimersHelper) TellDeskTickOfPullRequest(notice desktimers.PullRequestNotice) {
+	notice.Repo = desktimers.RepoSlug(".")
+	if notice.Repo == "" {
+		return
+	}
+	if notice.TaskCode == nil {
+		code := desktimers.ExtractCode(notice.Head)
+		if code == "" {
+			code = desktimers.ExtractCode(notice.Title)
+		}
+		if code == "" {
+			if picked := self.SelectedTask(); picked != nil {
+				code = picked.Code
+			}
+		}
+		if code != "" {
+			notice.TaskCode = &code
+		}
+	}
+	go func() {
+		client, err := desktimers.NewClientFromToken()
+		if err != nil {
+			self.c.Log.Debugf("deskgit: pull request not told to DeskTick: %v", err)
+			return
+		}
+		if _, err := client.SendPullRequest(notice); err != nil {
+			self.c.Log.Debugf("deskgit: pull request not told to DeskTick: %v", err)
+		}
+	}()
+}
