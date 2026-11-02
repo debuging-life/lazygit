@@ -296,6 +296,11 @@ type TranslationSet struct {
 	PRCreated                             string
 	PRCreatedMenuTitle                    string
 	PRExistingMenuTitle                   string
+	PRStandingDraft                       string
+	PRStandingWaiting                     string
+	PRStandingApproved                    string
+	PRStandingChangesAsked                string
+	PRStandingConflicts                   string
 	PRCreatedOpenInBrowser                string
 	PRCreatedCopyLink                     string
 	PRCreatedMergeInApp                   string
@@ -1568,6 +1573,11 @@ func EnglishTranslationSet() *TranslationSet {
 		PRCreated:                            `Pull request #{{number}} created`,
 		PRCreatedMenuTitle:                   `PR #{{number}} created`,
 		PRExistingMenuTitle:                  `PR #{{number}}: {{head}} → {{base}}`,
+		PRStandingDraft:                      `A draft`,
+		PRStandingWaiting:                    `Waiting for a review`,
+		PRStandingApproved:                   `Approved`,
+		PRStandingChangesAsked:               `Changes asked for`,
+		PRStandingConflicts:                  `Conflicts with {{base}}`,
 		PRCreatedOpenInBrowser:               `Open PR in browser`,
 		PRCreatedCopyLink:                    `Copy PR link`,
 		PRCreatedMergeInApp:                  `Merge in-app`,

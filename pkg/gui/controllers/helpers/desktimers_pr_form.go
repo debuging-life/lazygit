@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jesseduffield/lazygit/pkg/commands/models"
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
@@ -597,4 +598,27 @@ func (self *DesktimersHelper) ChooseGitHubAccount(pick AccountPick, then func() 
 		InitialSelectedIdx: max(selected, 0),
 		OnCancel:           pick.OnCancel,
 	})
+}
+
+// PullRequestStanding says where an open pull request stands, in words, as
+// the branches panel marks it: a draft or not, its reviewers' verdict, a
+// conflict with its base.
+func (self *DesktimersHelper) PullRequestStanding(pr *models.GithubPullRequest) string {
+	tr := self.c.Tr
+	parts := []string{}
+	if pr.State == "DRAFT" {
+		parts = append(parts, tr.PRStandingDraft)
+	}
+	switch pr.Review {
+	case desktimers.ReviewApproved:
+		parts = append(parts, tr.PRStandingApproved)
+	case desktimers.ReviewChangesRequested:
+		parts = append(parts, tr.PRStandingChangesAsked)
+	case desktimers.ReviewWaiting:
+		parts = append(parts, tr.PRStandingWaiting)
+	}
+	if pr.Conflicting {
+		parts = append(parts, utils.ResolvePlaceholderString(tr.PRStandingConflicts, map[string]string{"base": pr.BaseRefName}))
+	}
+	return strings.Join(parts, " · ")
 }

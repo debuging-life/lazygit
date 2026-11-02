@@ -508,7 +508,7 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 			title := utils.ResolvePlaceholderString(self.c.Tr.PRExistingMenuTitle, map[string]string{
 				"number": fmt.Sprintf("%d", pr.Number), "head": pr.HeadRefName, "base": pr.BaseRefName,
 			})
-			return self.showPullRequestMenu(pr, svcInfo, token, title, "")
+			return self.showPullRequestMenu(pr, svcInfo, token, title, self.c.Helpers().Desktimers.PullRequestStanding(pr))
 		}
 		return self.createPRViaAPIWithBase(selectedBranch, "", svcInfo, token)
 	}
