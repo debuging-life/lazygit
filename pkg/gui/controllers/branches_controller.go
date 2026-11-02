@@ -601,11 +601,51 @@ func (self *BranchesController) showPullRequestMenu(pr *models.GithubPullRequest
 				},
 			},
 			{
+				LabelColumns: []string{self.c.Tr.PRMenuEdit},
+				OnPress: func() error {
+					return self.editPullRequest(pr, svcInfo, token)
+				},
+			},
+			{
 				LabelColumns: []string{self.c.Tr.PRCreatedMergeInApp},
 				OnPress: func() error {
 					return self.handleMergePRViaAPI(pr, svcInfo, token)
 				},
 			},
+		},
+	})
+}
+
+// deskgit: the pull request form, on the open pull request as GitHub has
+// it. After saving, its menu comes back.
+func (self *BranchesController) editPullRequest(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string) error {
+	menuTitle := utils.ResolvePlaceholderString(self.c.Tr.PRExistingMenuTitle, map[string]string{
+		"number": fmt.Sprintf("%d", pr.Number), "head": pr.HeadRefName, "base": pr.BaseRefName,
+	})
+	return self.c.Helpers().Desktimers.OpenPullRequestForm(helpers.PullRequestFormOpts{
+		Repo: desktimers.GitHubRepo{
+			Host: svcInfo.WebDomain, Owner: svcInfo.Owner, Name: svcInfo.Repository, Token: token,
+		},
+		Number: pr.Number,
+		Branch: pr.HeadRefName,
+		Head:   pr.HeadRefName,
+		EditFile: func(path string) error {
+			return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1)
+		},
+		BaseSuggestions: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
+		OnSaved: func(number int, note string) error {
+			if note == "" {
+				self.c.Toast(utils.ResolvePlaceholderString(self.c.Tr.PRFormSaved, map[string]string{"number": fmt.Sprintf("%d", number)}))
+			}
+			return self.showPullRequestMenu(pr, svcInfo, token, menuTitle, note)
+		},
+		// Another account is another token: asked for again.
+		Reopen: func() error {
+			svcInfo, token, ok := self.getGitHubAuth()
+			if !ok {
+				return errors.New(self.c.Tr.PRNoGHToken)
+			}
+			return self.editPullRequest(pr, svcInfo, token)
 		},
 	})
 }

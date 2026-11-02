@@ -40,6 +40,11 @@ type PullRequestFormOpts struct {
 	// Reopen starts again from the branches panel, asked as another gh
 	// account.
 	Reopen func() error
+	// Number is the open pull request the form edits; 0 makes a new one.
+	Number int
+	// OnSaved is told an edited pull request was saved; note is what
+	// GitHub refused of it, or "".
+	OnSaved func(number int, note string) error
 }
 
 // pullRequestForm is the form as filled in so far.
@@ -51,6 +56,9 @@ type pullRequestForm struct {
 	accounts desktimers.GitHubAccounts
 	// fromTemplate says the description is still the repository's template.
 	fromTemplate bool
+	// existing is the pull request being edited, as GitHub has it; nil
+	// while making a new one.
+	existing *desktimers.OpenPullRequest
 }
 
 // The form's rows, in order; a row's index is where the form comes back to.
@@ -63,6 +71,8 @@ const (
 	prRowLabels
 	prRowProjects
 	prRowAccount
+	// Editing, the same two rows save, and save changing whether it is
+	// a draft.
 	prRowCreate
 	prRowCreateDraft
 )
@@ -89,7 +99,21 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 			taskURL <- desktimers.TaskURLForCode(".", code)
 		}()
 		accounts := desktimers.ListGitHubAccounts(opts.Repo.Host)
+		var existing *desktimers.OpenPullRequest
+		existingErr := make(chan error, 1)
+		go func() {
+			if opts.Number == 0 {
+				existingErr <- nil
+				return
+			}
+			var err error
+			existing, err = opts.Repo.LoadPullRequest(opts.Number)
+			existingErr <- err
+		}()
 		choices, err := opts.Repo.LoadPullRequestChoices()
+		if loadErr := <-existingErr; err == nil {
+			err = loadErr
+		}
 		var notFound *desktimers.RepoNotFoundError
 		if errors.As(err, &notFound) {
 			line := self.notFoundLine(notFound)
@@ -109,6 +133,14 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 		}
 		if err != nil {
 			return err
+		}
+		if existing != nil {
+			form := &pullRequestForm{
+				opts: opts, choices: choices, accounts: accounts, existing: existing,
+				draft: existing.Draft.Clone(),
+			}
+			self.c.OnUIThread(func() error { return self.showPullRequestForm(form, prRowTitle) })
+			return nil
 		}
 		base := opts.Base
 		if base == "" {
@@ -197,25 +229,25 @@ func (self *DesktimersHelper) showPullRequestForm(form *pullRequestForm, selecte
 		}),
 		projects,
 		self.accountRow(form, details),
-		{
-			LabelColumns: []string{tr.PRFormCreate, ""},
-			OnPress:      func() error { return self.createPullRequest(form, false) },
-			Section:      create,
-			Keys:         menuKey('c'),
-		},
-		{
-			LabelColumns: []string{tr.PRFormCreateDraft, ""},
-			OnPress:      func() error { return self.createPullRequest(form, true) },
-			Section:      create,
-			Keys:         menuKey('d'),
-		},
+	}
+	items = append(items, self.actionRows(form, create)...)
+
+	title := utils.ResolvePlaceholderString(tr.PRFormTitle, map[string]string{
+		"head": form.draft.Head,
+		"base": form.draft.Base,
+	})
+	discard := tr.PRFormDiscardPrompt
+	if form.existing != nil {
+		title = utils.ResolvePlaceholderString(tr.PRFormEditTitle, map[string]string{
+			"number": fmt.Sprintf("%d", form.existing.Number),
+			"head":   form.draft.Head,
+			"base":   form.draft.Base,
+		})
+		discard = tr.PRFormDiscardEdits
 	}
 
 	return self.c.Menu(types.CreateMenuOptions{
-		Title: utils.ResolvePlaceholderString(tr.PRFormTitle, map[string]string{
-			"head": form.draft.Head,
-			"base": form.draft.Base,
-		}),
+		Title:              title,
 		Items:              items,
 		InitialSelectedIdx: selected,
 		MinWidth:           100,
@@ -224,13 +256,38 @@ func (self *DesktimersHelper) showPullRequestForm(form *pullRequestForm, selecte
 		OnCancel: func() error {
 			self.c.Confirm(types.ConfirmOpts{
 				Title:         tr.PRFormDiscardTitle,
-				Prompt:        tr.PRFormDiscardPrompt,
+				Prompt:        discard,
 				HandleConfirm: func() error { return nil },
 				HandleClose:   back(selected),
 			})
 			return nil
 		},
 	})
+}
+
+// actionRows are the form's last two rows: make the pull request, or a
+// draft; editing one, save it, or save it changing whether it is a draft.
+func (self *DesktimersHelper) actionRows(form *pullRequestForm, section *types.MenuSection) []*types.MenuItem {
+	tr := self.c.Tr
+	action := func(key rune, label string, onPress func() error) *types.MenuItem {
+		return &types.MenuItem{LabelColumns: []string{label, ""}, OnPress: onPress, Section: section, Keys: menuKey(key)}
+	}
+	if form.existing == nil {
+		return []*types.MenuItem{
+			action('c', tr.PRFormCreate, func() error { return self.createPullRequest(form, false) }),
+			action('d', tr.PRFormCreateDraft, func() error { return self.createPullRequest(form, true) }),
+		}
+	}
+	section.Title = tr.PRFormSectionSave
+	isDraft := form.existing.Draft.Draft
+	toggle := tr.PRFormSaveDraft
+	if isDraft {
+		toggle = tr.PRFormSaveReady
+	}
+	return []*types.MenuItem{
+		action('c', tr.PRFormSave, func() error { return self.savePullRequest(form, isDraft) }),
+		action('d', toggle, func() error { return self.savePullRequest(form, !isDraft) }),
+	}
 }
 
 func (self *DesktimersHelper) listOrNone(values []string) string {
@@ -447,6 +504,42 @@ func (self *DesktimersHelper) createPullRequest(form *pullRequestForm, asDraft b
 		self.c.OnUIThread(func() error {
 			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
 			return form.opts.OnCreated(created.Number, created.URL, draft.Base, note)
+		})
+		return nil
+	})
+}
+
+func (self *DesktimersHelper) savePullRequest(form *pullRequestForm, asDraft bool) error {
+	if form.draft.Title == "" {
+		self.c.ErrorToast(self.c.Tr.PRFormTitleRequired)
+		return self.showPullRequestForm(form, prRowTitle)
+	}
+	if form.draft.Base == form.draft.Head {
+		self.c.ErrorToast(self.c.Tr.PRSameBranch)
+		return self.showPullRequestForm(form, prRowBase)
+	}
+	draft := form.draft
+	draft.Draft = asDraft
+	self.c.LogAction(self.c.Tr.Actions.EditPullRequest)
+	return self.c.WithWaitingStatus(self.c.Tr.PRFormSaving, func(gocui.Task) error {
+		warnings, err := form.opts.Repo.UpdatePullRequest(form.existing, draft)
+		if err != nil {
+			// Nothing was saved: the form comes back as it was.
+			self.c.OnUIThread(func() error {
+				self.c.ErrorToast(err.Error())
+				return self.showPullRequestForm(form, prRowCreate)
+			})
+			return nil
+		}
+		note := ""
+		if len(warnings) > 0 {
+			note = utils.ResolvePlaceholderString(self.c.Tr.PRFormSavedWithWarnings, map[string]string{
+				"warnings": strings.Join(warnings, "\n"),
+			})
+		}
+		self.c.OnUIThread(func() error {
+			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
+			return form.opts.OnSaved(form.existing.Number, note)
 		})
 		return nil
 	})

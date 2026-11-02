@@ -347,6 +347,16 @@ type TranslationSet struct {
 	PRFormDiscardPrompt                   string
 	PRFormTitleRequired                   string
 	PRFormCreatedWithWarnings             string
+	PRFormEditTitle                       string
+	PRFormSectionSave                     string
+	PRFormSave                            string
+	PRFormSaveReady                       string
+	PRFormSaveDraft                       string
+	PRFormSaving                          string
+	PRFormSaved                           string
+	PRFormSavedWithWarnings               string
+	PRFormDiscardEdits                    string
+	PRMenuEdit                            string
 	PRFieldAccount                        string
 	GitHubAccountTitle                    string
 	GitHubAccountChosen                   string
@@ -1257,6 +1267,7 @@ type Actions struct {
 	BisectMark                       string
 	AddWorktree                      string
 	CreatePullRequestViaAPI          string
+	EditPullRequest                  string
 	MergePullRequest                 string
 }
 
@@ -1628,6 +1639,18 @@ func EnglishTranslationSet() *TranslationSet {
 		PRFormCreatedWithWarnings: `The pull request was made, but GitHub refused some of the rest:
 
 {{warnings}}`,
+		PRFormEditTitle:   `Edit PR #{{number}}: {{head}} → {{base}}`,
+		PRFormSectionSave: `Save`,
+		PRFormSave:        `Save changes`,
+		PRFormSaveReady:   `Save and mark ready for review`,
+		PRFormSaveDraft:   `Save and turn back into a draft`,
+		PRFormSaving:      `Saving pull request...`,
+		PRFormSaved:       `PR #{{number}} saved`,
+		PRFormSavedWithWarnings: `The title, description and base were saved, but GitHub refused some of the rest:
+
+{{warnings}}`,
+		PRFormDiscardEdits:                   `Your changes will be lost. Enter discards them; Esc goes back to the form.`,
+		PRMenuEdit:                           `Edit: title, description, reviewers, labels, draft`,
 		PRFieldAccount:                       `GitHub account`,
 		GitHubAccountTitle:                   `GitHub account`,
 		GitHubAccountChosen:                  `THIS REPO`,
@@ -2502,6 +2525,7 @@ func EnglishTranslationSet() *TranslationSet {
 			BisectMark:                       "Bisect mark",
 			AddWorktree:                      "Add worktree",
 			CreatePullRequestViaAPI:          "Create pull request",
+			EditPullRequest:                  "Edit pull request",
 			MergePullRequest:                 "Merge pull request",
 		},
 		Bisect: Bisect{
