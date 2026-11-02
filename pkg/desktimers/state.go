@@ -50,7 +50,8 @@ func gitDir(repoPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolving git dir for %s: %w", repoPath, err)
 	}
-	return strings.TrimSpace(string(out)), nil
+	// git prints forward slashes on Windows too.
+	return filepath.Clean(strings.TrimSpace(string(out))), nil
 }
 
 func statePath(repoPath string) (string, error) {
