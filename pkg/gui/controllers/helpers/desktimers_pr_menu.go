@@ -78,11 +78,16 @@ func (self *DesktimersHelper) existingTitle(pr *models.GithubPullRequest) string
 }
 
 // pullRequestOf is the pull request as the form left it; what GitHub says
-// of its reviews is kept from before, the form not having changed it.
+// of its reviews is kept from before, the form not having changed it, and
+// of a conflict too unless the base changed.
 func pullRequestOf(result PullRequestResult, before *models.GithubPullRequest) *models.GithubPullRequest {
 	pr := &models.GithubPullRequest{}
 	if before != nil {
 		*pr = *before
+	}
+	if before != nil && before.BaseRefName != result.Draft.Base {
+		// Whether it conflicts was with the old base.
+		pr.Conflicting = false
 	}
 	pr.Number, pr.Url, pr.Title = result.Number, result.URL, result.Draft.Title
 	pr.HeadRefName, pr.BaseRefName = result.Draft.Head, result.Draft.Base

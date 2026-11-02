@@ -102,11 +102,19 @@ func (r GitHubRepo) LoadPullRequest(number int) (*OpenPullRequest, error) {
 	return pr, nil
 }
 
+// SavedPullRequest is what saving did: what GitHub refused of the rest,
+// and whether the pull request is a draft now, which a refused change
+// leaves as it was.
+type SavedPullRequest struct {
+	Warnings []string
+	Draft    bool
+}
+
 // UpdatePullRequest sends what changed from pr to edited. The title,
 // description and base go first and alone: if GitHub refuses them nothing
 // else is sent. What it refuses of the rest comes back as warnings, the
 // rest having been saved.
-func (r GitHubRepo) UpdatePullRequest(pr *OpenPullRequest, edited PullRequestDraft) ([]string, error) {
+func (r GitHubRepo) UpdatePullRequest(pr *OpenPullRequest, edited PullRequestDraft) (SavedPullRequest, error) {
 	before := pr.Draft
 	base := fmt.Sprintf("%s%s", r.restBase(), r.repoPath())
 
@@ -122,14 +130,14 @@ func (r GitHubRepo) UpdatePullRequest(pr *OpenPullRequest, edited PullRequestDra
 	}
 	if len(patch) > 0 {
 		if _, err := r.do(http.MethodPatch, fmt.Sprintf("%s/pulls/%d", base, pr.Number), patch, nil); err != nil {
-			return nil, err
+			return SavedPullRequest{}, err
 		}
 	}
 
-	warnings := []string{}
+	saved := SavedPullRequest{Warnings: []string{}, Draft: before.Draft}
 	warn := func(what string, err error) {
 		if err != nil {
-			warnings = append(warnings, what+": "+err.Error())
+			saved.Warnings = append(saved.Warnings, what+": "+err.Error())
 		}
 	}
 
@@ -138,7 +146,11 @@ func (r GitHubRepo) UpdatePullRequest(pr *OpenPullRequest, edited PullRequestDra
 		if edited.Draft {
 			mutation = `mutation($id: ID!) { convertPullRequestToDraft(input: {pullRequestId: $id}) { clientMutationId } }`
 		}
-		warn("draft", r.graphQL(mutation, map[string]any{"id": pr.NodeID}, nil))
+		if err := r.graphQL(mutation, map[string]any{"id": pr.NodeID}, nil); err != nil {
+			warn("draft", err)
+		} else {
+			saved.Draft = edited.Draft
+		}
 	}
 
 	reviewers := fmt.Sprintf("%s/pulls/%d/requested_reviewers", base, pr.Number)
@@ -177,7 +189,7 @@ func (r GitHubRepo) UpdatePullRequest(pr *OpenPullRequest, edited PullRequestDra
   deleteProjectV2Item(input: {projectId: $project, itemId: $item}) { deletedItemId }
 }`, map[string]any{"project": projectID, "item": pr.projectItems[projectID]}, nil))
 	}
-	return warnings, nil
+	return saved, nil
 }
 
 // changed says what is in after and not before, and what is in before

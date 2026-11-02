@@ -519,7 +519,9 @@ func (self *DesktimersHelper) createPullRequest(form *pullRequestForm, asDraft b
 			Number: created.Number, Title: draft.Title, URL: created.URL, State: desktimers.PullOpen,
 			Draft: draft.Draft, Head: draft.Head, Base: draft.Base,
 		}
-		if form.picked != nil && desktimers.ExtractCode(draft.Head) == "" && desktimers.ExtractCode(draft.Title) == "" {
+		// The task the form was opened for; the API reads the title and
+		// the branch as well.
+		if form.picked != nil {
 			notice.TaskCode = &form.picked.Code
 		}
 		self.TellDeskTickOfPullRequest(notice)
@@ -546,7 +548,7 @@ func (self *DesktimersHelper) savePullRequest(form *pullRequestForm, asDraft boo
 	draft.Draft = asDraft
 	self.c.LogAction(self.c.Tr.Actions.EditPullRequest)
 	return self.c.WithWaitingStatus(self.c.Tr.PRFormSaving, func(gocui.Task) error {
-		warnings, err := form.opts.Repo.UpdatePullRequest(form.existing, draft)
+		saved, err := form.opts.Repo.UpdatePullRequest(form.existing, draft)
 		if err != nil {
 			// Nothing was saved: the form comes back as it was.
 			self.c.OnUIThread(func() error {
@@ -556,11 +558,12 @@ func (self *DesktimersHelper) savePullRequest(form *pullRequestForm, asDraft boo
 			return nil
 		}
 		note := ""
-		if len(warnings) > 0 {
+		if len(saved.Warnings) > 0 {
 			note = utils.ResolvePlaceholderString(self.c.Tr.PRFormSavedWithWarnings, map[string]string{
-				"warnings": strings.Join(warnings, "\n"),
+				"warnings": strings.Join(saved.Warnings, "\n"),
 			})
 		}
+		draft.Draft = saved.Draft
 		self.TellDeskTickOfPullRequest(desktimers.PullRequestNotice{
 			Number: form.existing.Number, Title: draft.Title, URL: form.existing.URL, State: desktimers.PullOpen,
 			Draft: draft.Draft, Head: draft.Head, Base: draft.Base,

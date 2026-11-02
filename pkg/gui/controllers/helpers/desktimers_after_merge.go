@@ -30,7 +30,11 @@ func (self *DesktimersHelper) TidyAfterMerge(pr *models.GithubPullRequest, branc
 		return nil
 	}
 	words := map[string]string{"branch": branch.Name, "remote": branch.UpstreamRemote, "base": pr.BaseRefName}
-	onIt := branch.Head
+	// Asked now, not when o was pressed: the merge refreshed the branches.
+	onIt := false
+	if branches := self.c.Model().Branches; len(branches) > 0 {
+		onIt = branches[0].Head && branches[0].Name == branch.Name
+	}
 	label := tr.PRTidyDelete
 	if onIt {
 		label = tr.PRTidySwitchAndDelete
@@ -53,9 +57,10 @@ func (self *DesktimersHelper) TidyAfterMerge(pr *models.GithubPullRequest, branc
 	})
 }
 
-// tidy deletes the remote branch, then moves to the base, deletes the
-// local branch, and pulls the base last: a pull that fails (no upstream,
-// diverged, offline) is reported with everything else already done.
+// tidy moves to the base first, so that changes in the way stop it before
+// anything is deleted; then deletes the remote branch and the local one,
+// and pulls the base last: a pull that fails (no upstream, diverged,
+// offline) is reported with everything else already done.
 func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, branch *models.Branch, switchToBase bool, deleteLocal bool) error {
 	tr := self.c.Tr
 	return self.c.WithWaitingStatus(tr.PRTidyWorking, func(task gocui.Task) error {
@@ -68,16 +73,16 @@ func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, branch *models.
 			onlyHere, compareErr = desktimers.CommitsOnlyHere(".", branch.Name, branch.UpstreamRemote+"/"+branch.UpstreamBranch)
 		}
 
+		if switchToBase {
+			if err := self.c.Git().Branch.Checkout(pr.BaseRefName, git_commands.CheckoutOptions{}); err != nil {
+				return err
+			}
+		}
 		// GitHub may have deleted it already, on the repository's setting.
 		// (Pushes run with LANG=C, so git says this in English.)
 		if err := self.c.Git().Remote.DeleteRemoteBranch(task, branch.UpstreamRemote, []string{branch.UpstreamBranch}); err != nil &&
 			!strings.Contains(err.Error(), "remote ref does not exist") {
 			return err
-		}
-		if switchToBase {
-			if err := self.c.Git().Branch.Checkout(pr.BaseRefName, git_commands.CheckoutOptions{}); err != nil {
-				return err
-			}
 		}
 
 		kept := ""
@@ -96,16 +101,20 @@ func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, branch *models.
 			}
 		}
 
+		// Told whatever the pull does: a branch kept for its commits must
+		// not go unmentioned behind a pull's error.
+		if kept != "" {
+			self.c.OnUIThread(func() error {
+				self.c.Alert(utils.ResolvePlaceholderString(tr.PRTidyKeptTitle, words), kept)
+				return nil
+			})
+		}
 		if switchToBase {
 			if err := self.c.Git().Sync.Pull(task, git_commands.PullOptions{FastForwardOnly: true}); err != nil {
 				return err
 			}
 		}
 		if kept != "" {
-			self.c.OnUIThread(func() error {
-				self.c.Alert(utils.ResolvePlaceholderString(tr.PRTidyKeptTitle, words), kept)
-				return nil
-			})
 			return nil
 		}
 		self.c.Toast(utils.ResolvePlaceholderString(tr.PRTidyDone, map[string]string{"number": fmt.Sprintf("%d", pr.Number)}))

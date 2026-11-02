@@ -38,10 +38,10 @@ func TestUpdatePullRequestSendsNothingWhenNothingChanged(t *testing.T) {
 	pr, _ := github.repo().LoadPullRequest(7)
 	github.requests = nil
 
-	warnings, err := github.repo().UpdatePullRequest(pr, pr.Draft)
+	saved, err := github.repo().UpdatePullRequest(pr, pr.Draft)
 
 	assert.NoError(t, err)
-	assert.Empty(t, warnings)
+	assert.Empty(t, saved.Warnings)
 	assert.Empty(t, github.requests)
 }
 
@@ -57,10 +57,10 @@ func TestUpdatePullRequestSendsOnlyWhatChanged(t *testing.T) {
 	edited.Labels = []string{"bug", "ui"}
 	edited.ProjectIDs = []string{"P3"}
 
-	warnings, err := github.repo().UpdatePullRequest(pr, edited)
+	saved, err := github.repo().UpdatePullRequest(pr, edited)
 
 	assert.NoError(t, err)
-	assert.Empty(t, warnings)
+	assert.Empty(t, saved.Warnings)
 	assert.Equal(t, []string{
 		"PATCH /repos/acme/clock/pulls/7",
 		"POST /graphql",
@@ -89,8 +89,9 @@ func TestUpdatePullRequestMarksItReadyOrADraft(t *testing.T) {
 
 		edited := pr.Draft
 		edited.Draft = draft
-		_, err := github.repo().UpdatePullRequest(pr, edited)
+		saved, err := github.repo().UpdatePullRequest(pr, edited)
 		assert.NoError(t, err)
+		assert.Equal(t, draft, saved.Draft)
 		for _, key := range github.requests {
 			if key == "POST /graphql" {
 				queries = append(queries, github.bodies[key]["query"].(string))
@@ -142,9 +143,23 @@ func TestUpdatePullRequestKeepsGoingWhenAReviewerIsRefused(t *testing.T) {
 	edited := pr.Draft
 	edited.Reviewers = []string{"zed", "Bea"}
 	edited.Labels = nil
-	warnings, err := github.repo().UpdatePullRequest(pr, edited)
+	saved, err := github.repo().UpdatePullRequest(pr, edited)
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"reviewers: Reviews may only be requested from collaborators."}, warnings)
+	assert.Equal(t, []string{"reviewers: Reviews may only be requested from collaborators."}, saved.Warnings)
 	assert.Equal(t, map[string]any{"labels": []any{}}, github.bodies["PATCH /repos/acme/clock/issues/7"])
+}
+
+func TestUpdatePullRequestSaysItIsStillADraftWhenMarkingItReadyIsRefused(t *testing.T) {
+	github := newFakeGitHub(t)
+	pr, _ := github.repo().LoadPullRequest(7)
+	github.noProjectScope = true // every GraphQL call is refused
+
+	edited := pr.Draft
+	edited.Draft = false
+	saved, err := github.repo().UpdatePullRequest(pr, edited)
+
+	assert.NoError(t, err)
+	assert.True(t, saved.Draft)
+	assert.Len(t, saved.Warnings, 1)
 }
