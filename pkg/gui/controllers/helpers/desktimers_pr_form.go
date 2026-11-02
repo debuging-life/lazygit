@@ -34,18 +34,23 @@ type PullRequestFormOpts struct {
 	EditFile func(path string) error
 	// BaseSuggestions suggests branches for the base.
 	BaseSuggestions func(string) []*types.Suggestion
-	// OnCreated shows what can be done with the pull request made: its
-	// number, address, base and title; note is what GitHub refused of the
-	// rest, or "".
-	OnCreated func(number int, url string, base string, title string, note string) error
+	// OnDone is told the pull request was made or saved, as it now is.
 	// Reopen starts again from the branches panel, asked as another gh
 	// account.
 	Reopen func() error
 	// Number is the open pull request the form edits; 0 makes a new one.
 	Number int
-	// OnSaved is told an edited pull request was saved; note is what
-	// GitHub refused of it, or "".
-	OnSaved func(number int, note string) error
+	OnDone func(PullRequestResult) error
+}
+
+// PullRequestResult is a pull request the form made or saved.
+type PullRequestResult struct {
+	Number int
+	URL    string
+	// Draft is what was sent: its Draft says whether it is a draft now.
+	Draft desktimers.PullRequestDraft
+	// Note is what GitHub refused of the rest, or "".
+	Note string
 }
 
 // pullRequestForm is the form as filled in so far.
@@ -60,6 +65,8 @@ type pullRequestForm struct {
 	// existing is the pull request being edited, as GitHub has it; nil
 	// while making a new one.
 	existing *desktimers.OpenPullRequest
+	// picked is the task picked in deskgit when a new one's form opened.
+	picked *desktimers.State
 }
 
 // The form's rows, in order; a row's index is where the form comes back to.
@@ -89,6 +96,11 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 		// The task's link is DeskTick's to give, and does not wait on GitHub.
 		taskURL := make(chan string, 1)
 		go func() {
+			if opts.Number != 0 {
+				// Editing: the description is already written.
+				taskURL <- ""
+				return
+			}
 			code := desktimers.ExtractCode(opts.Branch)
 			if code == "" && picked != nil {
 				code = picked.Code
@@ -160,6 +172,7 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 			},
 			fromTemplate: text.FromTemplate,
 			accounts:     accounts,
+			picked:       picked,
 		}
 		self.c.OnUIThread(func() error { return self.showPullRequestForm(form, prRowTitle) })
 		return nil
@@ -502,13 +515,17 @@ func (self *DesktimersHelper) createPullRequest(form *pullRequestForm, asDraft b
 				"warnings": strings.Join(created.Warnings, "\n"),
 			})
 		}
-		self.TellDeskTickOfPullRequest(desktimers.PullRequestNotice{
+		notice := desktimers.PullRequestNotice{
 			Number: created.Number, Title: draft.Title, URL: created.URL, State: desktimers.PullOpen,
 			Draft: draft.Draft, Head: draft.Head, Base: draft.Base,
-		})
+		}
+		if form.picked != nil && desktimers.ExtractCode(draft.Head) == "" && desktimers.ExtractCode(draft.Title) == "" {
+			notice.TaskCode = &form.picked.Code
+		}
+		self.TellDeskTickOfPullRequest(notice)
 		self.c.OnUIThread(func() error {
 			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
-			return form.opts.OnCreated(created.Number, created.URL, draft.Base, draft.Title, note)
+			return form.opts.OnDone(PullRequestResult{Number: created.Number, URL: created.URL, Draft: draft, Note: note})
 		})
 		return nil
 	})
@@ -519,7 +536,9 @@ func (self *DesktimersHelper) savePullRequest(form *pullRequestForm, asDraft boo
 		self.c.ErrorToast(self.c.Tr.PRFormTitleRequired)
 		return self.showPullRequestForm(form, prRowTitle)
 	}
-	if form.draft.Base == form.draft.Head {
+	// Only a base changed here is checked: a fork's pull request is often
+	// from its main into main, which GitHub allows.
+	if form.draft.Base != form.existing.Draft.Base && form.draft.Base == form.draft.Head {
 		self.c.ErrorToast(self.c.Tr.PRSameBranch)
 		return self.showPullRequestForm(form, prRowBase)
 	}
@@ -548,7 +567,7 @@ func (self *DesktimersHelper) savePullRequest(form *pullRequestForm, asDraft boo
 		})
 		self.c.OnUIThread(func() error {
 			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
-			return form.opts.OnSaved(form.existing.Number, note)
+			return form.opts.OnDone(PullRequestResult{Number: form.existing.Number, URL: form.existing.URL, Draft: draft, Note: note})
 		})
 		return nil
 	})

@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
@@ -19,59 +20,43 @@ import (
 // remote: see desktimers.CommitsOnlyHere for why git's own check cannot be
 // used after a squash.
 
-// mergedBranch is where the merged pull request's branch is.
-type mergedBranch struct {
-	// local is the local branch, "" when this repository has none.
-	local        string
-	remote       string
-	remoteBranch string
-	base         string
-}
-
-func (self *DesktimersHelper) mergedBranchOf(pr *models.GithubPullRequest) mergedBranch {
-	merged := mergedBranch{remote: "origin", remoteBranch: pr.HeadRefName, base: pr.BaseRefName}
-	for _, branch := range self.c.Model().Branches {
-		if branch.IsTrackingRemote() && branch.UpstreamBranch == pr.HeadRefName {
-			merged.local, merged.remote = branch.Name, branch.UpstreamRemote
-			return merged
-		}
-	}
-	return merged
-}
-
-// TidyAfterMerge asks what to clear away after pr was merged. Cancel
-// leaves everything as it is.
-func (self *DesktimersHelper) TidyAfterMerge(pr *models.GithubPullRequest) error {
+// TidyAfterMerge asks what to clear away of branch, whose pull request pr
+// was just merged. Cancel leaves everything as it is. A main branch is
+// never offered for deletion, whatever it was merged from.
+func (self *DesktimersHelper) TidyAfterMerge(pr *models.GithubPullRequest, branch *models.Branch) error {
 	tr := self.c.Tr
-	merged := self.mergedBranchOf(pr)
-	words := map[string]string{"branch": merged.remoteBranch, "remote": merged.remote, "base": merged.base}
-	items := []*types.MenuItem{}
-	if merged.local != "" {
-		words["branch"] = merged.local
-		label := tr.PRTidyDelete
-		branches := self.c.Model().Branches
-		onIt := len(branches) > 0 && branches[0].Head && branches[0].Name == merged.local
-		if onIt {
-			label = tr.PRTidySwitchAndDelete
-		}
-		items = append(items, &types.MenuItem{
-			LabelColumns: []string{utils.ResolvePlaceholderString(label, words)},
-			OnPress:      func() error { return self.tidy(pr, merged, onIt, true) },
-			Keys:         menuKey('1'),
-		})
+	if !branch.IsTrackingRemote() || slices.Contains(self.c.UserConfig().Git.MainBranches, branch.Name) ||
+		slices.Contains(self.c.UserConfig().Git.MainBranches, branch.UpstreamBranch) {
+		return nil
 	}
-	items = append(items, &types.MenuItem{
-		LabelColumns: []string{utils.ResolvePlaceholderString(tr.PRTidyDeleteRemote, words)},
-		OnPress:      func() error { return self.tidy(pr, merged, false, false) },
-		Keys:         menuKey(rune('1' + len(items))),
-	})
+	words := map[string]string{"branch": branch.Name, "remote": branch.UpstreamRemote, "base": pr.BaseRefName}
+	onIt := branch.Head
+	label := tr.PRTidyDelete
+	if onIt {
+		label = tr.PRTidySwitchAndDelete
+	}
+	remoteWords := map[string]string{"branch": branch.UpstreamBranch, "remote": branch.UpstreamRemote}
 	return self.c.Menu(types.CreateMenuOptions{
 		Title: utils.ResolvePlaceholderString(tr.PRTidyTitle, map[string]string{"number": fmt.Sprintf("%d", pr.Number)}),
-		Items: items,
+		Items: []*types.MenuItem{
+			{
+				LabelColumns: []string{utils.ResolvePlaceholderString(label, words)},
+				OnPress:      func() error { return self.tidy(pr, branch, onIt, true) },
+				Keys:         menuKey('1'),
+			},
+			{
+				LabelColumns: []string{utils.ResolvePlaceholderString(tr.PRTidyDeleteRemote, remoteWords)},
+				OnPress:      func() error { return self.tidy(pr, branch, false, false) },
+				Keys:         menuKey('2'),
+			},
+		},
 	})
 }
 
-func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, merged mergedBranch, switchToBase bool, deleteLocal bool) error {
+// tidy deletes the remote branch, then moves to the base, deletes the
+// local branch, and pulls the base last: a pull that fails (no upstream,
+// diverged, offline) is reported with everything else already done.
+func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, branch *models.Branch, switchToBase bool, deleteLocal bool) error {
 	tr := self.c.Tr
 	return self.c.WithWaitingStatus(tr.PRTidyWorking, func(task gocui.Task) error {
 		defer self.c.Refresh(types.RefreshOptions{Mode: types.ASYNC})
@@ -80,26 +65,24 @@ func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, merged mergedBr
 		// local one is compared with.
 		onlyHere, compareErr := 0, error(nil)
 		if deleteLocal {
-			onlyHere, compareErr = desktimers.CommitsOnlyHere(".", merged.local, merged.remote+"/"+merged.remoteBranch)
+			onlyHere, compareErr = desktimers.CommitsOnlyHere(".", branch.Name, branch.UpstreamRemote+"/"+branch.UpstreamBranch)
 		}
 
-		if switchToBase {
-			if err := self.c.Git().Branch.Checkout(merged.base, git_commands.CheckoutOptions{}); err != nil {
-				return err
-			}
-			if err := self.c.Git().Sync.Pull(task, git_commands.PullOptions{FastForwardOnly: true}); err != nil {
-				return err
-			}
-		}
 		// GitHub may have deleted it already, on the repository's setting.
-		if err := self.c.Git().Remote.DeleteRemoteBranch(task, merged.remote, []string{merged.remoteBranch}); err != nil &&
+		// (Pushes run with LANG=C, so git says this in English.)
+		if err := self.c.Git().Remote.DeleteRemoteBranch(task, branch.UpstreamRemote, []string{branch.UpstreamBranch}); err != nil &&
 			!strings.Contains(err.Error(), "remote ref does not exist") {
 			return err
 		}
+		if switchToBase {
+			if err := self.c.Git().Branch.Checkout(pr.BaseRefName, git_commands.CheckoutOptions{}); err != nil {
+				return err
+			}
+		}
 
+		kept := ""
+		words := map[string]string{"branch": branch.Name, "remote": branch.UpstreamRemote, "count": fmt.Sprintf("%d", onlyHere)}
 		if deleteLocal {
-			kept := ""
-			words := map[string]string{"branch": merged.local, "remote": merged.remote, "count": fmt.Sprintf("%d", onlyHere)}
 			switch {
 			case compareErr != nil:
 				kept = utils.ResolvePlaceholderString(tr.PRTidyKeptNoRemote, words)
@@ -107,17 +90,23 @@ func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, merged mergedBr
 				kept = utils.ResolvePlaceholderString(tr.PRTidyKeptCommits, words)
 			default:
 				// Forced: after a squash git does not count it as merged.
-				if err := self.c.Git().Branch.LocalDelete([]string{merged.local}, true); err != nil {
+				if err := self.c.Git().Branch.LocalDelete([]string{branch.Name}, true); err != nil {
 					return err
 				}
 			}
-			if kept != "" {
-				self.c.OnUIThread(func() error {
-					self.c.Alert(utils.ResolvePlaceholderString(tr.PRTidyKeptTitle, words), kept)
-					return nil
-				})
-				return nil
+		}
+
+		if switchToBase {
+			if err := self.c.Git().Sync.Pull(task, git_commands.PullOptions{FastForwardOnly: true}); err != nil {
+				return err
 			}
+		}
+		if kept != "" {
+			self.c.OnUIThread(func() error {
+				self.c.Alert(utils.ResolvePlaceholderString(tr.PRTidyKeptTitle, words), kept)
+				return nil
+			})
+			return nil
 		}
 		self.c.Toast(utils.ResolvePlaceholderString(tr.PRTidyDone, map[string]string{"number": fmt.Sprintf("%d", pr.Number)}))
 		return nil
@@ -126,25 +115,13 @@ func (self *DesktimersHelper) tidy(pr *models.GithubPullRequest, merged mergedBr
 
 // TellDeskTickOfPullRequest puts a pull request deskgit just made, saved or
 // merged on its task's card at once, in the background: GitHub's webhook
-// says the same a little later, so a failure here is only logged.
+// says the same a little later, so a failure here is only logged. The API
+// reads codes from the title and the branch; TaskCode is only for the task
+// picked when a pull request naming none was made.
 func (self *DesktimersHelper) TellDeskTickOfPullRequest(notice desktimers.PullRequestNotice) {
 	notice.Repo = desktimers.RepoSlug(".")
 	if notice.Repo == "" {
 		return
-	}
-	if notice.TaskCode == nil {
-		code := desktimers.ExtractCode(notice.Head)
-		if code == "" {
-			code = desktimers.ExtractCode(notice.Title)
-		}
-		if code == "" {
-			if picked := self.SelectedTask(); picked != nil {
-				code = picked.Code
-			}
-		}
-		if code != "" {
-			notice.TaskCode = &code
-		}
 	}
 	go func() {
 		client, err := desktimers.NewClientFromToken()

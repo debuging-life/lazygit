@@ -354,6 +354,7 @@ type TranslationSet struct {
 	PRFormSavedWithWarnings               string
 	PRFormDiscardEdits                    string
 	PRMenuEdit                            string
+	PRMergeDraft                          string
 	PRTidyTitle                           string
 	PRTidySwitchAndDelete                 string
 	PRTidyDelete                          string
@@ -1654,6 +1655,7 @@ func EnglishTranslationSet() *TranslationSet {
 {{warnings}}`,
 		PRFormDiscardEdits:                   `Your changes will be lost. Enter discards them; Esc goes back to the form.`,
 		PRMenuEdit:                           `Edit: title, description, reviewers, labels, draft`,
+		PRMergeDraft:                         `A draft cannot be merged. Edit it, then d marks it ready for review.`,
 		PRTidyTitle:                          `PR #{{number}} merged · tidy up`,
 		PRTidySwitchAndDelete:                `Switch to {{base}} and pull it, then delete {{branch}} here and on {{remote}}`,
 		PRTidyDelete:                         `Delete {{branch}} here and on {{remote}}`,

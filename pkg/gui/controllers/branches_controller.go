@@ -503,15 +503,13 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 	}
 	if svcInfo, token, ok := self.getGitHubAuth(); ok {
 		// A branch's open pull request, a draft included, is shown, to
-		// open or merge, rather than a second one made: GitHub refuses
-		// that.
+		// open, edit or merge, rather than a second one made: GitHub
+		// refuses that.
+		place := self.pullRequestPlace(selectedBranch, svcInfo, token)
 		if pr := self.c.Model().PullRequestsMap[selectedBranch.Name]; pr != nil && (pr.State == "OPEN" || pr.State == "DRAFT") {
-			title := utils.ResolvePlaceholderString(self.c.Tr.PRExistingMenuTitle, map[string]string{
-				"number": fmt.Sprintf("%d", pr.Number), "head": pr.HeadRefName, "base": pr.BaseRefName,
-			})
-			return self.showPullRequestMenu(pr, svcInfo, token, title, self.c.Helpers().Desktimers.PullRequestStanding(pr))
+			return self.c.Helpers().Desktimers.ShowPullRequestMenu(place, pr)
 		}
-		return self.createPRViaAPIWithBase(selectedBranch, "", svcInfo, token)
+		return self.c.Helpers().Desktimers.CreatePullRequest(place, "")
 	}
 	if !selectedBranch.IsTrackingRemote() {
 		return errors.New(self.c.Tr.PullRequestNoUpstream)
@@ -533,181 +531,15 @@ func (self *BranchesController) getGitHubAuth() (hosting_service.ServiceInfo, st
 	return svcInfo, token, true
 }
 
-// createPRViaAPIWithBase prompts for title/body (pre-filled from last commit),
-// then calls the GitHub REST API to create the PR with a progress spinner.
-func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, baseBranch string, svcInfo hosting_service.ServiceInfo, token string) error {
-	headBranch := branch.Name
-	if branch.IsTrackingRemote() {
-		headBranch = branch.UpstreamBranch
-	}
-
-	// Guard: strip any "origin/" prefix for comparison, then reject head == base.
-	normalised := strings.TrimPrefix(baseBranch, "origin/")
-	if normalised != "" && normalised == strings.TrimPrefix(headBranch, "origin/") {
-		return errors.New(self.c.Tr.PRSameBranch)
-	}
-
-	// deskgit: the pull request form (title, description, base, reviewers,
-	// assignees, labels, projects), in the DeskTick helpers.
-	if !branch.IsTrackingRemote() {
-		return errors.New(self.c.Tr.PullRequestNoUpstream)
-	}
-	return self.c.Helpers().Desktimers.OpenPullRequestForm(helpers.PullRequestFormOpts{
-		Repo: desktimers.GitHubRepo{
-			Host: svcInfo.WebDomain, Owner: svcInfo.Owner, Name: svcInfo.Repository, Token: token,
-		},
-		Branch: branch.Name,
-		Head:   headBranch,
-		Base:   normalised,
-		EditFile: func(path string) error {
-			return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1)
-		},
+// deskgit: where the branch's pull request is, for the DeskTick helpers
+// (helpers/desktimers_pr_menu.go), which hold the form and the menu.
+func (self *BranchesController) pullRequestPlace(branch *models.Branch, svcInfo hosting_service.ServiceInfo, token string) helpers.PullRequestPlace {
+	return helpers.PullRequestPlace{
+		Service: svcInfo, Token: token, Branch: branch,
+		EditFile:        func(path string) error { return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1) },
 		BaseSuggestions: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
-		OnCreated: func(number int, url string, base string, title string, note string) error {
-			pr := &models.GithubPullRequest{
-				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: base, Title: title,
-			}
-			menuTitle := utils.ResolvePlaceholderString(
-				self.c.Tr.PRCreatedMenuTitle,
-				map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-			)
-			return self.showPullRequestMenu(pr, svcInfo, token, menuTitle, note)
-		},
-		Reopen: func() error { return self.handleCreatePullRequest(branch) },
-	})
-}
-
-// deskgit: what can be done with a pull request; note is shown above the
-// choices (what GitHub refused of the rest of the form, for one just made).
-func (self *BranchesController) showPullRequestMenu(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string, title string, note string) error {
-	return self.c.Menu(types.CreateMenuOptions{
-		Title:  title,
-		Prompt: note,
-		Items: []*types.MenuItem{
-			{
-				LabelColumns: []string{self.c.Tr.PRCreatedOpenInBrowser},
-				OnPress: func() error {
-					return self.c.OS().OpenLink(pr.Url)
-				},
-			},
-			{
-				LabelColumns: []string{self.c.Tr.PRCreatedCopyLink},
-				OnPress: func() error {
-					if err := self.c.OS().CopyToClipboard(pr.Url); err != nil {
-						return err
-					}
-					self.c.Toast(self.c.Tr.PullRequestURLCopiedToClipboard)
-					return nil
-				},
-			},
-			{
-				LabelColumns: []string{self.c.Tr.PRMenuEdit},
-				OnPress: func() error {
-					return self.editPullRequest(pr, svcInfo, token)
-				},
-			},
-			{
-				LabelColumns: []string{self.c.Tr.PRCreatedMergeInApp},
-				OnPress: func() error {
-					return self.handleMergePRViaAPI(pr, svcInfo, token)
-				},
-			},
-		},
-	})
-}
-
-// deskgit: the pull request form, on the open pull request as GitHub has
-// it. After saving, its menu comes back.
-func (self *BranchesController) editPullRequest(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string) error {
-	menuTitle := utils.ResolvePlaceholderString(self.c.Tr.PRExistingMenuTitle, map[string]string{
-		"number": fmt.Sprintf("%d", pr.Number), "head": pr.HeadRefName, "base": pr.BaseRefName,
-	})
-	return self.c.Helpers().Desktimers.OpenPullRequestForm(helpers.PullRequestFormOpts{
-		Repo: desktimers.GitHubRepo{
-			Host: svcInfo.WebDomain, Owner: svcInfo.Owner, Name: svcInfo.Repository, Token: token,
-		},
-		Number: pr.Number,
-		Branch: pr.HeadRefName,
-		Head:   pr.HeadRefName,
-		EditFile: func(path string) error {
-			return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1)
-		},
-		BaseSuggestions: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
-		OnSaved: func(number int, note string) error {
-			if note == "" {
-				self.c.Toast(utils.ResolvePlaceholderString(self.c.Tr.PRFormSaved, map[string]string{"number": fmt.Sprintf("%d", number)}))
-			}
-			return self.showPullRequestMenu(pr, svcInfo, token, menuTitle, note)
-		},
-		// Another account is another token: asked for again.
-		Reopen: func() error {
-			svcInfo, token, ok := self.getGitHubAuth()
-			if !ok {
-				return errors.New(self.c.Tr.PRNoGHToken)
-			}
-			return self.editPullRequest(pr, svcInfo, token)
-		},
-	})
-}
-
-func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string) error {
-	// deskgit: the task is not moved from here. DeskTick moves it to Done
-	// itself when GitHub says the pull request merged, whoever merged it
-	// and however.
-	return self.showMergeStrategyPicker(pr, svcInfo, token)
-}
-
-// showMergeStrategyPicker shows merge/squash/rebase options.
-func (self *BranchesController) showMergeStrategyPicker(
-	pr *models.GithubPullRequest,
-	svcInfo hosting_service.ServiceInfo,
-	token string,
-) error {
-	strategies := []struct {
-		label    string
-		strategy string
-	}{
-		{self.c.Tr.PRMergeStrategyMerge, "merge"},
-		{self.c.Tr.PRMergeStrategySquash, "squash"},
-		{self.c.Tr.PRMergeStrategyRebase, "rebase"},
+		Reopen:          func() error { return self.handleCreatePullRequest(branch) },
 	}
-	menuItems := lo.Map(strategies, func(s struct {
-		label    string
-		strategy string
-	}, _ int,
-	) *types.MenuItem {
-		strat := s.strategy
-		return &types.MenuItem{
-			LabelColumns: []string{s.label},
-			OnPress: func() error {
-				self.c.LogAction(self.c.Tr.Actions.MergePullRequest)
-				return self.c.WithWaitingStatus(self.c.Tr.PRMergingPR, func(_ gocui.Task) error {
-					if err := self.c.Git().GitHub.MergePullRequest(
-						svcInfo.Owner, svcInfo.Repository, pr.Number, strat, svcInfo.WebDomain, token,
-					); err != nil {
-						return err
-					}
-					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-					self.c.Toast(self.c.Tr.PRMerged)
-					// deskgit: on the task's card at once, then what is
-					// left of the branch.
-					self.c.Helpers().Desktimers.TellDeskTickOfPullRequest(desktimers.PullRequestNotice{
-						Number: pr.Number, Title: pr.Title, URL: pr.Url, State: desktimers.PullMerged,
-						Head: pr.HeadRefName, Base: pr.BaseRefName,
-					})
-					self.c.OnUIThread(func() error { return self.c.Helpers().Desktimers.TidyAfterMerge(pr) })
-					return nil
-				})
-			},
-		}
-	})
-	return self.c.Menu(types.CreateMenuOptions{
-		Title: utils.ResolvePlaceholderString(
-			self.c.Tr.PRMergeConfirmTitle,
-			map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-		),
-		Items: menuItems,
-	})
 }
 
 func (self *BranchesController) getPullRequestURL() (string, error) {
