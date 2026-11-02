@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 )
@@ -154,14 +155,19 @@ func ReplaceExecutable(src, dest string) error {
 
 // replaceExecutable is ReplaceExecutable; moveAside is for Windows, which
 // will not write over a program that is running but will rename it. The
-// one moved aside is dest.old, removed by the next update.
+// one moved aside gets a name of its own, dest.<n>.old, since an earlier
+// one may still be running too; each update removes those it can.
 func replaceExecutable(src, dest string, moveAside bool) error {
 	if err := os.Chmod(src, 0o755); err != nil {
 		return fmt.Errorf("chmod: %w", err)
 	}
-	old := dest + ".old"
+	old := fmt.Sprintf("%s.%d.old", dest, time.Now().UnixNano())
 	if moveAside {
-		_ = os.Remove(old)
+		if earlier, err := filepath.Glob(dest + ".*.old"); err == nil {
+			for _, path := range earlier {
+				_ = os.Remove(path) // fails while that one still runs
+			}
+		}
 		if err := os.Rename(dest, old); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("moving the running binary aside: %w", err)
 		}

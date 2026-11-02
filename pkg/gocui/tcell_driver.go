@@ -288,13 +288,13 @@ func (g *Gui) pollEvent() GocuiEvent {
 	if g.playRecording {
 		select {
 		case ev := <-g.ReplayedEvents.Keys:
-			tev = (ev).toTcellEvent()
+			tev = ev.toTcellEvent()
 		case ev := <-g.ReplayedEvents.Resizes:
-			tev = (ev).toTcellEvent()
+			tev = ev.toTcellEvent()
 		case ev := <-g.ReplayedEvents.MouseEvents:
-			tev = (ev).toTcellEvent()
+			tev = ev.toTcellEvent()
 		case ev := <-g.ReplayedEvents.FocusEvents:
-			tev = (ev).toTcellEvent()
+			tev = ev.toTcellEvent()
 		}
 	} else {
 		tev = <-Screen.EventQ()

@@ -11,7 +11,8 @@
 #       export AWS_SECRET_ACCESS_KEY=<your-r2-secret-access-key>
 #       export R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 #       export R2_BUCKET=<bucket-name>            # default: deskgit-releases
-#       export R2_PUBLIC_URL=https://cdn.desktimers.com/deskgit
+#       export R2_PUBLIC_URL=https://cdn.desktimers.com   # the bucket's root:
+#         latest.json and install.ps1 are fetched from there by name
 #
 # Usage:
 #   scripts/upload-deskgit.sh [vX.Y.Z]   # defaults to latest deskgit-v* tag

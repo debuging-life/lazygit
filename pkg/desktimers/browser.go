@@ -1,12 +1,19 @@
 package desktimers
 
 import (
+	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
-// OpenBrowser opens url in the default browser, best-effort.
+// OpenBrowser opens url in the default browser, best-effort. Only a web
+// address is handed on: each platform's opener would as readily run a
+// file or a program it was given.
 func OpenBrowser(url string) error {
+	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
+		return fmt.Errorf("not a web address: %s", url)
+	}
 	switch runtime.GOOS {
 	case "darwin":
 		return exec.Command("open", url).Start()

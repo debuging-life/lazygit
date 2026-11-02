@@ -263,7 +263,9 @@ func runDesktimersUpdate(w io.Writer, currentVersion string) int {
 	fmt.Fprintf(w, "Installing…\n")
 	if err := desktimers.ReplaceExecutable(tmpBin, execPath); err != nil {
 		fmt.Fprintf(w, "Failed to replace deskgit: %v\n", err)
-		fmt.Fprintf(w, "Try: sudo deskgit update\n")
+		if runtime.GOOS != "windows" {
+			fmt.Fprintf(w, "Try: sudo deskgit update\n")
+		}
 		return 1
 	}
 	if tmpHook != "" {

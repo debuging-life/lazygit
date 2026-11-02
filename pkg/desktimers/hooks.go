@@ -66,7 +66,8 @@ func hooksDir(repoPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolving hooks dir for %s: %w", repoPath, err)
 	}
-	return strings.TrimSpace(string(out)), nil
+	// git prints forward slashes on Windows too.
+	return filepath.Clean(strings.TrimSpace(string(out))), nil
 }
 
 func fileHasMarker(path string) (hasAny bool, current bool) {
