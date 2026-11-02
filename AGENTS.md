@@ -31,7 +31,8 @@ this section disagree, this section wins.
   failures), the linter (`scripts/golangci-lint-shim.sh run ./...`, the
   version CI pins; only errors in the files changed count) and the
   `/code-review` skill on the branch. Do not wait on, re-run or read CI on
-  `debuging-life/lazygit`. A pull request is still raised and merged with
+  `debuging-life/lazygit`. When the owner says to merge (see the first
+  rule), a pull request is still raised and merged, with
   `--match-head-commit`, as the record of what went in.
 - **Releases go out over the air to R2, from this machine**:
   `scripts/release-deskgit.sh <version>` with `.env.r2` loaded, after a
