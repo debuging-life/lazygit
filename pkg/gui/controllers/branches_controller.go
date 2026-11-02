@@ -757,6 +757,8 @@ func (self *BranchesController) showMergeStrategyPicker(
 					}
 					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
 					self.c.Toast(self.c.Tr.PRMerged)
+					// deskgit: then what is left of the branch.
+					self.c.OnUIThread(func() error { return self.c.Helpers().Desktimers.TidyAfterMerge(pr) })
 					// If the user chose a specific column, move the task there now.
 					if postMergeTarget != "" && client != nil {
 						parts := strings.SplitN(postMergeTarget, ":", 2)

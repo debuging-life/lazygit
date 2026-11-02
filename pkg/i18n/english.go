@@ -357,6 +357,15 @@ type TranslationSet struct {
 	PRFormSavedWithWarnings               string
 	PRFormDiscardEdits                    string
 	PRMenuEdit                            string
+	PRTidyTitle                           string
+	PRTidySwitchAndDelete                 string
+	PRTidyDelete                          string
+	PRTidyDeleteRemote                    string
+	PRTidyWorking                         string
+	PRTidyDone                            string
+	PRTidyKeptTitle                       string
+	PRTidyKeptCommits                     string
+	PRTidyKeptNoRemote                    string
 	PRFieldAccount                        string
 	GitHubAccountTitle                    string
 	GitHubAccountChosen                   string
@@ -1651,6 +1660,15 @@ func EnglishTranslationSet() *TranslationSet {
 {{warnings}}`,
 		PRFormDiscardEdits:                   `Your changes will be lost. Enter discards them; Esc goes back to the form.`,
 		PRMenuEdit:                           `Edit: title, description, reviewers, labels, draft`,
+		PRTidyTitle:                          `PR #{{number}} merged · tidy up`,
+		PRTidySwitchAndDelete:                `Switch to {{base}} and pull it, then delete {{branch}} here and on {{remote}}`,
+		PRTidyDelete:                         `Delete {{branch}} here and on {{remote}}`,
+		PRTidyDeleteRemote:                   `Delete {{branch}} on {{remote}} only`,
+		PRTidyWorking:                        `Tidying up...`,
+		PRTidyDone:                           `Tidied up after PR #{{number}}`,
+		PRTidyKeptTitle:                      `{{branch}} kept here`,
+		PRTidyKeptCommits:                    `{{branch}} has commits that never reached {{remote}} ({{count}}), so it was kept here. Everything else was done.`,
+		PRTidyKeptNoRemote:                   `{{branch}} is gone from {{remote}} already, so there is nothing to check it against for commits that never got there. It was kept here; delete it yourself once you are sure. Everything else was done.`,
 		PRFieldAccount:                       `GitHub account`,
 		GitHubAccountTitle:                   `GitHub account`,
 		GitHubAccountChosen:                  `THIS REPO`,
