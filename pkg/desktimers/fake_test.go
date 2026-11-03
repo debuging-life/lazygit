@@ -85,10 +85,9 @@ func (f *fakeDeskTick) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	f.requests = append(f.requests, line)
 
-	reply := func(status int, data any) {
+	reply := func(data any) {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(map[string]any{"success": status < 300, "data": data})
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": data})
 	}
 	say := func(status int, message string) {
 		w.Header().Set("Content-Type", "application/json")
@@ -113,7 +112,7 @@ func (f *fakeDeskTick) serve(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/"), "/")
 	switch {
 	case r.URL.Path == "/api/workspaces":
-		reply(200, f.workspaces)
+		reply(f.workspaces)
 	case r.URL.Path == "/api/github/commits":
 		commits, _ := f.bodies[r.URL.Path]["commits"].([]any)
 		f.commitBatches = append(f.commitBatches, commits)
@@ -129,33 +128,33 @@ func (f *fakeDeskTick) serve(w http.ResponseWriter, r *http.Request) {
 		for _, commit := range commits {
 			results = append(results, map[string]any{"sha": commit.(map[string]any)["sha"], "taskCodes": []string{}})
 		}
-		reply(200, map[string]any{"results": results})
+		reply(map[string]any{"results": results})
 	case r.URL.Path == "/api/auth/sign-out":
-		reply(200, map[string]any{"success": true})
+		reply(map[string]any{"success": true})
 	case len(parts) == 3 && parts[2] == "projects":
 		// The whole list on page 1, and nothing after it.
 		items := f.projects[parts[1]]
 		if r.URL.Query().Get("page") != "1" {
 			items = nil
 		}
-		reply(200, map[string]any{"items": items, "total": len(f.projects[parts[1]])})
+		reply(map[string]any{"items": items, "total": len(f.projects[parts[1]])})
 	case len(parts) == 5 && parts[4] == "board":
-		reply(200, map[string]any{"columns": f.boards[parts[1]+"/"+parts[3]]})
+		reply(map[string]any{"columns": f.boards[parts[1]+"/"+parts[3]]})
 	case len(parts) == 5 && parts[4] == "repositories":
 		linked := []map[string]any{}
 		for _, name := range f.repositories[parts[1]+"/"+parts[3]] {
 			linked = append(linked, map[string]any{"fullName": name})
 		}
-		reply(200, map[string]any{"connected": true, "linked": linked})
+		reply(map[string]any{"connected": true, "linked": linked})
 	case len(parts) == 5 && parts[4] == "tasks" && r.Method == http.MethodPost:
-		reply(200, map[string]any{"code": parts[3] + "-99"})
+		reply(map[string]any{"code": parts[3] + "-99"})
 	case len(parts) == 7 && parts[6] == "move":
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success":true}`))
 	case len(parts) == 5 && parts[2] == "time" && parts[4] == "current":
-		reply(200, f.current[parts[1]])
+		reply(f.current[parts[1]])
 	case len(parts) == 4 && parts[2] == "time" && parts[3] == "summary":
-		reply(200, map[string]any{"days": f.summaries[parts[1]]})
+		reply(map[string]any{"days": f.summaries[parts[1]]})
 	default:
 		say(http.StatusNotFound, "Not found.")
 	}

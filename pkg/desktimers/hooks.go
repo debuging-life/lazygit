@@ -1,6 +1,7 @@
 package desktimers
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,7 +48,8 @@ func customHooksPath(repoPath string) (string, error) {
 	cmd.Dir = repoPath
 	out, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
 			return "", nil // unset
 		}
 		return "", fmt.Errorf("reading core.hooksPath: %w", err)

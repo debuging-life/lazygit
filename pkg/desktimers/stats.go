@@ -64,7 +64,7 @@ func WeekOf(days map[string]int, now time.Time) int {
 	sinceMonday := (int(now.Weekday()) + 6) % 7
 	monday := time.Date(now.Year(), now.Month(), now.Day()-sinceMonday, 0, 0, 0, 0, now.Location())
 	total := 0
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		total += days[dayKey(monday.AddDate(0, 0, i))]
 	}
 	return total

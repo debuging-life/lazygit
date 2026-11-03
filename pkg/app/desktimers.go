@@ -17,6 +17,19 @@ import (
 // rebasing onto a new upstream release.
 const LazygitBaseVersion = "v0.63.1"
 
+// upstreamTestDefaults turns off what deskgit adds to upstream's flows, so
+// lazygit's own end-to-end tests see lazygit: no task picker before a commit
+// or a branch, no branch-type menu, no hooks installed, no update check. A
+// test of deskgit's own behaviour turns back on what it needs in its
+// SetupConfig, which runs after this.
+func upstreamTestDefaults(cfg *config.DesktimersConfig) {
+	cfg.RequireTaskForCommit = false
+	cfg.RequireTaskForBranch = false
+	cfg.AutoInstallHooks = "never"
+	cfg.StrictPush = false
+	cfg.CheckForUpdates = false
+}
+
 // runDesktimersGate blocks until this machine has a DeskTick git-client
 // token (running the browser sign-in in plain terminal mode if needed). Offline
 // with a previously stored token is allowed. DESKGIT_SKIP_AUTH=1 bypasses the

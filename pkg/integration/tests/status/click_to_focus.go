@@ -19,17 +19,9 @@ var ClickToFocus = NewIntegrationTest(NewIntegrationTestArgs{
 
 		t.Views().Status().Click(0, 0)
 		t.Views().Status().IsFocused()
+		// deskgit: the Status panel shows DeskTick's dashboard, not the logo.
 		t.Views().Main().ContainsLines(
-			Contains(`   _`),
-			Contains(`  | |                     (_) |`),
-			Contains(`  | | __ _ _____   _  __ _ _| |_`),
-			Contains("  | |/ _` |_  / | | |/ _` | | __|"),
-			Contains(`  | | (_| |/ /| |_| | (_| | | |_`),
-			Contains(`  |_|\__,_/___|\__, |\__, |_|\__|`),
-			Contains(`                __/ | __/ |`),
-			Contains(`               |___/ |___/`),
-			Contains(``),
-			Contains(`Copyright `),
+			Contains("DESKGIT"),
 		)
 	},
 })

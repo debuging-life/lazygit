@@ -16,7 +16,7 @@ var InitialOpen = NewIntegrationTest(NewIntegrationTestArgs{
 	Run: func(t *TestDriver, keys config.KeybindingConfig) {
 		t.ExpectPopup().Confirmation().
 			Title(Equals("")).
-			Content(Contains("Thanks for using lazygit!")).
+			Content(Contains("deskgit is DeskTick's git client")). // deskgit: our intro
 			Confirm()
 
 		t.Views().Files().IsFocused()

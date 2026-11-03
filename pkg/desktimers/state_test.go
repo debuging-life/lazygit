@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func runGit(t *testing.T, dir string, args ...string) string {
+func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	fullArgs := append([]string{
 		"-c", "user.name=Test", "-c", "user.email=test@example.com",
@@ -20,7 +20,6 @@ func runGit(t *testing.T, dir string, args ...string) string {
 	if err != nil {
 		t.Fatalf("git %v failed: %v\n%s", args, err, out)
 	}
-	return strings.TrimSpace(string(out))
 }
 
 func initRepo(t *testing.T) string {

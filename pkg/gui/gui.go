@@ -1109,6 +1109,7 @@ func (gui *Gui) showIntroPopupMessage() {
 	})
 }
 
+//nolint:unused // deskgit: kept for clean rebases; layout.go says why it is not called
 func (gui *Gui) showBreakingChangesMessage() {
 	_, err := types.ParseVersionNumber(gui.Config.GetVersion())
 	if err != nil {

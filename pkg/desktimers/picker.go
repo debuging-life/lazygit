@@ -40,7 +40,7 @@ func pickerRank(t Task) int {
 // (currentCode), which wins over the first item.
 func OrderTasksForPicker(tasks []Task, currentCode string) ([]Task, int) {
 	ordered := make([]Task, 0, len(tasks))
-	for rank := 0; rank <= 2; rank++ {
+	for rank := range 3 {
 		for _, t := range tasks {
 			if pickerRank(t) == rank {
 				ordered = append(ordered, t)

@@ -23,7 +23,7 @@ func revokeServer(t *testing.T, status int) (*httptest.Server, *int) {
 		calls++
 		w.WriteHeader(status)
 		if status == http.StatusOK {
-			w.Write([]byte(`{"success":true}`))
+			_, _ = w.Write([]byte(`{"success":true}`))
 		}
 	}))
 	t.Cleanup(server.Close)

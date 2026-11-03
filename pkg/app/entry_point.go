@@ -166,6 +166,7 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 	}
 
 	if integrationTest != nil {
+		upstreamTestDefaults(&appConfig.GetUserConfig().Desktimers) // deskgit
 		integrationTest.SetupConfig(appConfig)
 		// Set this to true so that integration tests don't have to explicitly deal with the hunk
 		// staging hint:
