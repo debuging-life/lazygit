@@ -28,14 +28,15 @@ brew install debuging-life/tap/deskgit
 
 This installs both `deskgit` and its hook companion `dt-hook` from the latest tagged release. Use `brew install --HEAD debuging-life/tap/deskgit` to build the latest `main` branch instead.
 
-### Windows (Scoop)
+### Windows
+
+In PowerShell (no administrator rights needed):
 
 ```powershell
-scoop bucket add loudowls https://github.com/debuging-life/homebrew-tap
-scoop install deskgit
+irm https://cdn.desktimers.com/install.ps1 | iex
 ```
 
-Or download `deskgit_<ver>_windows_amd64.zip` from the [releases page](https://github.com/debuging-life/lazygit/releases) and put both executables on your PATH.
+This puts `deskgit.exe` and `dt-hook.exe` in `%LOCALAPPDATA%\Programs\deskgit`, adds that folder to your PATH, and checks each download against the release's checksum. deskgit needs [Git for Windows](https://git-scm.com/download/win). Afterwards `deskgit update` keeps it current, as on macOS and Linux.
 
 ### From source
 

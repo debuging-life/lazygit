@@ -11,7 +11,8 @@
 #       export AWS_SECRET_ACCESS_KEY=<your-r2-secret-access-key>
 #       export R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 #       export R2_BUCKET=<bucket-name>            # default: deskgit-releases
-#       export R2_PUBLIC_URL=https://cdn.desktimers.com/deskgit
+#       export R2_PUBLIC_URL=https://cdn.desktimers.com   # the bucket's root:
+#         latest.json and install.ps1 are fetched from there by name
 #
 # Usage:
 #   scripts/upload-deskgit.sh [vX.Y.Z]   # defaults to latest deskgit-v* tag
@@ -49,6 +50,8 @@ PLATFORMS=(
   "darwin/amd64"
   "linux/arm64"
   "linux/amd64"
+  "windows/amd64"
+  "windows/arm64"
 )
 
 OUT="$(mktemp -d)"
@@ -152,6 +155,13 @@ echo ""
 echo "Manifest:"
 cat "$MANIFEST_FILE"
 echo ""
+
+# The Windows installer is fetched by its address (irm …/install.ps1 | iex),
+# so it lives beside latest.json and is replaced with every release.
+echo "Uploading install.ps1..."
+s3 cp scripts/install-deskgit.ps1 "s3://$BUCKET/install.ps1" \
+  --content-type "text/plain; charset=utf-8" \
+  --cache-control "no-cache, no-store"
 
 echo "Uploading latest.json..."
 s3 cp "$MANIFEST_FILE" "s3://$BUCKET/latest.json" \

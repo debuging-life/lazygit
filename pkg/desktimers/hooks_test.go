@@ -4,8 +4,11 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInstallHooksFresh(t *testing.T) {
@@ -21,7 +24,8 @@ func TestInstallHooksFresh(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s hook missing: %v", name, err)
 		}
-		if info.Mode().Perm()&0o111 == 0 {
+		// Windows has no executable bit: Git for Windows runs any hook.
+		if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
 			t.Errorf("%s hook is not executable", name)
 		}
 		content, _ := os.ReadFile(path)
@@ -164,4 +168,10 @@ func TestUninstallLeavesForeignHooksAlone(t *testing.T) {
 	if err != nil || string(content) != original {
 		t.Fatalf("foreign hook was touched: (%q, %v)", content, err)
 	}
+}
+
+func TestHookScriptGivesGitForWindowsForwardSlashes(t *testing.T) {
+	script := hookScript("post-commit", `C:\Users\ada\AppData\Local\Programs\deskgit\dt-hook.exe`, false)
+
+	assert.Contains(t, script, `DT_HOOK="C:/Users/ada/AppData/Local/Programs/deskgit/dt-hook.exe"`)
 }

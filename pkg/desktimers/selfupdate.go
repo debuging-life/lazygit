@@ -4,10 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 )
@@ -147,13 +150,35 @@ func DownloadAndVerify(url, expectedSHA256 string) (string, error) {
 // ReplaceExecutable atomically replaces dest with the file at src, preserving
 // the executable bit. src is removed on success.
 func ReplaceExecutable(src, dest string) error {
+	return replaceExecutable(src, dest, runtime.GOOS == "windows")
+}
+
+// replaceExecutable is ReplaceExecutable; moveAside is for Windows, which
+// will not write over a program that is running but will rename it. The
+// one moved aside gets a name of its own, dest.<n>.old, since an earlier
+// one may still be running too; each update removes those it can.
+func replaceExecutable(src, dest string, moveAside bool) error {
 	if err := os.Chmod(src, 0o755); err != nil {
 		return fmt.Errorf("chmod: %w", err)
+	}
+	old := fmt.Sprintf("%s.%d.old", dest, time.Now().UnixNano())
+	if moveAside {
+		if earlier, err := filepath.Glob(dest + ".*.old"); err == nil {
+			for _, path := range earlier {
+				_ = os.Remove(path) // fails while that one still runs
+			}
+		}
+		if err := os.Rename(dest, old); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("moving the running binary aside: %w", err)
+		}
 	}
 	// Rename is atomic on the same filesystem; fall back to copy+rename if
 	// src and dest are on different filesystems.
 	if err := os.Rename(src, dest); err != nil {
 		if err2 := copyFile(src, dest); err2 != nil {
+			if moveAside {
+				_ = os.Rename(old, dest)
+			}
 			return fmt.Errorf("replacing binary: %w", err2)
 		}
 		os.Remove(src)
