@@ -129,6 +129,8 @@ func (f *fakeDeskTick) serve(w http.ResponseWriter, r *http.Request) {
 			results = append(results, map[string]any{"sha": commit.(map[string]any)["sha"], "taskCodes": []string{}})
 		}
 		reply(map[string]any{"results": results})
+	case r.URL.Path == "/api/github/pulls":
+		reply(map[string]any{"taskCodes": []string{"CLK-12"}})
 	case r.URL.Path == "/api/auth/sign-out":
 		reply(map[string]any{"success": true})
 	case len(parts) == 3 && parts[2] == "projects":

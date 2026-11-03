@@ -71,7 +71,7 @@ func getBranchDisplayStrings(
 	}
 	if len(prs) > 0 {
 		// if we have PRs then we assume that at least one branch in the list has one
-		availableWidth -= 2
+		availableWidth -= 3 // deskgit: the icon, its review mark, a space
 	}
 	paddingNeededForDivergence := availableWidth
 
@@ -149,7 +149,7 @@ func getBranchDisplayStrings(
 		} else {
 			prIcon = "●"
 		}
-		coloredPrIcon = WithPrColor(pr.State, prIcon, false)
+		coloredPrIcon = WithPrColor(pr.State, prIcon, false) + deskgitPrMark(pr) // deskgit
 	}
 	res = append(res, coloredPrIcon)
 

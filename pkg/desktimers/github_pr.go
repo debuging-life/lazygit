@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -455,4 +456,14 @@ func nonNil(s []string) []string {
 		return []string{}
 	}
 	return s
+}
+
+// Clone is a copy whose lists can be changed without changing these.
+func (d PullRequestDraft) Clone() PullRequestDraft {
+	d.Reviewers = slices.Clone(d.Reviewers)
+	d.TeamReviewers = slices.Clone(d.TeamReviewers)
+	d.Assignees = slices.Clone(d.Assignees)
+	d.Labels = slices.Clone(d.Labels)
+	d.ProjectIDs = slices.Clone(d.ProjectIDs)
+	return d
 }

@@ -502,15 +502,14 @@ func (self *BranchesController) handleCreatePullRequest(selectedBranch *models.B
 		})
 	}
 	if svcInfo, token, ok := self.getGitHubAuth(); ok {
-		// A branch's open pull request is shown, to open or merge, rather
-		// than a second one made: GitHub refuses that.
-		if pr := self.c.Model().PullRequestsMap[selectedBranch.Name]; pr != nil && pr.State == "OPEN" {
-			title := utils.ResolvePlaceholderString(self.c.Tr.PRExistingMenuTitle, map[string]string{
-				"number": fmt.Sprintf("%d", pr.Number), "head": pr.HeadRefName, "base": pr.BaseRefName,
-			})
-			return self.showPullRequestMenu(pr, svcInfo, token, title, "")
+		// A branch's open pull request, a draft included, is shown, to
+		// open, edit or merge, rather than a second one made: GitHub
+		// refuses that.
+		place := self.pullRequestPlace(selectedBranch, svcInfo, token)
+		if pr := self.c.Model().PullRequestsMap[selectedBranch.Name]; pr != nil && (pr.State == "OPEN" || pr.State == "DRAFT") {
+			return self.c.Helpers().Desktimers.ShowPullRequestMenu(place, pr)
 		}
-		return self.createPRViaAPIWithBase(selectedBranch, "", svcInfo, token)
+		return self.c.Helpers().Desktimers.CreatePullRequest(place, "")
 	}
 	if !selectedBranch.IsTrackingRemote() {
 		return errors.New(self.c.Tr.PullRequestNoUpstream)
@@ -532,210 +531,15 @@ func (self *BranchesController) getGitHubAuth() (hosting_service.ServiceInfo, st
 	return svcInfo, token, true
 }
 
-// createPRViaAPIWithBase prompts for title/body (pre-filled from last commit),
-// then calls the GitHub REST API to create the PR with a progress spinner.
-func (self *BranchesController) createPRViaAPIWithBase(branch *models.Branch, baseBranch string, svcInfo hosting_service.ServiceInfo, token string) error {
-	headBranch := branch.Name
-	if branch.IsTrackingRemote() {
-		headBranch = branch.UpstreamBranch
-	}
-
-	// Guard: strip any "origin/" prefix for comparison, then reject head == base.
-	normalised := strings.TrimPrefix(baseBranch, "origin/")
-	if normalised != "" && normalised == strings.TrimPrefix(headBranch, "origin/") {
-		return errors.New(self.c.Tr.PRSameBranch)
-	}
-
-	// deskgit: the pull request form (title, description, base, reviewers,
-	// assignees, labels, projects), in the DeskTick helpers.
-	if !branch.IsTrackingRemote() {
-		return errors.New(self.c.Tr.PullRequestNoUpstream)
-	}
-	return self.c.Helpers().Desktimers.OpenPullRequestForm(helpers.PullRequestFormOpts{
-		Repo: desktimers.GitHubRepo{
-			Host: svcInfo.WebDomain, Owner: svcInfo.Owner, Name: svcInfo.Repository, Token: token,
-		},
-		Branch: branch.Name,
-		Head:   headBranch,
-		Base:   normalised,
-		EditFile: func(path string) error {
-			return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1)
-		},
+// deskgit: where the branch's pull request is, for the DeskTick helpers
+// (helpers/desktimers_pr_menu.go), which hold the form and the menu.
+func (self *BranchesController) pullRequestPlace(branch *models.Branch, svcInfo hosting_service.ServiceInfo, token string) helpers.PullRequestPlace {
+	return helpers.PullRequestPlace{
+		Service: svcInfo, Token: token, Branch: branch,
+		EditFile:        func(path string) error { return self.c.Helpers().Files.EditFileAtLineAndWait(path, 1) },
 		BaseSuggestions: self.c.Helpers().Suggestions.GetRemoteBranchesForRemoteSuggestionsFunc("origin"),
-		OnCreated: func(number int, url string, base string, note string) error {
-			pr := &models.GithubPullRequest{
-				Number: number, Url: url, State: "OPEN", HeadRefName: headBranch, BaseRefName: base,
-			}
-			title := utils.ResolvePlaceholderString(
-				self.c.Tr.PRCreatedMenuTitle,
-				map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-			)
-			return self.showPullRequestMenu(pr, svcInfo, token, title, note)
-		},
-		Reopen: func() error { return self.handleCreatePullRequest(branch) },
-	})
-}
-
-// deskgit: what can be done with a pull request; note is shown above the
-// choices (what GitHub refused of the rest of the form, for one just made).
-func (self *BranchesController) showPullRequestMenu(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string, title string, note string) error {
-	return self.c.Menu(types.CreateMenuOptions{
-		Title:  title,
-		Prompt: note,
-		Items: []*types.MenuItem{
-			{
-				LabelColumns: []string{self.c.Tr.PRCreatedOpenInBrowser},
-				OnPress: func() error {
-					return self.c.OS().OpenLink(pr.Url)
-				},
-			},
-			{
-				LabelColumns: []string{self.c.Tr.PRCreatedCopyLink},
-				OnPress: func() error {
-					if err := self.c.OS().CopyToClipboard(pr.Url); err != nil {
-						return err
-					}
-					self.c.Toast(self.c.Tr.PullRequestURLCopiedToClipboard)
-					return nil
-				},
-			},
-			{
-				LabelColumns: []string{self.c.Tr.PRCreatedMergeInApp},
-				OnPress: func() error {
-					return self.handleMergePRViaAPI(pr, svcInfo, token)
-				},
-			},
-		},
-	})
-}
-
-func (self *BranchesController) handleMergePRViaAPI(pr *models.GithubPullRequest, svcInfo hosting_service.ServiceInfo, token string) error {
-	// Resolve task code before doing anything else so we can ask "which column?"
-	// BEFORE the merge — that way the suppress flag is set before the webhook fires.
-	taskCode := desktimers.ExtractCode(pr.HeadRefName)
-	if taskCode == "" {
-		taskCode = desktimers.ExtractCode(pr.Title)
+		Reopen:          func() error { return self.handleCreatePullRequest(branch) },
 	}
-	if taskCode == "" {
-		if sel := self.c.Helpers().Desktimers.SelectedTask(); sel != nil {
-			taskCode = sel.Code
-		}
-	}
-
-	if taskCode == "" {
-		// No linked task — skip the column picker, go straight to strategy.
-		return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-	}
-
-	capturedCode := taskCode
-	// Fetch project columns with a spinner, then show the column picker.
-	return self.c.WithWaitingStatus(self.c.Tr.PRLoadingColumns, func(_ gocui.Task) error {
-		client, err := desktimers.NewClientFromToken()
-		if err != nil {
-			return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-		}
-		columns, err := client.GetTaskColumns(capturedCode)
-		if err != nil || len(columns) == 0 {
-			return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-		}
-		return self.showColumnPickerMenu(pr, svcInfo, token, client, capturedCode, columns)
-	})
-}
-
-// showColumnPickerMenu lets the user pick which column to move the task to
-// after the merge. The choice is recorded BEFORE the merge so the suppress
-// flag can prevent the webhook from also moving the task.
-func (self *BranchesController) showColumnPickerMenu(
-	pr *models.GithubPullRequest,
-	svcInfo hosting_service.ServiceInfo,
-	token string,
-	client *desktimers.Client,
-	taskCode string,
-	columns []desktimers.Column,
-) error {
-	items := make([]*types.MenuItem, 0, len(columns)+1)
-	for _, col := range columns {
-		items = append(items, &types.MenuItem{
-			LabelColumns: []string{col.Name},
-			OnPress: func() error {
-				// Suppress webhook auto-done, then merge with a post-merge column move.
-				_ = client.SuppressAutoDone(taskCode)
-				return self.showMergeStrategyPicker(pr, svcInfo, token, client, taskCode+":"+col.Slug)
-			},
-		})
-	}
-	items = append(items, &types.MenuItem{
-		LabelColumns: []string{self.c.Tr.PRMoveToColumnKeep},
-		OnPress: func() error {
-			_ = client.SuppressAutoDone(taskCode)
-			return self.showMergeStrategyPicker(pr, svcInfo, token, nil, "")
-		},
-	})
-	return self.c.Menu(types.CreateMenuOptions{
-		Title: utils.ResolvePlaceholderString(
-			self.c.Tr.PRMoveToColumnPrompt,
-			map[string]string{"code": taskCode},
-		),
-		Items: items,
-	})
-}
-
-// showMergeStrategyPicker shows merge/squash/rebase options.
-// postMergeTarget is "CODE:columnSlug" when we should call MoveTaskToColumn
-// after a successful merge; empty string means no column move.
-func (self *BranchesController) showMergeStrategyPicker(
-	pr *models.GithubPullRequest,
-	svcInfo hosting_service.ServiceInfo,
-	token string,
-	client *desktimers.Client,
-	postMergeTarget string,
-) error {
-	strategies := []struct {
-		label    string
-		strategy string
-	}{
-		{self.c.Tr.PRMergeStrategyMerge, "merge"},
-		{self.c.Tr.PRMergeStrategySquash, "squash"},
-		{self.c.Tr.PRMergeStrategyRebase, "rebase"},
-	}
-	menuItems := lo.Map(strategies, func(s struct {
-		label    string
-		strategy string
-	}, _ int,
-	) *types.MenuItem {
-		strat := s.strategy
-		return &types.MenuItem{
-			LabelColumns: []string{s.label},
-			OnPress: func() error {
-				self.c.LogAction(self.c.Tr.Actions.MergePullRequest)
-				return self.c.WithWaitingStatus(self.c.Tr.PRMergingPR, func(_ gocui.Task) error {
-					if err := self.c.Git().GitHub.MergePullRequest(
-						svcInfo.Owner, svcInfo.Repository, pr.Number, strat, svcInfo.WebDomain, token,
-					); err != nil {
-						return err
-					}
-					self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}})
-					self.c.Toast(self.c.Tr.PRMerged)
-					// If the user chose a specific column, move the task there now.
-					if postMergeTarget != "" && client != nil {
-						parts := strings.SplitN(postMergeTarget, ":", 2)
-						if len(parts) == 2 {
-							code, slug := parts[0], parts[1]
-							go func() { _ = client.MoveTaskToColumn(code, slug) }()
-						}
-					}
-					return nil
-				})
-			},
-		}
-	})
-	return self.c.Menu(types.CreateMenuOptions{
-		Title: utils.ResolvePlaceholderString(
-			self.c.Tr.PRMergeConfirmTitle,
-			map[string]string{"number": fmt.Sprintf("%d", pr.Number)},
-		),
-		Items: menuItems,
-	})
 }
 
 func (self *BranchesController) getPullRequestURL() (string, error) {

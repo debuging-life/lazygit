@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jesseduffield/lazygit/pkg/commands/models"
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
@@ -33,12 +34,23 @@ type PullRequestFormOpts struct {
 	EditFile func(path string) error
 	// BaseSuggestions suggests branches for the base.
 	BaseSuggestions func(string) []*types.Suggestion
-	// OnCreated shows what can be done with the pull request made, into
-	// base; note is what GitHub refused of the rest, or "".
-	OnCreated func(number int, url string, base string, note string) error
+	// OnDone is told the pull request was made or saved, as it now is.
 	// Reopen starts again from the branches panel, asked as another gh
 	// account.
 	Reopen func() error
+	// Number is the open pull request the form edits; 0 makes a new one.
+	Number int
+	OnDone func(PullRequestResult) error
+}
+
+// PullRequestResult is a pull request the form made or saved.
+type PullRequestResult struct {
+	Number int
+	URL    string
+	// Draft is what was sent: its Draft says whether it is a draft now.
+	Draft desktimers.PullRequestDraft
+	// Note is what GitHub refused of the rest, or "".
+	Note string
 }
 
 // pullRequestForm is the form as filled in so far.
@@ -50,6 +62,11 @@ type pullRequestForm struct {
 	accounts desktimers.GitHubAccounts
 	// fromTemplate says the description is still the repository's template.
 	fromTemplate bool
+	// existing is the pull request being edited, as GitHub has it; nil
+	// while making a new one.
+	existing *desktimers.OpenPullRequest
+	// picked is the task picked in deskgit when a new one's form opened.
+	picked *desktimers.State
 }
 
 // The form's rows, in order; a row's index is where the form comes back to.
@@ -62,6 +79,8 @@ const (
 	prRowLabels
 	prRowProjects
 	prRowAccount
+	// Editing, the same two rows save, and save changing whether it is
+	// a draft.
 	prRowCreate
 	prRowCreateDraft
 )
@@ -77,6 +96,11 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 		// The task's link is DeskTick's to give, and does not wait on GitHub.
 		taskURL := make(chan string, 1)
 		go func() {
+			if opts.Number != 0 {
+				// Editing: the description is already written.
+				taskURL <- ""
+				return
+			}
 			code := desktimers.ExtractCode(opts.Branch)
 			if code == "" && picked != nil {
 				code = picked.Code
@@ -88,7 +112,21 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 			taskURL <- desktimers.TaskURLForCode(".", code)
 		}()
 		accounts := desktimers.ListGitHubAccounts(opts.Repo.Host)
+		var existing *desktimers.OpenPullRequest
+		existingErr := make(chan error, 1)
+		go func() {
+			if opts.Number == 0 {
+				existingErr <- nil
+				return
+			}
+			var err error
+			existing, err = opts.Repo.LoadPullRequest(opts.Number)
+			existingErr <- err
+		}()
 		choices, err := opts.Repo.LoadPullRequestChoices()
+		if loadErr := <-existingErr; err == nil {
+			err = loadErr
+		}
 		var notFound *desktimers.RepoNotFoundError
 		if errors.As(err, &notFound) {
 			line := self.notFoundLine(notFound)
@@ -109,6 +147,14 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 		if err != nil {
 			return err
 		}
+		if existing != nil {
+			form := &pullRequestForm{
+				opts: opts, choices: choices, accounts: accounts, existing: existing,
+				draft: existing.Draft.Clone(),
+			}
+			self.c.OnUIThread(func() error { return self.showPullRequestForm(form, prRowTitle) })
+			return nil
+		}
 		base := opts.Base
 		if base == "" {
 			base = choices.DefaultBranch
@@ -126,6 +172,7 @@ func (self *DesktimersHelper) OpenPullRequestForm(opts PullRequestFormOpts) erro
 			},
 			fromTemplate: text.FromTemplate,
 			accounts:     accounts,
+			picked:       picked,
 		}
 		self.c.OnUIThread(func() error { return self.showPullRequestForm(form, prRowTitle) })
 		return nil
@@ -196,25 +243,25 @@ func (self *DesktimersHelper) showPullRequestForm(form *pullRequestForm, selecte
 		}),
 		projects,
 		self.accountRow(form, details),
-		{
-			LabelColumns: []string{tr.PRFormCreate, ""},
-			OnPress:      func() error { return self.createPullRequest(form, false) },
-			Section:      create,
-			Keys:         menuKey('c'),
-		},
-		{
-			LabelColumns: []string{tr.PRFormCreateDraft, ""},
-			OnPress:      func() error { return self.createPullRequest(form, true) },
-			Section:      create,
-			Keys:         menuKey('d'),
-		},
+	}
+	items = append(items, self.actionRows(form, create)...)
+
+	title := utils.ResolvePlaceholderString(tr.PRFormTitle, map[string]string{
+		"head": form.draft.Head,
+		"base": form.draft.Base,
+	})
+	discard := tr.PRFormDiscardPrompt
+	if form.existing != nil {
+		title = utils.ResolvePlaceholderString(tr.PRFormEditTitle, map[string]string{
+			"number": fmt.Sprintf("%d", form.existing.Number),
+			"head":   form.draft.Head,
+			"base":   form.draft.Base,
+		})
+		discard = tr.PRFormDiscardEdits
 	}
 
 	return self.c.Menu(types.CreateMenuOptions{
-		Title: utils.ResolvePlaceholderString(tr.PRFormTitle, map[string]string{
-			"head": form.draft.Head,
-			"base": form.draft.Base,
-		}),
+		Title:              title,
 		Items:              items,
 		InitialSelectedIdx: selected,
 		MinWidth:           100,
@@ -223,13 +270,38 @@ func (self *DesktimersHelper) showPullRequestForm(form *pullRequestForm, selecte
 		OnCancel: func() error {
 			self.c.Confirm(types.ConfirmOpts{
 				Title:         tr.PRFormDiscardTitle,
-				Prompt:        tr.PRFormDiscardPrompt,
+				Prompt:        discard,
 				HandleConfirm: func() error { return nil },
 				HandleClose:   back(selected),
 			})
 			return nil
 		},
 	})
+}
+
+// actionRows are the form's last two rows: make the pull request, or a
+// draft; editing one, save it, or save it changing whether it is a draft.
+func (self *DesktimersHelper) actionRows(form *pullRequestForm, section *types.MenuSection) []*types.MenuItem {
+	tr := self.c.Tr
+	action := func(key rune, label string, onPress func() error) *types.MenuItem {
+		return &types.MenuItem{LabelColumns: []string{label, ""}, OnPress: onPress, Section: section, Keys: menuKey(key)}
+	}
+	if form.existing == nil {
+		return []*types.MenuItem{
+			action('c', tr.PRFormCreate, func() error { return self.createPullRequest(form, false) }),
+			action('d', tr.PRFormCreateDraft, func() error { return self.createPullRequest(form, true) }),
+		}
+	}
+	section.Title = tr.PRFormSectionSave
+	isDraft := form.existing.Draft.Draft
+	toggle := tr.PRFormSaveDraft
+	if isDraft {
+		toggle = tr.PRFormSaveReady
+	}
+	return []*types.MenuItem{
+		action('c', tr.PRFormSave, func() error { return self.savePullRequest(form, isDraft) }),
+		action('d', toggle, func() error { return self.savePullRequest(form, !isDraft) }),
+	}
 }
 
 func (self *DesktimersHelper) listOrNone(values []string) string {
@@ -443,9 +515,62 @@ func (self *DesktimersHelper) createPullRequest(form *pullRequestForm, asDraft b
 				"warnings": strings.Join(created.Warnings, "\n"),
 			})
 		}
+		notice := desktimers.PullRequestNotice{
+			Number: created.Number, Title: draft.Title, URL: created.URL, State: desktimers.PullOpen,
+			Draft: draft.Draft, Head: draft.Head, Base: draft.Base,
+		}
+		// The task the form was opened for; the API reads the title and
+		// the branch as well.
+		if form.picked != nil {
+			notice.TaskCode = &form.picked.Code
+		}
+		self.TellDeskTickOfPullRequest(notice)
 		self.c.OnUIThread(func() error {
 			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
-			return form.opts.OnCreated(created.Number, created.URL, draft.Base, note)
+			return form.opts.OnDone(PullRequestResult{Number: created.Number, URL: created.URL, Draft: draft, Note: note})
+		})
+		return nil
+	})
+}
+
+func (self *DesktimersHelper) savePullRequest(form *pullRequestForm, asDraft bool) error {
+	if form.draft.Title == "" {
+		self.c.ErrorToast(self.c.Tr.PRFormTitleRequired)
+		return self.showPullRequestForm(form, prRowTitle)
+	}
+	// Only a base changed here is checked: a fork's pull request is often
+	// from its main into main, which GitHub allows.
+	if form.draft.Base != form.existing.Draft.Base && form.draft.Base == form.draft.Head {
+		self.c.ErrorToast(self.c.Tr.PRSameBranch)
+		return self.showPullRequestForm(form, prRowBase)
+	}
+	draft := form.draft
+	draft.Draft = asDraft
+	self.c.LogAction(self.c.Tr.Actions.EditPullRequest)
+	return self.c.WithWaitingStatus(self.c.Tr.PRFormSaving, func(gocui.Task) error {
+		saved, err := form.opts.Repo.UpdatePullRequest(form.existing, draft)
+		if err != nil {
+			// Nothing was saved: the form comes back as it was.
+			self.c.OnUIThread(func() error {
+				self.c.ErrorToast(err.Error())
+				return self.showPullRequestForm(form, prRowCreate)
+			})
+			return nil
+		}
+		note := ""
+		if len(saved.Warnings) > 0 {
+			note = utils.ResolvePlaceholderString(self.c.Tr.PRFormSavedWithWarnings, map[string]string{
+				"warnings": strings.Join(saved.Warnings, "\n"),
+			})
+		}
+		draft.Draft = saved.Draft
+		self.TellDeskTickOfPullRequest(desktimers.PullRequestNotice{
+			Number: form.existing.Number, Title: draft.Title, URL: form.existing.URL, State: desktimers.PullOpen,
+			Draft: draft.Draft, Head: draft.Head, Base: draft.Base,
+		})
+		self.c.OnUIThread(func() error {
+			self.c.Refresh(types.RefreshOptions{Scope: []types.RefreshableView{types.BRANCHES}, Mode: types.ASYNC})
+			return form.opts.OnDone(PullRequestResult{Number: form.existing.Number, URL: form.existing.URL, Draft: draft, Note: note})
 		})
 		return nil
 	})
@@ -597,4 +722,27 @@ func (self *DesktimersHelper) ChooseGitHubAccount(pick AccountPick, then func() 
 		InitialSelectedIdx: max(selected, 0),
 		OnCancel:           pick.OnCancel,
 	})
+}
+
+// PullRequestStanding says where an open pull request stands, in words, as
+// the branches panel marks it: a draft or not, its reviewers' verdict, a
+// conflict with its base.
+func (self *DesktimersHelper) PullRequestStanding(pr *models.GithubPullRequest) string {
+	tr := self.c.Tr
+	parts := []string{}
+	if pr.State == "DRAFT" {
+		parts = append(parts, tr.PRStandingDraft)
+	}
+	switch pr.Review {
+	case desktimers.ReviewApproved:
+		parts = append(parts, tr.PRStandingApproved)
+	case desktimers.ReviewChangesRequested:
+		parts = append(parts, tr.PRStandingChangesAsked)
+	case desktimers.ReviewWaiting:
+		parts = append(parts, tr.PRStandingWaiting)
+	}
+	if pr.Conflicting {
+		parts = append(parts, utils.ResolvePlaceholderString(tr.PRStandingConflicts, map[string]string{"base": pr.BaseRefName}))
+	}
+	return strings.Join(parts, " · ")
 }

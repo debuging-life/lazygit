@@ -296,6 +296,11 @@ type TranslationSet struct {
 	PRCreated                             string
 	PRCreatedMenuTitle                    string
 	PRExistingMenuTitle                   string
+	PRStandingDraft                       string
+	PRStandingWaiting                     string
+	PRStandingApproved                    string
+	PRStandingChangesAsked                string
+	PRStandingConflicts                   string
 	PRCreatedOpenInBrowser                string
 	PRCreatedCopyLink                     string
 	PRCreatedMergeInApp                   string
@@ -310,9 +315,6 @@ type TranslationSet struct {
 	PRMoveToDonePrompt                    string
 	PRMoveToDoneYes                       string
 	PRMoveToDoneNo                        string
-	PRMoveToColumnPrompt                  string
-	PRMoveToColumnKeep                    string
-	PRLoadingColumns                      string
 	PRCreatingPR                          string
 	PRMergingPR                           string
 	PRFormLoading                         string
@@ -342,6 +344,26 @@ type TranslationSet struct {
 	PRFormDiscardPrompt                   string
 	PRFormTitleRequired                   string
 	PRFormCreatedWithWarnings             string
+	PRFormEditTitle                       string
+	PRFormSectionSave                     string
+	PRFormSave                            string
+	PRFormSaveReady                       string
+	PRFormSaveDraft                       string
+	PRFormSaving                          string
+	PRFormSaved                           string
+	PRFormSavedWithWarnings               string
+	PRFormDiscardEdits                    string
+	PRMenuEdit                            string
+	PRMergeDraft                          string
+	PRTidyTitle                           string
+	PRTidySwitchAndDelete                 string
+	PRTidyDelete                          string
+	PRTidyDeleteRemote                    string
+	PRTidyWorking                         string
+	PRTidyDone                            string
+	PRTidyKeptTitle                       string
+	PRTidyKeptCommits                     string
+	PRTidyKeptNoRemote                    string
 	PRFieldAccount                        string
 	GitHubAccountTitle                    string
 	GitHubAccountChosen                   string
@@ -1252,6 +1274,7 @@ type Actions struct {
 	BisectMark                       string
 	AddWorktree                      string
 	CreatePullRequestViaAPI          string
+	EditPullRequest                  string
 	MergePullRequest                 string
 }
 
@@ -1568,6 +1591,11 @@ func EnglishTranslationSet() *TranslationSet {
 		PRCreated:                            `Pull request #{{number}} created`,
 		PRCreatedMenuTitle:                   `PR #{{number}} created`,
 		PRExistingMenuTitle:                  `PR #{{number}}: {{head}} → {{base}}`,
+		PRStandingDraft:                      `A draft`,
+		PRStandingWaiting:                    `Waiting for a review`,
+		PRStandingApproved:                   `Approved`,
+		PRStandingChangesAsked:               `Changes asked for`,
+		PRStandingConflicts:                  `Conflicts with {{base}}`,
 		PRCreatedOpenInBrowser:               `Open PR in browser`,
 		PRCreatedCopyLink:                    `Copy PR link`,
 		PRCreatedMergeInApp:                  `Merge in-app`,
@@ -1582,9 +1610,6 @@ func EnglishTranslationSet() *TranslationSet {
 		PRMoveToDonePrompt:                   `PR merged — move {{code}} to Done?`,
 		PRMoveToDoneYes:                      `Yes — move to Done`,
 		PRMoveToDoneNo:                       `No — keep in current column`,
-		PRMoveToColumnPrompt:                 `Move {{code}} to which column after merge?`,
-		PRMoveToColumnKeep:                   `Keep in current column`,
-		PRLoadingColumns:                     `Loading columns...`,
 		PRCreatingPR:                         `Creating pull request...`,
 		PRMergingPR:                          `Merging pull request...`,
 		PRFormLoading:                        `Asking GitHub...`,
@@ -1618,6 +1643,28 @@ func EnglishTranslationSet() *TranslationSet {
 		PRFormCreatedWithWarnings: `The pull request was made, but GitHub refused some of the rest:
 
 {{warnings}}`,
+		PRFormEditTitle:   `Edit PR #{{number}}: {{head}} → {{base}}`,
+		PRFormSectionSave: `Save`,
+		PRFormSave:        `Save changes`,
+		PRFormSaveReady:   `Save and mark ready for review`,
+		PRFormSaveDraft:   `Save and turn back into a draft`,
+		PRFormSaving:      `Saving pull request...`,
+		PRFormSaved:       `PR #{{number}} saved`,
+		PRFormSavedWithWarnings: `The title, description and base were saved, but GitHub refused some of the rest:
+
+{{warnings}}`,
+		PRFormDiscardEdits:                   `Your changes will be lost. Enter discards them; Esc goes back to the form.`,
+		PRMenuEdit:                           `Edit: title, description, reviewers, labels, draft`,
+		PRMergeDraft:                         `A draft cannot be merged. Edit it, then d marks it ready for review.`,
+		PRTidyTitle:                          `PR #{{number}} merged · tidy up`,
+		PRTidySwitchAndDelete:                `Switch to {{base}} and pull it, then delete {{branch}} here and on {{remote}}`,
+		PRTidyDelete:                         `Delete {{branch}} here and on {{remote}}`,
+		PRTidyDeleteRemote:                   `Delete {{branch}} on {{remote}} only`,
+		PRTidyWorking:                        `Tidying up...`,
+		PRTidyDone:                           `Tidied up after PR #{{number}}`,
+		PRTidyKeptTitle:                      `{{branch}} kept here`,
+		PRTidyKeptCommits:                    `{{branch}} has commits that never reached {{remote}} ({{count}}), so it was kept here. Everything else was done.`,
+		PRTidyKeptNoRemote:                   `{{branch}} is gone from {{remote}} already, so there is nothing to check it against for commits that never got there. It was kept here; delete it yourself once you are sure. Everything else was done.`,
 		PRFieldAccount:                       `GitHub account`,
 		GitHubAccountTitle:                   `GitHub account`,
 		GitHubAccountChosen:                  `THIS REPO`,
@@ -2492,6 +2539,7 @@ func EnglishTranslationSet() *TranslationSet {
 			BisectMark:                       "Bisect mark",
 			AddWorktree:                      "Add worktree",
 			CreatePullRequestViaAPI:          "Create pull request",
+			EditPullRequest:                  "Edit pull request",
 			MergePullRequest:                 "Merge pull request",
 		},
 		Bisect: Bisect{

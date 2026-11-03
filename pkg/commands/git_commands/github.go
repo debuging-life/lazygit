@@ -87,6 +87,7 @@ type PullRequestNode struct {
 	HeadRepositoryOwner GithubRepositoryOwner `json:"headRepositoryOwner"`
 	State               string                `json:"state"`
 	IsDraft             bool                  `json:"isDraft"`
+	deskgitReviewFields                       // deskgit: review and conflict state
 }
 
 type GithubRepositoryOwner struct {
@@ -124,6 +125,9 @@ func fetchPullRequestsQuery(branches []string, owner string, repo string) (strin
           number
           url
           isDraft
+          reviewDecision
+          mergeable
+          latestOpinionatedReviews(first: 20) { nodes { state } }
           headRepositoryOwner {
             login
           }
@@ -254,6 +258,7 @@ func (self *GitHubCommands) fetchRecentPRsAux(endpoint string, repoOwner string,
 					Login: node.HeadRepositoryOwner.Login,
 				},
 			}
+			node.deskgitReviewFields.applyTo(pr) // deskgit
 			prs = append(prs, pr)
 		}
 	}
