@@ -367,7 +367,7 @@ func (self *RefsHelper) NewBranch(from string, fromFormattedName string, suggest
 
 	return self.withTaskForBranch(suggestedBranchName, func(taskPrefix string, suggested string) error {
 		return self.promptNewBranch(from, fromFormattedName, suggested, taskPrefix)
-	})
+	}, self.sectionChoice(from)) // deskgit
 }
 
 // withTaskForBranch wraps a new-branch flow: when requireTaskForBranch is on
@@ -375,8 +375,9 @@ func (self *RefsHelper) NewBranch(from string, fromFormattedName string, suggest
 // menu runs first (skipped when the template has no {{type}}), then the task
 // picker, and `then` receives the composed readonly prefix
 // (e.g. "bugfix/LOUD-183-") to display and prepend on confirm. Escape at
-// either menu aborts the flow.
-func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(taskPrefix string, suggested string) error) error {
+// either menu aborts the flow. A task with sections then asks which one
+// (WithSectionFor) when the flow passes sections; nil asks nothing.
+func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(taskPrefix string, suggested string) error, sections *SectionChoice) error {
 	cfg := self.c.UserConfig().Desktimers
 	if !cfg.RequireTaskForBranch || desktimers.ExtractCode(suggestedBranchName) != "" {
 		return then("", suggestedBranchName)
@@ -401,7 +402,12 @@ func (self *RefsHelper) withTaskForBranch(suggestedBranchName string, then func(
 				return then(branchType+"/", suggestedBranchName)
 			}
 			prefix := desktimers.ApplyBranchPrefixTemplate(cfg.BranchPrefixTemplate, branchType, task.Code)
-			return then(prefix, suggestedBranchName)
+			if sections == nil {
+				return then(prefix, suggestedBranchName)
+			}
+			return self.desktimersHelper.WithSectionFor(task.Code, func() error {
+				return then(prefix, suggestedBranchName)
+			}, *sections)
 		})
 	}
 
@@ -424,10 +430,14 @@ func (self *RefsHelper) NewBranchForTask(from string, fromFormattedName string, 
 		prefix := desktimers.ApplyBranchPrefixTemplate(cfg.BranchPrefixTemplate, branchType, taskCode)
 		return self.promptNewBranch(from, fromFormattedName, "", prefix)
 	}
-	if !desktimers.BranchTemplateUsesType(cfg.BranchPrefixTemplate) {
-		return buildPrefix("")
+	wholeTask := func() error {
+		if !desktimers.BranchTemplateUsesType(cfg.BranchPrefixTemplate) {
+			return buildPrefix("")
+		}
+		return self.desktimersHelper.PickBranchTypeThen(cfg.BranchTypes, buildPrefix)
 	}
-	return self.desktimersHelper.PickBranchTypeThen(cfg.BranchTypes, buildPrefix)
+	// deskgit: a section's branch is named by DeskTick, so no type is asked.
+	return self.desktimersHelper.WithSectionFor(taskCode, wholeTask, *self.sectionChoice(from))
 }
 
 func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, suggestedBranchName string, taskPrefix string) error {
@@ -531,7 +541,7 @@ func (self *RefsHelper) MoveCommitsToNewBranch() error {
 				},
 			})
 			return nil
-		})
+		}, nil) // deskgit: no section branches when moving commits
 	}
 
 	isMainBranch := lo.Contains(self.c.UserConfig().Git.MainBranches, currentBranch.Name)

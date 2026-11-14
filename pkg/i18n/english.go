@@ -631,6 +631,15 @@ type TranslationSet struct {
 	DesktimersUpdateLater                 string
 	DesktimersRestartAfterUpdate          string
 	DesktimersContinueWithoutTask         string
+	DesktimersLoadingSections             string
+	DesktimersSectionsTitle               string
+	DesktimersSectionWholeTask            string
+	DesktimersSectionSwitch               string
+	DesktimersSectionNew                  string
+	DesktimersSectionDone                 string
+	DesktimersSectionBlocked              string
+	DesktimersSectionRunning              string
+	DesktimersSectionNoBranch             string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
 	DesktimersJustCreated                 string
@@ -1946,6 +1955,15 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersUpdateLater:                "Later",
 		DesktimersRestartAfterUpdate:         "Update finished — restart deskgit to run the new version.",
 		DesktimersContinueWithoutTask:        "Continue without a task",
+		DesktimersLoadingSections:            "Loading the task's sections",
+		DesktimersSectionsTitle:              "A branch for all of {{.code}}, or one section?",
+		DesktimersSectionWholeTask:           "The whole task",
+		DesktimersSectionSwitch:              "switch to it",
+		DesktimersSectionNew:                 "new",
+		DesktimersSectionDone:                "done",
+		DesktimersSectionBlocked:             "blocked",
+		DesktimersSectionRunning:             "timer running",
+		DesktimersSectionNoBranch:            "DeskTick gave no branch name for this section",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
 		DesktimersJustCreated:                "Just created",
