@@ -631,6 +631,18 @@ type TranslationSet struct {
 	DesktimersUpdateLater                 string
 	DesktimersRestartAfterUpdate          string
 	DesktimersContinueWithoutTask         string
+	DesktimersLoadingSections             string
+	DesktimersSectionsTitle               string
+	DesktimersSectionWholeTask            string
+	DesktimersSectionSwitch               string
+	DesktimersSectionNew                  string
+	DesktimersSectionDone                 string
+	DesktimersSectionBlocked              string
+	DesktimersSectionRunning              string
+	DesktimersSectionNoBranch             string
+	DesktimersSectionDoneNoBranch         string
+	DesktimersSectionBranchNotHere        string
+	DesktimersSectionsUnread              string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
 	DesktimersJustCreated                 string
@@ -1946,6 +1958,18 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersUpdateLater:                "Later",
 		DesktimersRestartAfterUpdate:         "Update finished — restart deskgit to run the new version.",
 		DesktimersContinueWithoutTask:        "Continue without a task",
+		DesktimersLoadingSections:            "Loading the task's sections",
+		DesktimersSectionsTitle:              "A branch for all of {{.code}}, or one section?",
+		DesktimersSectionWholeTask:           "The whole task",
+		DesktimersSectionSwitch:              "switch to it",
+		DesktimersSectionNew:                 "new",
+		DesktimersSectionDone:                "done",
+		DesktimersSectionBlocked:             "blocked",
+		DesktimersSectionRunning:             "timer running",
+		DesktimersSectionNoBranch:            "DeskTick gave no branch name for this section",
+		DesktimersSectionDoneNoBranch:        "This section is done; a new branch would start work on it again",
+		DesktimersSectionBranchNotHere:       "{{.branch}} is not in this clone: fetch it, or it may be in another repository linked to the task",
+		DesktimersSectionsUnread:             "Could not read the task's sections, so this is a branch for the whole task: {{.error}}",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
 		DesktimersJustCreated:                "Just created",

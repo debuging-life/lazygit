@@ -27,6 +27,8 @@ type fakeDeskTick struct {
 	repositories map[string][]string
 	current      map[string]map[string]any
 	summaries    map[string][]map[string]any
+	// sections is keyed by "<workspace id>/<project code>/<task code>".
+	sections map[string][]map[string]any
 	// refuse answers a path with this status and message.
 	refuse map[string]string
 	// requests is every "METHOD path?query" that arrived, and bodies what
@@ -45,7 +47,7 @@ func newFakeDeskTick(t *testing.T) *fakeDeskTick {
 		t: t, token: "session-token",
 		projects: map[string][]map[string]any{}, boards: map[string][]map[string]any{},
 		repositories: map[string][]string{}, current: map[string]map[string]any{},
-		summaries: map[string][]map[string]any{}, refuse: map[string]string{}, bodies: map[string]map[string]any{},
+		summaries: map[string][]map[string]any{}, sections: map[string][]map[string]any{}, refuse: map[string]string{}, bodies: map[string]map[string]any{},
 	}
 	f.server = httptest.NewServer(http.HandlerFunc(f.serve))
 	t.Cleanup(f.server.Close)
@@ -150,6 +152,12 @@ func (f *fakeDeskTick) serve(w http.ResponseWriter, r *http.Request) {
 		reply(map[string]any{"connected": true, "linked": linked})
 	case len(parts) == 5 && parts[4] == "tasks" && r.Method == http.MethodPost:
 		reply(map[string]any{"code": parts[3] + "-99"})
+	case len(parts) == 7 && parts[6] == "sections":
+		sections := f.sections[parts[1]+"/"+parts[3]+"/"+parts[5]]
+		if sections == nil {
+			sections = []map[string]any{}
+		}
+		reply(map[string]any{"sections": sections})
 	case len(parts) == 7 && parts[6] == "move":
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success":true}`))
