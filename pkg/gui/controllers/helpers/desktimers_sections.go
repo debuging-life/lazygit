@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/jesseduffield/lazygit/pkg/desktimers"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
@@ -24,6 +24,7 @@ func (self *DesktimersHelper) WithSectionFor(taskCode string, whole func() error
 	if taskCode == "" {
 		return whole()
 	}
+	tr := self.c.Tr
 	var sections []desktimers.Section
 	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersLoadingSections, func() error {
 		client, err := desktimers.NewClientFromToken()
@@ -34,14 +35,16 @@ func (self *DesktimersHelper) WithSectionFor(taskCode string, whole func() error
 		return err
 	})
 	if err != nil {
+		// Said, not hidden: a whole-task branch made instead loses the
+		// section, and the person may rather retry.
 		self.c.Log.Warnf("deskgit: reading the sections of %s: %v", taskCode, err)
+		self.c.ErrorToast(utils.ResolvePlaceholderString(tr.DesktimersSectionsUnread, map[string]string{"error": err.Error()}))
 		return whole()
 	}
 	if len(sections) == 0 {
 		return whole()
 	}
 
-	tr := self.c.Tr
 	accent, dim := self.hudAccent(), self.hudDim()
 	items := []*types.MenuItem{{
 		LabelColumns: []string{accent.Sprint(tr.DesktimersSectionWholeTask), "", ""},
@@ -59,6 +62,10 @@ func (self *DesktimersHelper) WithSectionFor(taskCode string, whole func() error
 			press = func() error { return choice.Existing(branch) }
 		case branch == "":
 			disabled = &types.DisabledReason{Text: tr.DesktimersSectionNoBranch}
+		case section.Done:
+			// Its work is finished: switching to a branch it had is fine,
+			// starting one is not.
+			disabled = &types.DisabledReason{Text: tr.DesktimersSectionDoneNoBranch}
 		default:
 			press = func() error { return choice.New(branch) }
 		}
@@ -92,56 +99,38 @@ func (self *DesktimersHelper) WithSectionFor(taskCode string, whole func() error
 // branch from `from`, or go to the one it has.
 func (self *RefsHelper) sectionChoice(from string) *SectionChoice {
 	return &SectionChoice{
-		New: func(branch string) error { return self.newSectionBranch(from, branch) },
-		Existing: func(branch string) error {
-			self.c.LogAction(self.c.Tr.Actions.CheckoutBranch)
-			return self.CheckoutRef(branch, types.CheckoutRefOptions{})
+		New: func(branch string) error {
+			// Made here before, and nothing of it has reached DeskTick yet.
+			if self.hasLocalBranch(branch) {
+				return self.switchToSectionBranch(branch)
+			}
+			// Named exactly as DeskTick gave it, no prompt to change it: the
+			// name is how the API finds the section. Not tracking `from`: a
+			// branch with a name of its own must not push to its base's
+			// upstream.
+			self.c.LogAction(self.c.Tr.Actions.CreateBranch)
+			return self.createBranch(branch, from, self.c.Git().Branch.NewWithoutTracking)
 		},
+		Existing: self.switchToSectionBranch,
 	}
 }
 
-// newSectionBranch makes the section's branch, named exactly as DeskTick
-// gave it (no prompt to change it: the name is how the API finds the
-// section). It does not track `from`: a branch with a name of its own must
-// not push to its base's upstream.
-func (self *RefsHelper) newSectionBranch(from string, branch string) error {
-	self.c.LogAction(self.c.Tr.Actions.CreateBranch)
-	create := func() error { return self.c.Git().Branch.NewWithoutTracking(branch, from) }
-	refresh := func() {
-		if self.c.Context().Current() != self.c.Contexts().Branches {
-			self.c.Context().Push(self.c.Contexts().Branches, types.OnFocusOpts{})
+func (self *RefsHelper) hasLocalBranch(name string) bool {
+	for _, branch := range self.c.Model().Branches {
+		if branch.Name == name {
+			return true
 		}
-		self.SelectFirstBranchAndFirstCommit()
-		self.c.Refresh(types.RefreshOptions{
-			Mode:                     types.BLOCK_UI,
-			KeepBranchSelectionIndex: true,
-			CommitSelection:          types.KeepCommitSelectionIndex,
-		})
 	}
+	return false
+}
 
-	err := create()
-	if err == nil {
-		refresh()
-		return nil
-	}
-	if !IsSwitchBranchUncommittedChangesError(err) {
-		return err
-	}
-	// The same offer as any new branch: stash, switch, put the changes back.
-	self.c.Confirm(types.ConfirmOpts{
-		Title:  self.c.Tr.AutoStashTitle,
-		Prompt: self.c.Tr.AutoStashPrompt,
-		HandleConfirm: func() error {
-			if err := self.c.Git().Stash.Push(fmt.Sprintf(self.c.Tr.AutoStashForNewBranch, branch)); err != nil {
-				return err
-			}
-			if err := create(); err != nil {
-				return err
-			}
-			err := self.c.Git().Stash.Pop(0)
-			refresh()
-			return err
+// switchToSectionBranch goes to a section's branch; one DeskTick knows of
+// that this clone does not (a teammate's, not fetched) is said in words.
+func (self *RefsHelper) switchToSectionBranch(branch string) error {
+	self.c.LogAction(self.c.Tr.Actions.CheckoutBranch)
+	return self.CheckoutRef(branch, types.CheckoutRefOptions{
+		OnRefNotFound: func(ref string) error {
+			return errors.New(utils.ResolvePlaceholderString(self.c.Tr.DesktimersSectionBranchNotHere, map[string]string{"branch": ref}))
 		},
 	})
-	return nil
 }

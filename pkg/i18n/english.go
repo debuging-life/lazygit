@@ -640,6 +640,9 @@ type TranslationSet struct {
 	DesktimersSectionBlocked              string
 	DesktimersSectionRunning              string
 	DesktimersSectionNoBranch             string
+	DesktimersSectionDoneNoBranch         string
+	DesktimersSectionBranchNotHere        string
+	DesktimersSectionsUnread              string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
 	DesktimersJustCreated                 string
@@ -1964,6 +1967,9 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersSectionBlocked:             "blocked",
 		DesktimersSectionRunning:             "timer running",
 		DesktimersSectionNoBranch:            "DeskTick gave no branch name for this section",
+		DesktimersSectionDoneNoBranch:        "This section is done; a new branch would start work on it again",
+		DesktimersSectionBranchNotHere:       "{{.branch}} is not in this clone: fetch it, or it may be in another repository linked to the task",
+		DesktimersSectionsUnread:             "Could not read the task's sections, so this is a branch for the whole task: {{.error}}",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
 		DesktimersJustCreated:                "Just created",

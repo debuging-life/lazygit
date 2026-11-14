@@ -451,6 +451,26 @@ func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, s
 	// the typed name on confirm (ComposeWithTaskPrefix).
 	message = desktimers.TitleWithTaskPrefix(message, taskPrefix)
 
+	self.c.Prompt(types.PromptOpts{
+		Title:          message,
+		InitialContent: suggestedBranchName,
+		HandleConfirm: func(response string) error {
+			self.c.LogAction(self.c.Tr.Actions.CreateBranch)
+			newBranchName := SanitizedBranchName(desktimers.ComposeWithTaskPrefix(taskPrefix, response))
+			newBranchFunc := self.c.Git().Branch.New
+			if newBranchName != suggestedBranchName {
+				newBranchFunc = self.c.Git().Branch.NewWithoutTracking
+			}
+			return self.createBranch(newBranchName, from, newBranchFunc)
+		},
+	})
+
+	return nil
+}
+
+// createBranch makes and switches to a new branch, offering to stash
+// changes that are in the way. deskgit: shared with section branches.
+func (self *RefsHelper) createBranch(newBranchName string, from string, newBranchFunc func(name string, base string) error) error {
 	refresh := func() {
 		if self.c.Context().Current() != self.c.Contexts().Branches {
 			self.c.Context().Push(self.c.Contexts().Branches, types.OnFocusOpts{})
@@ -465,47 +485,33 @@ func (self *RefsHelper) promptNewBranch(from string, fromFormattedName string, s
 		})
 	}
 
-	self.c.Prompt(types.PromptOpts{
-		Title:          message,
-		InitialContent: suggestedBranchName,
-		HandleConfirm: func(response string) error {
-			self.c.LogAction(self.c.Tr.Actions.CreateBranch)
-			newBranchName := SanitizedBranchName(desktimers.ComposeWithTaskPrefix(taskPrefix, response))
-			newBranchFunc := self.c.Git().Branch.New
-			if newBranchName != suggestedBranchName {
-				newBranchFunc = self.c.Git().Branch.NewWithoutTracking
-			}
-			if err := newBranchFunc(newBranchName, from); err != nil {
-				if IsSwitchBranchUncommittedChangesError(err) {
-					// offer to autostash changes
-					self.c.Confirm(types.ConfirmOpts{
-						Title:  self.c.Tr.AutoStashTitle,
-						Prompt: self.c.Tr.AutoStashPrompt,
-						HandleConfirm: func() error {
-							if err := self.c.Git().Stash.Push(fmt.Sprintf(self.c.Tr.AutoStashForNewBranch, newBranchName)); err != nil {
-								return err
-							}
-							if err := newBranchFunc(newBranchName, from); err != nil {
-								return err
-							}
-							err := self.c.Git().Stash.Pop(0)
-							// Branch switch successful so re-render the UI even if the pop operation failed (e.g. conflict).
-							refresh()
-							return err
-						},
-					})
+	if err := newBranchFunc(newBranchName, from); err != nil {
+		if IsSwitchBranchUncommittedChangesError(err) {
+			// offer to autostash changes
+			self.c.Confirm(types.ConfirmOpts{
+				Title:  self.c.Tr.AutoStashTitle,
+				Prompt: self.c.Tr.AutoStashPrompt,
+				HandleConfirm: func() error {
+					if err := self.c.Git().Stash.Push(fmt.Sprintf(self.c.Tr.AutoStashForNewBranch, newBranchName)); err != nil {
+						return err
+					}
+					if err := newBranchFunc(newBranchName, from); err != nil {
+						return err
+					}
+					err := self.c.Git().Stash.Pop(0)
+					// Branch switch successful so re-render the UI even if the pop operation failed (e.g. conflict).
+					refresh()
+					return err
+				},
+			})
 
-					return nil
-				}
-
-				return err
-			}
-
-			refresh()
 			return nil
-		},
-	})
+		}
 
+		return err
+	}
+
+	refresh()
 	return nil
 }
 
