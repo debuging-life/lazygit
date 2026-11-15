@@ -80,3 +80,18 @@ func TestASectionWithABranchIsSwitchedTo(t *testing.T) {
 		{Section: sections[0], Branch: "CLK-2/done-one"},
 	}, rows)
 }
+
+func TestWithSectionTrailer(t *testing.T) {
+	cases := []struct{ name, message, section, want string }{
+		{"no section", "body", "", "body"},
+		{"empty description", "", "API endpoints", "Section: API endpoints"},
+		{"after the body", "Wire the route\n", "API endpoints", "Wire the route\n\nSection: API endpoints"},
+		{"already named", "body\n\nsection: Docs", "API endpoints", "body\n\nsection: Docs"},
+		{"the word in a sentence is not a trailer", "this section: hard", "API endpoints", "this section: hard\n\nSection: API endpoints"},
+	}
+	for _, c := range cases {
+		if got := WithSectionTrailer(c.message, c.section); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}

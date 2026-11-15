@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -85,4 +86,22 @@ func SectionRows(sections []Section) []SectionRow {
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// sectionTrailer finds a "Section:" line, as the API reads one: anywhere in
+// the message, any case.
+var sectionTrailer = regexp.MustCompile(`(?im)^section:`)
+
+// WithSectionTrailer ends a commit message with "Section: <name>", the line
+// the API counts a commit toward a section by. A message that already names
+// a section is left as it is: the person wrote it on purpose.
+func WithSectionTrailer(message string, name string) string {
+	if name == "" || sectionTrailer.MatchString(message) {
+		return message
+	}
+	trimmed := strings.TrimRight(message, " \t\n")
+	if trimmed == "" {
+		return "Section: " + name
+	}
+	return trimmed + "\n\nSection: " + name
 }
