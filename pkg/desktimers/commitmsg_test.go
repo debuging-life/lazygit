@@ -202,3 +202,19 @@ func TestPrefixCommitMessageIgnoresTheVerboseDiff(t *testing.T) {
 	got, _ := PrefixCommitMessage(content, "MOB-101", "")
 	assert.Equal(t, "MOB-101/"+content, got)
 }
+
+// A section named like a task code ("OAUTH-2 flow") does not stop the
+// picked task's code being put in front.
+func TestPrefixCommitMessageIgnoresASectionsName(t *testing.T) {
+	got, changed := PrefixCommitMessage("\n\nSection: OAUTH-2 flow\n", "MOB-101", "message")
+	assert.True(t, changed)
+	assert.Equal(t, "MOB-101/\n\nSection: OAUTH-2 flow\n", got)
+}
+
+// The task's trailer joins a section's in one block: git reads only the
+// last paragraph as trailers.
+func TestAppendTaskTrailerJoinsTheSectionTrailer(t *testing.T) {
+	got, changed := AppendTaskTrailer("MOB-101/wire it\n\nSection: API\n", "https://t/1", "message")
+	assert.True(t, changed)
+	assert.Equal(t, "MOB-101/wire it\n\nSection: API\nTask: https://t/1\n", got)
+}

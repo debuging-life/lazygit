@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // A task can be divided into sections in its description, each with a
@@ -88,20 +92,90 @@ func SectionRows(sections []Section) []SectionRow {
 	return rows
 }
 
-// sectionTrailer finds a "Section:" line, as the API reads one: anywhere in
-// the message, any case.
-var sectionTrailer = regexp.MustCompile(`(?im)^section:`)
+// sectionTrailer finds a "Section:" line that names something, as the API
+// reads one: anywhere in the message, any case.
+var sectionTrailer = regexp.MustCompile(`(?im)^section:[ \t]*\S`)
+
+// sectionReadLimit is how much of a message the API reads for the trailer
+// (4000 characters there), less room for the summary in front of it.
+const sectionReadLimit = 3800
 
 // WithSectionTrailer ends a commit message with "Section: <name>", the line
 // the API counts a commit toward a section by. A message that already names
-// a section is left as it is: the person wrote it on purpose.
+// a section is left as it is: the person wrote it on purpose. A message too
+// long for the API to read to its end gets the line at the top instead.
 func WithSectionTrailer(message string, name string) string {
 	if name == "" || sectionTrailer.MatchString(message) {
 		return message
 	}
+	line := "Section: " + name
 	trimmed := strings.TrimRight(message, " \t\n")
-	if trimmed == "" {
-		return "Section: " + name
+	switch {
+	case trimmed == "":
+		return line
+	case len(trimmed) > sectionReadLimit:
+		return line + "\n\n" + message
 	}
-	return trimmed + "\n\nSection: " + name
+	return trimmed + "\n\n" + line
+}
+
+// AddSectionTrailerToFile ends a commit message file, as the editor will
+// open it, with the section's trailer. A file with nothing typed keeps its
+// first line free for the summary.
+func AddSectionTrailerToFile(path string, section string) error {
+	if section == "" {
+		return nil
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	message := WithSectionTrailer(string(content), section) + "\n"
+	if strings.TrimSpace(string(content)) == "" {
+		message = "\n\n" + message
+	}
+	return os.WriteFile(path, []byte(message), 0o600)
+}
+
+// slugOf is the API's slug of a section name: "API endpoints (v2)" →
+// "api-endpoints-v2".
+func slugOf(name string) string {
+	var b strings.Builder
+	for _, r := range norm.NFKD.String(name) {
+		if unicode.Is(unicode.Mn, r) {
+			continue // the accent split off a letter
+		}
+		b.WriteRune(r)
+	}
+	slug := strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(b.String()), "-"), "-")
+	if len(slug) > 60 {
+		slug = strings.TrimRight(slug[:60], "-")
+	}
+	return slug
+}
+
+var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
+
+// SectionOfBranch is the ID of the section a branch is for, matched as the
+// API matches it: the task's code, a separator, then a section's slug ending
+// there or at another separator, the longest slug winning. "" when none.
+func SectionOfBranch(branch string, taskCode string, sections []Section) string {
+	m := regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9])` + regexp.QuoteMeta(taskCode) + `[-/_]+(.*)$`).FindStringSubmatch(branch)
+	if m == nil {
+		return ""
+	}
+	rest := strings.ToLower(m[1])
+	best, bestLen := "", 0
+	for _, section := range sections {
+		slug := slugOf(section.Name)
+		if slug == "" {
+			continue
+		}
+		if rest == slug || (strings.HasPrefix(rest, slug) && strings.ContainsRune("-/_", rune(rest[len(slug)]))) {
+			if len(slug) > bestLen {
+				best, bestLen = section.ID, len(slug)
+			}
+		}
+	}
+	return best
 }

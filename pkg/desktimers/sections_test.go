@@ -1,6 +1,9 @@
 package desktimers
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,11 +90,50 @@ func TestWithSectionTrailer(t *testing.T) {
 		{"empty description", "", "API endpoints", "Section: API endpoints"},
 		{"after the body", "Wire the route\n", "API endpoints", "Wire the route\n\nSection: API endpoints"},
 		{"already named", "body\n\nsection: Docs", "API endpoints", "body\n\nsection: Docs"},
+		{"an empty Section line names nothing", "body\nSection:", "API endpoints", "body\nSection:\n\nSection: API endpoints"},
 		{"the word in a sentence is not a trailer", "this section: hard", "API endpoints", "this section: hard\n\nSection: API endpoints"},
 	}
 	for _, c := range cases {
 		if got := WithSectionTrailer(c.message, c.section); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
+	}
+}
+
+func TestWithSectionTrailerOnALongMessageGoesFirst(t *testing.T) {
+	long := strings.Repeat("log line\n", 500)
+	got := WithSectionTrailer(long, "API endpoints")
+	assert.True(t, strings.HasPrefix(got, "Section: API endpoints\n\n"), "the API reads only the first 4000 characters")
+	assert.True(t, strings.HasSuffix(got, long))
+}
+
+func TestAddSectionTrailerToFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "msg")
+	assert.NoError(t, os.WriteFile(path, nil, 0o600))
+	assert.NoError(t, AddSectionTrailerToFile(path, "API endpoints"))
+	got, _ := os.ReadFile(path)
+	assert.Equal(t, "\n\nSection: API endpoints\n", string(got), "the first line stays free for the summary")
+
+	assert.NoError(t, os.WriteFile(path, []byte("Wire it\n"), 0o600))
+	assert.NoError(t, AddSectionTrailerToFile(path, "API endpoints"))
+	got, _ = os.ReadFile(path)
+	assert.Equal(t, "Wire it\n\nSection: API endpoints\n", string(got))
+}
+
+func TestSectionOfBranchMatchesAsTheAPIDoes(t *testing.T) {
+	sections := []Section{{ID: "a", Name: "API"}, {ID: "t", Name: "API tests"}, {ID: "c", Name: "Café menu"}}
+	cases := map[string]string{
+		"LOUD-4/api":          "a",
+		"LOUD-4/api-tests":    "t", // the longest slug wins
+		"loud-4/API-tests-v2": "t", // any case, a separator after the slug
+		"feature/loud-4-api":  "a",
+		"LOUD-4/cafe-menu":    "c", // the accent dropped, as the API's slug does
+		"LOUD-4/apis":         "",  // the slug must end at a separator
+		"LOUD-4":              "",
+		"XLOUD-4/api":         "", // the code must stand alone
+		"LOUD-44/api":         "",
+	}
+	for branch, want := range cases {
+		assert.Equal(t, want, SectionOfBranch(branch, "LOUD-4", sections), branch)
 	}
 }
