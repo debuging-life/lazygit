@@ -327,9 +327,9 @@ func (self *WorkingTreeHelper) handleCommitPressWithTaskPrefix(initialMessage st
 				OnSwitchToEditor: func(filepath string) error {
 					// The prefix isn't in the buffer; the prepare-commit-msg
 					// hook prepends the picked task's code in the editor flow.
-					// The section's trailer is not the hook's to know, so it
-					// goes into the message file here.
-					if err := self.addSectionTrailerToFile(filepath, section); err != nil {
+					// deskgit: the section is not the hook's to know, so its
+					// trailer goes into the message file here.
+					if err := desktimers.AddSectionTrailerToFile(filepath, section); err != nil {
 						return err
 					}
 					return self.switchFromCommitMessagePanelToEditor(filepath, false)
@@ -536,22 +536,4 @@ func (self *WorkingTreeHelper) CreateMergeConflictMenu(selectedFilepaths []strin
 			},
 		},
 	})
-}
-
-// addSectionTrailerToFile ends the message file the editor opens with the
-// section's trailer. deskgit
-func (self *WorkingTreeHelper) addSectionTrailerToFile(path string, section string) error {
-	if section == "" {
-		return nil
-	}
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	message := desktimers.WithSectionTrailer(string(content), section) + "\n"
-	if strings.TrimSpace(string(content)) == "" {
-		// Nothing typed yet: the first line stays free for the summary.
-		message = "\n\n" + message
-	}
-	return os.WriteFile(path, []byte(message), 0o600)
 }

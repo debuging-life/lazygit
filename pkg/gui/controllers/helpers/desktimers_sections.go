@@ -119,7 +119,8 @@ func (self *DesktimersHelper) sectionName(section desktimers.Section) string {
 // WithSectionForCommit asks, for a task with sections, whether a commit is
 // for the whole task or one section, and calls then with the section's name
 // ("" for the whole task). A task without sections asks nothing. The
-// section the checked-out branch is for comes first under the cursor.
+// section the checked-out branch is for, as the API matches it, is under
+// the cursor.
 func (self *DesktimersHelper) WithSectionForCommit(taskCode string, currentBranch string, then func(section string) error) error {
 	if taskCode == "" {
 		return then("")
@@ -130,19 +131,29 @@ func (self *DesktimersHelper) WithSectionForCommit(taskCode string, currentBranc
 		return then("")
 	}
 
+	// On a section's branch the API counts the commit toward that section
+	// without a trailer, so "the whole task" cannot be said from here; a
+	// trailer for another section still wins over the branch.
+	onSection := desktimers.SectionOfBranch(currentBranch, taskCode, sections)
+	var wholeDisabled *types.DisabledReason
+	if onSection != "" {
+		wholeDisabled = &types.DisabledReason{Text: utils.ResolvePlaceholderString(tr.DesktimersCommitWholeOnSectionBranch, map[string]string{"branch": currentBranch})}
+	}
+
 	accent, dim := self.hudAccent(), self.hudDim()
 	items := []*types.MenuItem{{
-		LabelColumns: []string{accent.Sprint(tr.DesktimersSectionWholeTask), ""},
-		OnPress:      func() error { return then("") },
-		Keys:         menuKey('w'),
+		LabelColumns:   []string{accent.Sprint(tr.DesktimersSectionWholeTask), ""},
+		OnPress:        func() error { return then("") },
+		Keys:           menuKey('w'),
+		DisabledReason: wholeDisabled,
 	}}
 	selected := 0
 	for _, row := range desktimers.SectionRows(sections) {
 		section := row.Section
-		// A done section still takes a commit: a fix to finished work.
-		if currentBranch != "" && (row.Branch == currentBranch || section.SuggestedBranch == currentBranch) {
+		if section.ID == onSection {
 			selected = len(items)
 		}
+		// A done section still takes a commit: a fix to finished work.
 		items = append(items, &types.MenuItem{
 			LabelColumns: []string{self.sectionName(section), dim.Sprint(self.sectionStatus(section))},
 			OnPress:      func() error { return then(section.Name) },
