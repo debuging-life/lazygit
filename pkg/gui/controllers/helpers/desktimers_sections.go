@@ -25,22 +25,7 @@ func (self *DesktimersHelper) WithSectionFor(taskCode string, whole func() error
 		return whole()
 	}
 	tr := self.c.Tr
-	var sections []desktimers.Section
-	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersLoadingSections, func() error {
-		client, err := desktimers.NewClientFromToken()
-		if err != nil {
-			return err
-		}
-		sections, err = client.GetSections(taskCode)
-		return err
-	})
-	if err != nil {
-		// Said, not hidden: a whole-task branch made instead loses the
-		// section, and the person may rather retry.
-		self.c.Log.Warnf("deskgit: reading the sections of %s: %v", taskCode, err)
-		self.c.ErrorToast(utils.ResolvePlaceholderString(tr.DesktimersSectionsUnread, map[string]string{"error": err.Error()}))
-		return whole()
-	}
+	sections := self.readSections(taskCode, tr.DesktimersSectionsUnread)
 	if len(sections) == 0 {
 		return whole()
 	}
@@ -69,20 +54,11 @@ func (self *DesktimersHelper) WithSectionFor(taskCode string, whole func() error
 		default:
 			press = func() error { return choice.New(branch) }
 		}
-		switch {
-		case section.Done:
-			tag += " · " + tr.DesktimersSectionDone
-		case section.Blocked != nil:
-			tag += " · " + tr.DesktimersSectionBlocked
-		case section.Running:
-			tag += " · " + tr.DesktimersSectionRunning
-		}
-		name := utils.TruncateWithEllipsis(section.Name, 50)
-		if section.Done {
-			name = dim.Sprint(name)
+		if status := self.sectionStatus(section); status != "" {
+			tag += " · " + status
 		}
 		items = append(items, &types.MenuItem{
-			LabelColumns:   []string{name, branch, dim.Sprint(tag)},
+			LabelColumns:   []string{self.sectionName(section), branch, dim.Sprint(tag)},
 			OnPress:        press,
 			DisabledReason: disabled,
 		})
@@ -92,6 +68,103 @@ func (self *DesktimersHelper) WithSectionFor(taskCode string, whole func() error
 		Title:    utils.ResolvePlaceholderString(tr.DesktimersSectionsTitle, map[string]string{"code": taskCode}),
 		Items:    items,
 		MinWidth: 100,
+	})
+}
+
+// readSections reads a task's sections for a picker. One that cannot be
+// read (an older API, a dropped connection) is an empty list, so the flow
+// goes on for the whole task; unread says so, not hidden, since the section
+// is then lost and the person may rather retry.
+func (self *DesktimersHelper) readSections(taskCode string, unread string) []desktimers.Section {
+	var sections []desktimers.Section
+	err := self.c.WithWaitingStatusSync(self.c.Tr.DesktimersLoadingSections, func() error {
+		client, err := desktimers.NewClientFromToken()
+		if err != nil {
+			return err
+		}
+		sections, err = client.GetSections(taskCode)
+		return err
+	})
+	if err != nil {
+		self.c.Log.Warnf("deskgit: reading the sections of %s: %v", taskCode, err)
+		self.c.ErrorToast(utils.ResolvePlaceholderString(unread, map[string]string{"error": err.Error()}))
+		return nil
+	}
+	return sections
+}
+
+// sectionStatus is the word a picker shows beside a section: done, blocked,
+// or its timer running.
+func (self *DesktimersHelper) sectionStatus(section desktimers.Section) string {
+	tr := self.c.Tr
+	switch {
+	case section.Done:
+		return tr.DesktimersSectionDone
+	case section.Blocked != nil:
+		return tr.DesktimersSectionBlocked
+	case section.Running:
+		return tr.DesktimersSectionRunning
+	}
+	return ""
+}
+
+func (self *DesktimersHelper) sectionName(section desktimers.Section) string {
+	name := utils.TruncateWithEllipsis(section.Name, 50)
+	if section.Done {
+		return self.hudDim().Sprint(name)
+	}
+	return name
+}
+
+// WithSectionForCommit asks, for a task with sections, whether a commit is
+// for the whole task or one section, and calls then with the section's name
+// ("" for the whole task). A task without sections asks nothing. The
+// section the checked-out branch is for, as the API matches it, is under
+// the cursor.
+func (self *DesktimersHelper) WithSectionForCommit(taskCode string, currentBranch string, then func(section string) error) error {
+	if taskCode == "" {
+		return then("")
+	}
+	tr := self.c.Tr
+	sections := self.readSections(taskCode, tr.DesktimersCommitSectionsUnread)
+	if len(sections) == 0 {
+		return then("")
+	}
+
+	// On a section's branch the API counts the commit toward that section
+	// without a trailer, so "the whole task" cannot be said from here; a
+	// trailer for another section still wins over the branch.
+	onSection := desktimers.SectionOfBranch(currentBranch, taskCode, sections)
+	var wholeDisabled *types.DisabledReason
+	if onSection != "" {
+		wholeDisabled = &types.DisabledReason{Text: utils.ResolvePlaceholderString(tr.DesktimersCommitWholeOnSectionBranch, map[string]string{"branch": currentBranch})}
+	}
+
+	accent, dim := self.hudAccent(), self.hudDim()
+	items := []*types.MenuItem{{
+		LabelColumns:   []string{accent.Sprint(tr.DesktimersSectionWholeTask), ""},
+		OnPress:        func() error { return then("") },
+		Keys:           menuKey('w'),
+		DisabledReason: wholeDisabled,
+	}}
+	selected := 0
+	for _, row := range desktimers.SectionRows(sections) {
+		section := row.Section
+		if section.ID == onSection {
+			selected = len(items)
+		}
+		// A done section still takes a commit: a fix to finished work.
+		items = append(items, &types.MenuItem{
+			LabelColumns: []string{self.sectionName(section), dim.Sprint(self.sectionStatus(section))},
+			OnPress:      func() error { return then(section.Name) },
+		})
+	}
+
+	return self.c.Menu(types.CreateMenuOptions{
+		Title:              utils.ResolvePlaceholderString(tr.DesktimersCommitSectionTitle, map[string]string{"code": taskCode}),
+		Items:              items,
+		InitialSelectedIdx: selected,
+		MinWidth:           80,
 	})
 }
 

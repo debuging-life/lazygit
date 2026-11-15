@@ -643,6 +643,9 @@ type TranslationSet struct {
 	DesktimersSectionDoneNoBranch         string
 	DesktimersSectionBranchNotHere        string
 	DesktimersSectionsUnread              string
+	DesktimersCommitSectionTitle          string
+	DesktimersCommitSectionsUnread        string
+	DesktimersCommitWholeOnSectionBranch  string
 	DesktimersClearTask                   string
 	DesktimersNoTasks                     string
 	DesktimersJustCreated                 string
@@ -1970,6 +1973,9 @@ func EnglishTranslationSet() *TranslationSet {
 		DesktimersSectionDoneNoBranch:        "This section is done; a new branch would start work on it again",
 		DesktimersSectionBranchNotHere:       "{{.branch}} is not in this clone: fetch it, or it may be in another repository linked to the task",
 		DesktimersSectionsUnread:             "Could not read the task's sections, so this is a branch for the whole task: {{.error}}",
+		DesktimersCommitSectionTitle:         "Is this commit for all of {{.code}}, or one section?",
+		DesktimersCommitWholeOnSectionBranch: "On {{.branch}} every commit counts toward its section; make the whole task's work on another branch",
+		DesktimersCommitSectionsUnread:       "Could not read the task's sections, so this commit is for the whole task: {{.error}}",
 		DesktimersClearTask:                  "Clear selected task",
 		DesktimersNoTasks:                    "No active tasks assigned to you",
 		DesktimersJustCreated:                "Just created",

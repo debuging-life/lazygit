@@ -83,7 +83,12 @@ func AppendTaskTrailer(content string, url string, source string) (string, bool)
 
 	rewritten := make([]string, 0, len(lines)+2)
 	rewritten = append(rewritten, lines[:lastContent+1]...)
-	rewritten = append(rewritten, "", "Task: "+url)
+	if !sectionTrailer.MatchString(lines[lastContent]) {
+		rewritten = append(rewritten, "")
+	}
+	// After a section's trailer, in the same block: git reads only the
+	// last paragraph as trailers.
+	rewritten = append(rewritten, "Task: "+url)
 	rewritten = append(rewritten, lines[lastContent+1:]...)
 	return strings.Join(rewritten, "\n"), true
 }
@@ -111,7 +116,8 @@ func messageHasCode(content string) bool {
 			}
 			continue
 		}
-		if MessageNamesCode(line) {
+		// A section's name is not a task code, even one shaped like it.
+		if MessageNamesCode(line) && !sectionTrailer.MatchString(line) {
 			return true
 		}
 	}

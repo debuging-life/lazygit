@@ -247,7 +247,10 @@ func (self *WorkingTreeHelper) HandleCommitPress() error {
 
 		commitWithTask := func() error {
 			prefix := desktimers.ApplyPrefixTemplate(cfg.CommitPrefixTemplate, desktimers.DefaultCommitPrefixTemplate, task.Code)
-			return self.handleCommitPressWithTaskPrefix(messageTail, prefix)
+			// deskgit: a task with sections asks which one the commit is for
+			return self.desktimersHelper.WithSectionForCommit(task.Code, self.refHelper.GetCheckedOutRef().Name, func(section string) error {
+				return self.handleCommitPressWithTaskPrefix(messageTail, prefix, section)
+			})
 		}
 
 		// Mismatch guard: if the branch carries a task code, the picked task
@@ -302,21 +305,33 @@ func (self *WorkingTreeHelper) pickParentBranchForTask(task desktimers.Task) err
 // (`Commit summary — LOUD-124/`) rather than prefilled into the editable
 // buffer. The prefix is prepended to the typed summary on confirm, unless
 // the user typed their own task code (intentional override).
-func (self *WorkingTreeHelper) handleCommitPressWithTaskPrefix(initialMessage string, taskPrefix string) error {
+//
+// A section picked for the commit works the same way: named in the
+// description's title, and its "Section:" trailer added on confirm.
+func (self *WorkingTreeHelper) handleCommitPressWithTaskPrefix(initialMessage string, taskPrefix string, section string) error {
+	descriptionTitle := self.c.Tr.CommitDescriptionTitle
+	if section != "" {
+		descriptionTitle += " — Section: " + section
+	}
 	return self.WithEnsureCommittableFiles(func() error {
 		self.commitsHelper.OpenCommitMessagePanel(
 			&OpenCommitMessagePanelOpts{
 				CommitIndex:      context.NoCommitIndex,
 				InitialMessage:   initialMessage,
 				SummaryTitle:     desktimers.TitleWithTaskPrefix(self.c.Tr.CommitSummaryTitle, taskPrefix),
-				DescriptionTitle: self.c.Tr.CommitDescriptionTitle,
+				DescriptionTitle: descriptionTitle,
 				PreserveMessage:  true,
 				OnConfirm: func(summary string, description string) error {
-					return self.handleCommit(desktimers.ComposeWithTaskPrefix(taskPrefix, summary), description, false)
+					return self.handleCommit(desktimers.ComposeWithTaskPrefix(taskPrefix, summary), desktimers.WithSectionTrailer(description, section), false)
 				},
 				OnSwitchToEditor: func(filepath string) error {
 					// The prefix isn't in the buffer; the prepare-commit-msg
 					// hook prepends the picked task's code in the editor flow.
+					// deskgit: the section is not the hook's to know, so its
+					// trailer goes into the message file here.
+					if err := desktimers.AddSectionTrailerToFile(filepath, section); err != nil {
+						return err
+					}
 					return self.switchFromCommitMessagePanelToEditor(filepath, false)
 				},
 				ForceSkipHooks:  false,
